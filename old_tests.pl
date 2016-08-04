@@ -262,3 +262,132 @@ sub bullshit_test{
 		print " up to ".$bin*$step."\t".$hist{$bin}[0]."\t".$hist{$bin}[1]."\n";
 	}
 }
+
+## For checking iterations_gulp
+
+sub test_gulp {
+	my $fullpath = $_[0];
+	my $md = $_[1];
+	open GULP, "<$fullpath" or die "Cannot open $fullpath";
+	
+	my $site; # careful	
+	my $node_name;
+		while (<GULP>){
+
+			my $max_depth;
+			if ($_ =~ /^>/){
+				#$iteration_number++;
+		#		my $str = <GULP>;
+				#print "str ".$str."\n";
+		#		my @str_array = split(/\s+/, $str);
+		#		my $site = $str_array[1];
+		#		my $node_name = $str_array[3];
+		#		$max_depth = $str_array[5];
+				
+				#print $site." site,".$node_name." node,".$max_depth." maxdepth\n";
+			}
+			my @str_array;
+			my $str = <GULP>; 
+
+			
+			my %sums;
+			my %hash;
+			
+			my $test_obs_summ;
+			my $test_exp_summ;
+			
+			while ($str =~ /^[^>]/){ 
+
+			
+				if ($str =~ /^site/){
+				
+			if ($test_obs_summ == $test_exp_summ){
+				print "summtest ok\n";
+			}
+			else {
+				print "summtest failed! $site $node_name obssum $test_obs_summ, expsum $test_exp_summ\n";
+			}
+			$test_obs_summ = 0;
+			$test_exp_summ = 0;	
+				
+					my @str_array = split(/\s+/, $str);
+					$site = $str_array[1]; # careful
+					$node_name = $str_array[3];
+					$max_depth = $str_array[5];
+					#print $site." site,".$node_name." node,".$max_depth." maxdepth\n";
+					#print "test str $str\n";
+					$str = <GULP>; ## What?! change this line to my $str = <GULP>, and one line will be skipped
+					#print "test2 str $str\n";
+				}
+				@str_array = split(/,/, $str);
+				
+								#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
+								
+									if ($max_depth > $md){
+										#foreach my $group_number(0..scalar @groups-1){
+											#if ($group_hashes{$md}[$group_number]{$node_name}){
+											#print "group number $group_number md $md node name $node_name\n";
+												#$sums{$md}[$group_number] += $str_array[1];
+												#$hash{$md}[$group_number]{$str_array[0]}[1] += $str_array[2];
+												#$hash{$md}[$group_number]{$str_array[0]}[0] += $str_array[1];
+												$test_obs_summ += $str_array[1];
+												$test_exp_summ += $str_array[2];
+												#print $hash{$md}[$group_number]{$str_array[0]}[0]." obs integral\n";
+											#}
+										#}
+									}
+								
+
+				
+				$str = <GULP>;
+				#print "test3 str $str\n";
+				
+			}
+			
+
+			# maxbins are different for every iteration. Find maximum and use it.
+
+			#$maxbin = max($maxbin, $str_array[0]);
+#print "maxbin $maxbin, iteration number $iteration_number\n";	
+#print "sum50 $sum50 sum100 $sum100 sum150 $sum150 norm 50 $norm50 norm 100 $norm100 norm 150 $norm150\n";		
+			
+			#foreach my $md(@maxdepths){ 
+				#foreach my $group_number(0..scalar @groups-1){
+					#print "maxdepth $md group number $group_number \n";
+					#if ($sums{$md}[$group_number] == 0){
+						#foreach my $bin(1..$maxbin){
+							#$hash{$md}[$group_number]{$bin}[0] = "NA";
+							#$hash{$md}[$group_number]{$bin}[1] = "NA";
+						#}
+					#}
+					#else {
+					#	foreach my $bin(1..$maxbin){
+					#		#print "in hash: ".$hash{$md}[$group_number]{$bin}[0]."\n";
+					#		#print "norm ".$norms{$md}[$group_number]."\n";
+					#		#print "sum ".$sums{$md}[$group_number]."\n";
+					#		$hash{$md}[$group_number]{$bin}[0] = $hash{$md}[$group_number]{$bin}[0]*$norms{$md}[$group_number]/$sums{$md}[$group_number];
+					#		$hash{$md}[$group_number]{$bin}[1] = $hash{$md}[$group_number]{$bin}[1]*$norms{$md}[$group_number]/$sums{$md}[$group_number];
+					#	}
+					#}
+					
+					#my $filehandle = $filehandles{$md}{$group_number};
+					#print "going to print something\n";
+					#foreach my $bin(1..$maxbin){
+						#print $filehandle $hash{$md}[$group_number]{$bin}[0].",".$hash{$md}[$group_number]{$bin}[1].",";
+					#}
+					#print $filehandle "\n";
+				
+				
+			#	}
+			#}
+			
+
+			
+			#$iteration_number++;
+			#print $iteration_number."\n";
+		}
+		
+		close GULP;
+}
+
+
