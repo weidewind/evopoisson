@@ -196,3 +196,69 @@ sub test_my_visit_depth_first {
 	    print "2: up to 10 ".$static_ring_hash{2}{"alister1"}{2}[0]."\t_".$static_ring_hash{2}{"alister1"}{2}[1]."\n";
 	    
 }
+
+#bullshit_test();
+sub bullshit_test{
+	
+	set_mutmap("h1", "nsyn");
+	my %matrix = incidence_matrix();
+	$self -> print_incidence_matrix(\%matrix);
+	my $step = 2;
+	my $root = $static_tree-> get_root;
+	my @array;
+	my %hist;
+	print "radius,site,node,observed,expected\n";
+	my @group;
+
+	foreach my $ind (1..7){
+		print "\nindex $ind\n";
+		foreach my $node(@{$static_nodes_with_sub{$ind}}){
+			
+			if(ref($node) eq "REF"){
+				$node = ${$node};
+			}
+			print "\n   node ".$node->get_name()."\n";
+			if (!$node->is_terminal){
+			my @args = ($ind, $step, $node);
+			$self->my_visit_depth_first ($node, \@array,\&update_ring,\&has_no_mutation,\@args,0);
+			$self->my_visit_depth_first ($node, \@array,\&max_depth,\&has_no_mutation,\@args,0);
+			my $total_muts;
+			my $total_length;
+	#print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
+			if ($static_depth_hash{$ind}{$node->get_name()} > 0){
+			foreach my $bin (keys %{$static_ring_hash{$ind}{$node->get_name()}}){
+				print "         bin ".$bin*$step."\n";
+				print "            adding ".$static_ring_hash{$ind}{$node->get_name()}{$bin}[0]." to muts\n";
+				print "            adding ".$static_ring_hash{$ind}{$node->get_name()}{$bin}[1]." to length\n";
+				$total_muts += $static_ring_hash{$ind}{$node->get_name()}{$bin}[0];
+				$total_length += $static_ring_hash{$ind}{$node->get_name()}{$bin}[1];
+			}
+			#if ($total_length > 0 && $total_muts/$total_length < 0.005){
+			if ($total_length > 0){
+			foreach my $bin (sort {$a <=> $b} (keys %{$static_ring_hash{$ind}{$node->get_name()}})){
+				
+				if ($total_length > 0 && $static_ring_hash{$ind}{$node->get_name()}{$bin}[1] > 0){ #there are some internal nodes with 0-length terminal daughter branches
+					print "         bin ".$bin*$step."\n";
+					$hist{$bin}[0] += $static_ring_hash{$ind}{$node->get_name()}{$bin}[0]; #observed
+					print "            adding ".$static_ring_hash{$ind}{$node->get_name()}{$bin}[0]." to observed\n";
+					$hist{$bin}[1] += $total_muts*$static_ring_hash{$ind}{$node->get_name()}{$bin}[1]/$total_length; #expected
+					print "            adding ".$total_muts*$static_ring_hash{$ind}{$node->get_name()}{$bin}[1]/$total_length." to expected\n";
+				}
+				if (!$hist{$bin}[0]){
+					$hist{$bin}[0] += 0;
+				}
+				if (!$hist{$bin}[1]){
+					$hist{$bin}[1] += 0;
+				}
+				#print "$bin,$ind,".$node->get_name().",".$hist{$bin}[0].",".$hist{$bin}[1]."\n";
+			}
+			}
+			}
+		}
+		}
+	}
+	
+	foreach my $bin (sort {$a <=> $b} keys %hist){
+		print " up to ".$bin*$step."\t".$hist{$bin}[0]."\t".$hist{$bin}[1]."\n";
+	}
+}
