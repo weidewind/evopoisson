@@ -390,4 +390,53 @@ sub test_gulp {
 		close GULP;
 }
 
+sub test_distr_to_stathist_norm {
+	logic_global_median_statistics("h3", "nsyn", 0, "distrtest");
+}
 
+#test_obsv_manipulation();
+
+sub test_obsv_manipulation {
+	my $prot = "h1";
+	my $restriction = 0;
+	set_mutmap($prot, "nsyn");
+	set_distance_matrix($prot);
+	my %obs_vectors = get_observation_vectors();
+	
+	my %shuffled_obs_vectors = shuffle_observation_vectors(\%obs_vectors);
+	my @mock_mutmaps = read_observation_vectors(\%shuffled_obs_vectors);
+	%static_subs_on_node = %{$mock_mutmaps[0]};
+	%static_nodes_with_sub = %{$mock_mutmaps[1]};
+
+	my %hash = depth_groups_entrenchment_optimized(10,$restriction);
+	
+	
+	open CSV, ">/export/home/popova/workspace/perlCoevolution/TreeUtils/Phylo/MutMap/".$prot."_vector_simulation_test_".$restriction.".csv";
+	foreach my $bin(1..32){
+			print CSV $bin."_obs,".$bin."_exp,";
+	}
+	print CSV "\n";
+
+	#foreach my $i(0..$iterations-1){
+		foreach my $bin(1..32){
+			print CSV $hash{$bin}[0].",".$hash{$bin}[1].",";
+		}
+		print CSV "\n";
+	#}
+	close CSV;
+	
+	
+	#push @simulated_hists, \%hash;
+	#%static_ring_hash = ();
+	#%static_depth_hash = ();
+	
+	
+}
+sub test_remove_zero_branches {
+	my $tree = parse_tree("/export/home/popova/workspace/perlCoevolution/TreeUtils/Phylo/MutMap/h1.l.r.newick");
+	my $multitree = remove_zero_branches($tree);
+	open TREE, ">multitree.tre" or die "Cannot create file";
+	my $treestr=tree2str($multitree);
+	print TREE $treestr;
+	close TREE;
+}
