@@ -32,32 +32,37 @@ use Cwd qw(abs_path cwd getcwd);
 use File::Spec;
 use Clone 'clone';
 use Sub::Identify ':all';
+use File::Path qw(make_path remove_tree);
 use autodie;
 
 $| = 1;
 
 	
 	
-#rewrite
+
 	sub set_node_distance {
-		$distance_hash{$_[0]}->{$_[1]} = $_[2];	
+		my $self = shift;
+		$self->{static_distance_hash}{$_[0]}->{$_[1]} = $_[2];	
 	}
-#rewrite	
+	
 	sub set_alignment_length {
-		$static_alignment_length = $_[0]; 
+		my $self = shift;
+		$self->{static_alignment_length} = $_[0]; 
 	}
-#rewrite	
+	
 	sub has_node_distance {
-		if (!defined $distance_hash{$_[0]}->{$_[1]}){
+		my $self = shift;
+		if (!defined $self->{static_distance_hash}{$_[0]}->{$_[1]}){
 			return 0;
 		}
 		else {
 			return 1;
 		}
 	}
-#rewrite	
+	
 	sub get_node_distance {
-		return $distance_hash{$_[0]}->{$_[1]};
+		my $self = shift;
+		return $self->{static_distance_hash}{$_[0]}->{$_[1]};
 	}
 	
 	
@@ -66,30 +71,21 @@ $| = 1;
 		node => '$',
 	};
 	
-
-	
-	sub pathFinder {
-		my $mutmap = shift;
-		my $subroutine = shift;
-		my $bigtag = shift;
-		my $bigdatatag = shift;
-		
-		#my $sub_name = (caller(0))[3];
-		my $subroutine_name = split(\::\, $subroutine)[-1];
-		
-		my $output_base = File::Spec->catdir(getcwd(), "output", $bigdatatag, $bigtag, state_tag($mutmap -> {state}), maxpath_tag($mutmap -> {subtract_tallest}), $mutmap -> {protein}); 
-		my $input_base = File::Spec->catdir(getcwd(), "data", $bigdatatag,);
-	}
 	
 	sub maxpath_tag{
 		my $subtract_maxpath = $_[0];
 		my $tag;
-		if ($subtract_maxpath){
-			$tag = "maxpath_subtracted";
+		if (defined $subtract_maxpath){
+			if ($subtract_maxpath eq "y" || $subtract_maxpath eq "yes" || $subtract_maxpath == 1 ){
+				$tag = "maxpath_subtracted";
+			}
+			elsif ($subtract_maxpath eq "n" || $subtract_maxpath eq "no" || $subtract_maxpath == 0 ) {
+				$tag = "maxpath_not_subtracted";
+			}
+			else {die "Invalid subtract_maxpath: $subtract_maxpath";}
 		}
-		else {
-			$tag = "maxpath_not_subtracted"
-		};
+		else {$tag = '';}
+		
 		return $tag;
 	}
 
@@ -123,12 +119,14 @@ $| = 1;
 		my $input_base = File::Spec->catdir(getcwd(), "data", $args->{bigdatatag},);
 		my $treefile = File::Spec->catfile($input_base, $args->{protein}.".l.r.newick");
 		my $static_tree = parse_tree($treefile)  or die "No tree at $treefile";
+		my $self;
+		make_path($output_base);
 		
 		if ($args->{fromfile}){
 			my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_realdata");
 			my $realdata = retrieve ($realdatapath) or die "Cannot retrieve ".$realdatapath;
 			
-			my $self = { 
+			$self = { 
 				static_output_base => $output_base,
 				static_input_base => $input_base,
 				static_protein => $args->{protein},
@@ -152,11 +150,6 @@ $| = 1;
 			my %static_fasta = %fasta;
 			my %static_hash_of_nodes;	
 			my @nodes = $static_tree -> get_nodes;
-			foreach my $node(@nodes){
-				#if ($node->is_root()) {next;}
-				my $name = $node ->get_name();
-				$self ->{static_hash_of_nodes}{$name} = \$node;
-			}
 			
 			my @mutmaps;
 			my @bkg_mutmaps;
@@ -169,10 +162,10 @@ $| = 1;
 				@bkg_mutmaps = synmutmap($static_tree, \%fasta);
 			} 
 			else {
-				die "only syn or nsyn can be used as the second argument; unknown ."$args->{state}." was used instead";
+				die "only syn or nsyn can be used as the second argument; unknown ".$args->{state}." was used instead";
 			}
 
-			my $self = {
+			$self = {
 				static_output_base => $output_base,
 				static_input_base => $input_base,
 				static_protein => $args->{protein},
@@ -187,6 +180,12 @@ $| = 1;
 				static_background_subs_on_node => $bkg_mutmaps[0],
 				static_background_nodes_with_sub => $bkg_mutmaps[1],
 			};
+			
+			foreach my $node(@nodes){
+				#if ($node->is_root()) {next;}
+				my $name = $node ->get_name();
+				$self ->{static_hash_of_nodes}{$name} = \$node;
+			}
 		}	
 
 		bless $self, $class;
@@ -395,7 +394,7 @@ sub print_incidence_matrix {
 	my $sorted_nodnames_file = File::Spec -> catfile($self->{static_output_base}, $self->{static_protein}."_".$statetag."_sorted_nodnames");
 	
 	# todo check if static_sorted_nodnames exists, if not - throw error and die (where did you take incidence_hash from?)
-	unless ($self->{static_sorted_nodnames} && $self->{static_sorted_sites}) die "There is no static_sorted_nodnames (or static_sorted_sites) in this mutmapper. Where did you take incidence_hash from?\n";
+	unless ($self->{static_sorted_nodnames} && $self->{static_sorted_sites}) {die "There is no static_sorted_nodnames (or static_sorted_sites) in this mutmapper. Where did you take incidence_hash from?\n";}
 	
 	open MATRIX, ">$matrix_file" or die "Cannot open file ".$matrix_file."\n";
 	foreach my $nodname (@{$self->{static_sorted_nodnames}}){
@@ -536,14 +535,15 @@ sub get_mrcn {
     }
     
     sub node_distance {
+    	my $self = shift;
     	my ( $node, $other_node ) = @_;
-    	if  (has_node_distance($node, $other_node)){
-    		return get_node_distance($node, $other_node);
+    	if  ($self->has_node_distance($node, $other_node)){
+    		return $self->get_node_distance($node, $other_node);
     	}
     	else {
     		## calc_true instead of calc_my since 02 06 2015
     		my $dist = calc_true_patristic_distance($node, $other_node);
-    		set_node_distance($node, $other_node, $dist);
+    		$self->set_node_distance($node, $other_node, $dist);
     		return $dist;
     	}
     	
@@ -781,7 +781,7 @@ sub myclone {
 			static_distance_hash => $self->{realdata}{"distance_hash"},
 			static_background_subs_on_node => $self->{static_background_subs_on_node },
 			static_background_nodes_with_sub => $self->{static_background_nodes_with_sub},
-			obs_vectors => clone($self->{realdata}{"obs_vectors"}) ; #the only structure which can (and will) be changed
+			obs_vectors => clone($self->{realdata}{"obs_vectors"})  #the only structure which can (and will) be changed
 	};
 	
 	return $clone;
@@ -873,7 +873,7 @@ sub compute_norm {
 	
 #	$real_data = lock_retrieve("/export/home/popova/workspace/perlCoevolution/TreeUtils/Phylo/MutMap/".$prot."_realdata") or die "Cannot retrieve real_data";
 	my $realdata = $self->{realdata};
-	@obshash_restriction = map { /^obs_hash(.*)/ ? $1 : () } (keys $realdata);
+	my @obshash_restriction = map { /^obs_hash(.*)/ ? $1 : () } (keys $realdata);
 	unless(defined $obshash_restriction[0] && $obshash_restriction[0] <= $restriction ){
 			die "realdata restriction is bigger than compute_norm restriction: ".$obshash_restriction[0]." > $restriction \n";
 	}
@@ -914,8 +914,8 @@ sub print_nodes_in_analysis {
 		print $names[$i]."\n";
 		my %obs_hash = $self->nodeselector(1,$restriction,$subtract_tallest, $group, $names[$i]); #bin, restriction, subtract-tallest
 
-		%static_ring_hash = ();
-		%static_subtree_info = ();
+		#%static_ring_hash = ();
+		#%static_subtree_info = ();
 		$i++;
 	}
 }
@@ -930,6 +930,7 @@ sub prepare_real_data {
 	my $self = shift;
 	my $restriction = shift;
 	unless(defined $restriction) { $restriction = 50; }
+	my $prot = $self->{static_protein};
 	$self -> set_distance_matrix();
 	my %matrix = $self->incidence_matrix(); 
 	$self -> print_incidence_matrix(\%matrix);
@@ -964,8 +965,8 @@ sub prepare_real_data {
 	my %obs_vectors = $self ->get_observation_vectors();
 
 	my %realdata = (
-		norm."restriction" => $restricted_norm,
-		restriction = $restriction,
+		"norm".$restriction => $restricted_norm,
+		restriction => $restriction,
 		maxbin => $maxbin,
 		ancestor_nodes => \%ancestor_nodes,
 		obs_vectors => \%obs_vectors,
@@ -974,7 +975,7 @@ sub prepare_real_data {
 		distance_hash => $self -> {static_distance_hash},
 		hash_of_nodes => $self -> {static_hash_of_nodes},
 		subtree_info => $self -> {static_subtree_info},
-		obs_hash."restriction" => \%restricted_obs_hash,
+		"obs_hash".$restriction => \%restricted_obs_hash,
 	);
 	
 	my $realdatapath = $self->{static_output_base};
@@ -1005,7 +1006,7 @@ sub select_ancestor_nodes {
 	my $realdata = $self->{realdata};
 	my $maxbin = $realdata->{"maxbin"};
 	my $ancestor_nodes = $realdata->{"ancestor_nodes"};
-	@obshash_restriction = map { /^obs_hash(.*)/ ? $1 : () } (keys $realdata);
+	my @obshash_restriction = map { /^obs_hash(.*)/ ? $1 : () } (keys $realdata);
 	unless(defined $obshash_restriction[0] && $obshash_restriction[0] <= $restriction ){
 			die "realdata restriction is bigger than select_ancestor_nodes restriction: ".$obshash_restriction[0]." > $restriction \n";
 	}
@@ -1227,7 +1228,7 @@ sub concat_and_divide_simult {
 	foreach my $md(@maxdepths){
 		foreach my $group_number(0.. scalar @groups - 1){
 			local *FILE;
-			my $csvfile =  File::Spec->catfile($dir, $prot."_gulpselector_vector_".$md."_".$group_names[$group_number]."_".$tag.".csv");
+			my $csvfile =  File::Spec->catfile($dir, $prot."_gulpselector_vector_".$md."_".$group_names[$group_number].".csv");
 			open FILE, ">$csvfile" or die "Cannot create $csvfile";
 			
 			FILE->autoflush(1);
@@ -2025,7 +2026,7 @@ sub no_check{
 
 # prints protein_for_LRT files
 sub print_data_for_LRT {
-	$self = shift;
+	my $self = shift;
 	my $dir = File::Spec->catdir(getcwd(),"likelihood", $self->{static_state});
 	my $filename = File::Spec->catfile($dir, ($self->{static_protein})."_for_LRT.csv");
 	open FILE, ">$filename" or die "Cannot create $filename";
@@ -2092,11 +2093,12 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 
 	foreach my $ind (@group){
 	#print "here my ind $ind\n";
-		foreach my $node(@{$self->{static_nodes_with_sub}{$ind}}){
-			
-			if(ref($node) eq "REF"){
-				$node = ${$node};
+		foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
+			my $node;
+			if(ref($nod) eq "REF"){
+				$node = ${$nod};
 			}
+			else {$node = $nod};
 			my $nodename = $node->get_name();
 			my $site_node = $ind."_".$nodename;
 			#print "here my site_node $site_node\n";
@@ -2233,10 +2235,12 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 	my @args = ( $step, $root);
 	$self->visitor_coat ($root, \@array,\&entrenchment_visitor,\&no_check,\@args,0);
 	foreach my $ind (@group){
-		foreach my $node(@{$self ->{static_nodes_with_sub}{$ind}}){
-			if(ref($node) eq "REF"){
-				$node = ${$node};
+		foreach my $nod(@{$self ->{static_nodes_with_sub}{$ind}}){
+			my $node;
+			if(ref($nod) eq "REF"){
+				$node = ${$nod};
 			}
+			else {$node = $nod;}
 			my $site_node = $ind."_".$node->get_name();
 			my $total_muts;
 			my $total_length;
@@ -2331,10 +2335,12 @@ sub nodeselector {
 	my %sitecounts;
 	my %mutcounts;
 	foreach my $ind (@group){
-		foreach my $node(@{$self->{static_nodes_with_sub}{$ind}}){
-			if(ref($node) eq "REF"){
-				$node = ${$node};
+		foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
+			my $node;
+			if(ref($nod) eq "REF"){
+				$node = ${$nod};
 			}
+			else {$node = $nod;}
 			my $site_node = $ind."_".$node->get_name();
 			my $total_muts;
 			my $total_length;
@@ -2590,6 +2596,438 @@ sub median_difference{
 	return $diff;
 }
 
+# one hist for one ancestor aa in one site
+# the chosen one (used by r scripts for drawing plots)
+# circles, not rings! ()
+sub egor_smart_site_entrenchment {
+	my $self = shift;
+	my $verbose = shift;
+	my $step = 1;
+	my $root = $self->{static_tree}-> get_root;
+	my $file = File::Spec->catfile($self->{static_output_base}, "egor_smart_".$self->{static_protein}.".csv");
+	open PLOTCSV, ">$file" or die "Cannot create $file \n";
+	my @array;
+	print PLOTCSV "radius,site,node,density,cummuts,cumlength\n";
+	my $hash_ready;
+	if (exists $self->{static_ring_hash}){
+		warn "Static_ring_hash is ready, egor_smart_site_entrenchment won't change it\n";
+		$hash_ready = 1;
+	}
 
+	for (my $ind = 1; $ind < 566; $ind++){
+		if ($verbose) {print "$ind\n"};
+		foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
+			my $node = ${$nod};
+			if (!$node->is_terminal){
+			if ($verbose) {print $node->get_name()."\n"};
+			my %hist;
+			#my $ancestor = ${$static_subs_on_node{$node->get_name()}}{$ind}->{"Substitution::ancestral_allele"};
+			my @args = ($ind, $step, $node);
+			unless ($hash_ready) {$self->my_visit_depth_first ($node, \@array,\&update_ring,\&has_no_mutation,\@args,0);} #visitor_coat cannot be used inside a cycle; we still do not want to mess the hash up, so we check for its existance
+			
+			my $cumulative_muts;
+			my $cumulative_length;
+			my @sorted_keys = sort {$a <=> $b} (keys %{$self->{static_ring_hash}{$ind}{$node->get_name()}});
+			foreach my $bin (@sorted_keys){
+				my $muts_in_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0];
+				my $length_of_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[1];
+				$cumulative_muts += $muts_in_bin;
+				$cumulative_length += $length_of_bin;
+				if ($verbose) {print "bin $bin observed ".$self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0]." totmut $cumulative_muts muts in bin $muts_in_bin totlen $cumulative_length bin len $length_of_bin\n"};
+				if ($cumulative_length > 0){ #there are some internal nodes with 0-length terminal daughter branches
+					#	$hist{$bin}{$ancestor} += $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0]/$self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[1]; #density
+
+					$hist{$bin} = $cumulative_muts/$cumulative_length; #density
+				}
+				else {
+					$hist{$bin} = 0;
+				}
+				#if ($muts_in_bin > 0 || $bin == $sorted_keys[0] || $bin == $sorted_keys[-1]){	
+					if ($muts_in_bin > 0){	
+					print PLOTCSV "$bin,$ind,".$node->get_name().",".$hist{$bin}.",".$cumulative_muts.",".$cumulative_length."\n";
+				}
+				
+			}
+			
+
+		}
+		}
+		
+	}
+
+	
+	close PLOTCSV;
+	
+}
+
+# last egor plots sub. NOT the chosen one (egor_h1.csv are printed by some other method (defined by comparison))
+sub egor_diff_rings_site_entrenchment {
+	my $self = shift;
+	print ($self->{static_protein}."\n");
+	my $step = 1;
+	my $root = $self->{static_tree}-> get_root;
+	my $file = File::Spec->catfile($self->{static_output_base}, "egor_diff_rings_".$self->{static_protein}.".csv");
+	open PLOTCSV, ">$file" or die "Cannot create $file \n";
+	my @array;
+	print PLOTCSV "radius,site,node,density,cum_muts,cum_length\n";
+	
+	my $hash_ready;
+	if (exists $self->{static_ring_hash}){
+		$hash_ready = 1;
+		warn "Static_ring_hash is ready, egor_diff_rings_site_entrenchment won't change it\n";
+	}
+
+	for (my $ind = 1; $ind < 566; $ind++){
+		#print "$ind\n";
+		foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
+			my $node = ${$nod};
+			if (!$node->is_terminal){
+			#print $node->get_name()."\n";
+			my %hist;
+			#my $ancestor = ${$static_subs_on_node{$node->get_name()}}{$ind}->{"Substitution::ancestral_allele"};
+			my @args = ($ind, $step, $node);
+			unless ($hash_ready) {$self->my_visit_depth_first ($node, \@array,\&update_ring,\&has_no_mutation,\@args,0);} #visitor_coat cannot be used inside a cycle; we still do not want to mess the hash up, so we check for its existance
+			my $cumulative_muts;
+			my $cumulative_length;
+			my @sorted_keys = sort {$a <=> $b} (keys %{$self->{static_ring_hash}{$ind}{$node->get_name()}});
+			foreach my $bin (@sorted_keys){
+				#print "bin $bin observed ".$self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0]." totmut $cumulative_muts totlen $cumulative_length\n";
+				my $muts_in_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0];
+				my $length_of_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[1];
+				$cumulative_muts += $muts_in_bin;
+				$cumulative_length += $length_of_bin;
+				if ($cumulative_length > 0){ #there are some internal nodes with 0-length terminal daughter branches
+					#	$hist{$bin}{$ancestor} += $static_ring_hash{$ind}{$node->get_name()}{$bin}[0]/$static_ring_hash{$ind}{$node->get_name()}{$bin}[1]; #density
+					$hist{$bin} = $cumulative_muts/$cumulative_length; #density
+				}
+				else {
+					$hist{$bin} = 0;
+				}
+				#if ($muts_in_bin > 0 || $bin == $sorted_keys[0] || $bin == $sorted_keys[-1]){	
+					if ($muts_in_bin > 0){	
+					print PLOTCSV "$bin,$ind,".$node->get_name().",".$hist{$bin}.",".$cumulative_muts.",".$cumulative_length."\n";
+					$cumulative_muts = 0;
+					$cumulative_length = 0;
+				}
+				
+			}
+			
+
+		}
+		}
+	}
+	
+	close PLOTCSV;
+	
+	
+}
+
+
+
+
+sub visitor_coat {
+		my $self = shift;
+		my $node = $_[0];
+		my @array = @{$_[1]};
+		my $action_callback = $_[2];
+		my $check_callback = $_[3];
+		my $callback_args = $_[4];
+		my $depth = $_[5];
+		my $overwrite = $_[6];
+		
+		my $visitor_name = sub_name($action_callback);
+		
+		if ($visitor_name eq "update_ring"){
+			if (exists $self->{static_ring_hash}){
+				if ($overwrite){
+					delete $self->{static_ring_hash};
+				}
+				else {return;}	
+			}	
+		}
+		elsif ($visitor_name eq "entrenchment_visitor" || $visitor_name eq "lrt_visitor"){
+			if (exists $self->{static_subtree_info}){
+					foreach my $node(keys $self->{static_subtree_info}){
+							foreach my $site(keys $self->{static_subtree_info}{$node}){
+								if ($visitor_name eq "entrenchment_visitor"){
+									if (exists $self->{static_subtree_info}{$node}{$site}{"hash"}){
+										if ($overwrite){
+											delete $self->{static_subtree_info}{$node}{$site}{"hash"};
+											delete $self->{static_subtree_info}{$node}{$site}{"maxdepth"};
+											delete $self->{static_subtree_info}{$node}{$site}{"maxdepth_node"};
+										}
+										else {return;}
+									}
+										
+								}
+								elsif ($visitor_name eq "lrt_visitor"){
+									if (exists $self->{static_subtree_info}{$node}{$site}{"lrt"}){
+										if ($overwrite){
+											delete $self->{static_subtree_info}{$node}{$site}{"lrt"};
+										}
+										else {return;}
+									}
+								}
+							}
+					}
+			}
+		}
+		else {print "Warning: visitor_coat cannot perform any check for $visitor_name subroutine. Launching my_visit_depth_first without checking for previous launches\n";}
+		$self->my_visit_depth_first($node, \@array, \&$action_callback, \&$check_callback, $callback_args, $depth);
+}
+
+ sub my_visit_depth_first {
+		my $self = shift;
+		my $node = $_[0];
+		my @array = @{$_[1]};
+		my $action_callback = $_[2];
+		my $check_callback = $_[3];
+		my $callback_args = $_[4];
+		my $depth = $_[5];
+		push @array, $node;
+		my $len = $node -> get_branch_length;
+		$depth += $len;
+		&$action_callback($self, $node, $callback_args, $depth);
+		if (! $node->is_terminal && &$check_callback($self, $node, $callback_args)){
+			my $i = 0;
+			while($node->get_child($i)){
+				@array = $self -> my_visit_depth_first($node->get_child($i), \@array, \&$action_callback, \&$check_callback, $callback_args, $depth);
+				$i++;
+				#@array = my_visit_depth_first($node->get_first_daughter, \@array, \&$action_callback, \&$check_callback, $callback_args, $depth);
+				#@array = my_visit_depth_first($node->get_last_daughter, \@array, \&$action_callback, \&$check_callback, $callback_args, $depth);
+			}
+		}
+		
+		$node = pop @array;
+#print $node->get_name()."\t".$depth."\n";
+		$depth -= $len;
+		return @array;
+    }
+    
+
+    
+    # old version, does not account for  mutations of the other type.
+    # Used in update ring
+ 	sub has_no_same_type_mutation { #has_no_same_type_mutation
+ 		my $self = $_[0];
+ 		my $node = $_[1];
+ 		my $site_index = $_[2]->[0];
+ 		my $starting_node = $_[2]->[2];
+ 		
+ 		if ($node eq $starting_node){
+ 			return 1;
+ 		}
+ 		if (${ $self->{static_subs_on_node}{$node->get_name()}}{$site_index}){
+ 			return 0;
+ 		}
+ 		else {
+ 			return 1;
+ 		}
+ 	}  
+ 	
+ 	
+ 	# also accounts for mutations of the other type (synonimous for nsyn and non-synonimous for syn)
+ 	sub has_no_mutation{
+ 		my $self = $_[0];
+ 		my $node = $_[1];
+ 		my $site_index = $_[2]->[0];
+ 		my $starting_node = $_[2]->[2];
+ 		
+ 		if ($node eq $starting_node){
+ 			return 1;
+ 		}
+ 		if (${$self->{static_subs_on_node}{$node->get_name()}}{$site_index}){
+ 			return 0;
+ 		}
+ 		
+ 		if ($self->{static_state} eq "nsyn"){
+ 			if (is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
+ 				return 0;
+ 			}
+ 			else {
+ 				return 1;
+ 			}
+ 		}
+ 		else {
+ 			if (${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}){
+ 				return 0;
+ 			}
+ 			else {
+ 				return 1;
+ 			}
+ 		}
+ 	}  
+ 	
+ 	
+ 	sub has_no_background_mutation {
+ 		my $self = $_[0];
+ 		my $node = $_[1];
+ 		my $site_index = $_[2];
+ 		if ($self->{static_state} eq "nsyn"){
+ 			if (is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
+ 				return 0;
+ 			}
+ 			else {
+ 				return 1;
+ 			}
+ 		}
+ 		else {
+ 			if (${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}){
+ 				return 0;
+ 			}
+ 			else {
+ 				return 1;
+ 			}
+ 		}
+ 	}
+ 	
+
+ 	
+
+ 	
+ 	sub max ($$) { $_[$_[0] < $_[1]] }
+ 	
+ 	sub update_ring {
+ 		my $self = $_[0];
+ 		my $node = $_[1];
+		my $site_index = $_[2]->[0];
+		my $step = $_[2]->[1];
+		my $starting_node = $_[2]->[2];
+		my $depth = $_[3] - $starting_node->get_branch_length ;
+		if ($node eq $starting_node){
+			#print " \n equality: ".$starting_node ->get_name."\t".$node ->get_name."\n";
+			return;
+		}
+		if ($starting_node -> is_terminal){
+			#print " \n terminal: ".$starting_node ->get_name."\n";
+			return;
+		}
+ 		#print "depth $depth step $step bin ".(bin($depth,$step))."\n";
+ 		if (!($self->has_no_same_type_mutation($_[1], \@{$_[2]}))){ #has_no_same_type_mutation
+ 			$self->{static_ring_hash}{$site_index}{$starting_node->get_name()}{bin($depth,$step)}[0] += 1;
+ 			#print "addded to 0\n";
+ 		}
+ 		$self->{static_ring_hash}{$site_index}{$starting_node->get_name()}{bin($depth,$step)}[1] += $node->get_branch_length;
+ 		#print "addded to 1\n";
+ 	}
+ 	
+ 	sub set_distance_matrix {
+ 		my $self = shift;
+ 		my $prot = $self->{static_protein};
+ 		my $file = $self->{static_input_base}.$prot."_distance_matrix.csv";
+ 		
+ 		open CSV, "<$file" or die "Cannot open file $file\n";
+ 		my $header = <CSV>;
+ 		$header =~ s/[\s\n\r\t]+$//s;
+ 		my @nodelables = split(',', $header);
+ 		while(<CSV>){
+			$_ =~ s/[\s\n\r\t]+$//s;
+ 			my @dists = split(',', $_);
+ 			my $node = $dists[0];
+ 			for (my $i = 1; $i < scalar @dists; $i++){
+ 				$self->{static_distance_hash}{$node}{$nodelables[$i]} = $dists[$i];
+ 			}
+ 		}
+ 		close CSV;
+
+ 	}
+ 	
+ 		# track_tallest is needed for finding longest path in the subtree and subtracting its length
+ 	# Added at 08.10 for testing whether this will improve correspondence between simulation_observed and simulation_expected.
+ 	sub entrenchment_visitor {
+ 		my $self = shift;
+ 		my $node = $_[0];
+ 		my $step = $_[1]->[0];
+ 		my $subtract_tallest = $self->{static_subtract_tallest};
+		if (!$node->is_root){
+		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")};
+		
+		if (%closest_ancestors){
+			foreach my $site_index(keys %closest_ancestors){ 
+				my $anc_node = $closest_ancestors{$site_index};
+				my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()};
+				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
+				my $current_maxdepth = $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"};
+				if ($current_maxdepth < $depth){
+						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"} = $depth;
+						if ($subtract_tallest){
+							$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth_node"} = $node->get_name();
+						}
+				}					
+			}
+			
+			my @ancestors = keys %closest_ancestors;	
+			foreach my $site_index(@ancestors){
+				if (!($self->has_no_background_mutation($node, $site_index))){
+					delete $closest_ancestors{$site_index};
+				}
+			}	
+		}
+		
+		foreach my $site_index(keys %{$self->{static_subs_on_node}{$node->get_name()}}){
+			if ($closest_ancestors{$site_index}){
+				my $anc_node = $closest_ancestors{$site_index};
+				my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()} - ($node->get_branch_length)/2;
+			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
+			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
+				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[0] += 1;
+			}
+			$closest_ancestors{$site_index} = $node;
+		}
+		
+		$node->set_generic("-closest_ancestors" => \%closest_ancestors);
+		}
+#!
+ 	}
+   
+   	sub lrt_visitor {
+   		my $self = shift;
+ 		my $node = $_[0];
+
+		if (!$node->is_root){
+			my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")};
+			
+			if (%closest_ancestors){
+				foreach my $site_index(keys %closest_ancestors){ 
+					my $anc_node = $closest_ancestors{$site_index};
+					my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()};
+					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"lrt"}{$node->get_name()}[1] = $depth-($node->get_branch_length); #23.03 t_branch_start
+					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"lrt"}{$node->get_name()}[2] = $depth; #23.03 t_branch_end					
+				}
+				
+				my @ancestors = keys %closest_ancestors;	
+				foreach my $site_index(@ancestors){
+					if (!($self->has_no_background_mutation($node, $site_index))){
+						delete $closest_ancestors{$site_index};
+					}
+				}	
+			}
+			
+			foreach my $site_index(keys %{$self->{static_subs_on_node}{$node->get_name()}}){
+				if ($closest_ancestors{$site_index}){
+					my $anc_node = $closest_ancestors{$site_index};
+					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"lrt"}{$node->get_name()}[0] = 1;
+				}
+				$closest_ancestors{$site_index} = $node;
+			}
+			
+			$node->set_generic("-closest_ancestors" => \%closest_ancestors);
+		}
+
+ 	}
+   
+   
+   
+   sub bin {
+   	my $depth = $_[0];
+   	my $step = $_[1];
+   	
+   	my $bin = int($depth/$step);
+   	if (int($depth/$step) == $depth/$step && $depth != 0){
+   		$bin -= 1;
+   	}
+   	return $bin+1;
+   }
+    
 
 1;

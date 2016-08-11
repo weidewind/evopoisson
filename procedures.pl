@@ -1,3 +1,31 @@
+#!/usr/bin/perl
+
+use File::Spec;
+use Cwd qw(abs_path cwd getcwd);
+use lib getcwd(); #adds working directory to @INC
+use MutMap;
+use Getopt::Long;
+
+
+
+my $protein;
+my $state = 'nsyn';
+my $input = '';
+my $output = '';	# option variable with default value
+my $verbose;
+GetOptions (	'protein=s' => \$protein,
+		'state=s' => \$state,
+		'input=s' => \$input,
+		'output=s' => \$output,
+		'verbose'  => \$verbose,
+	);
+
+my $mutmap = MutMap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
+$mutmap->egor_smart_site_entrenchment($verbose);
+
+
+
+
 #Procedure for printing _for_LRT files
 #my $prot = "n1";
 #set_mutmap($prot, "nsyn", "locally");

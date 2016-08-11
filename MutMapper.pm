@@ -63,6 +63,8 @@ $| = 1;
 	
 {
 #	my %distance_hash;
+
+# set of stale methods; new versions - in mutmap
 	sub set_node_distance {
 		$distance_hash{$_[0]}->{$_[1]} = $_[2];	
 	}
@@ -544,6 +546,8 @@ sub get_mrcn {
         return $patristic_distance;
     }
     
+    
+    # stale, new version in mutmap
     sub node_distance {
     	my ( $node, $other_node ) = @_;
     	if  (has_node_distance($node, $other_node)){
@@ -3528,10 +3532,10 @@ sub iterations_gulp {
 		#%static_subtree_info = ();
 	}
 
-	store \@simulated_hists, $self->{static_output_base}.$self->{static_protein}."_gulpselector_vector_alldepths_stored";
+	store \@simulated_hists, File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored");
 	
-	my $arref = retrieve($self->{static_output_base}.$self->{static_protein}."_gulpselector_vector_alldepths_stored");
-	my $csvfile = $self->{static_output_base}.$self->{static_protein}."_gulpselector_vector_alldepths.csv";
+	my $arref = retrieve(File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored"));
+	my $csvfile = File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths.csv");
 	open CSV, ">$csvfile";
 	foreach my $bin(1..$maxbin){
 			print CSV $bin."_obs,".$bin."_exp,";
@@ -4916,7 +4920,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 	my $ancestral_nodes = $_[2];
 	my $overwrite = $_[3];
 	
-	my $filename = $self->{static_output_base}.$self->{static_protein}."_for_enrichment";
+	my $filename = File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_for_enrichment");
 	open FILE, ">>$filename";
 	my $root = $self->{static_tree}-> get_root;
 	my @array;
@@ -5478,12 +5482,12 @@ sub egor_site_entrenchment {
 			
 			my $cumulative_muts;
 			my $cumulative_length;
-			foreach my $bin (sort {$a <=> $b} (keys %{$static_ring_hash{$ind}{$node->get_name()}})){
-				#print "bin $bin observed ".$static_ring_hash{$ind}{$node->get_name()}{$bin}[0]." totmut $total_muts totlen $total_length\n";
-				my $muts_in_bin = $static_ring_hash{$ind}{$node->get_name()}{$bin}[0];
-				my $length_of_bin = $static_ring_hash{$ind}{$node->get_name()}{$bin}[1];
+			foreach my $bin (sort {$a <=> $b} (keys %{$self->{static_ring_hash}{$ind}{$node->get_name()}})){
+				#print "bin $bin observed ".$self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0]." totmut $total_muts totlen $total_length\n";
+				my $muts_in_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0];
+				my $length_of_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[1];
 				if ($length_of_bin > 0){ #there are some internal nodes with 0-length terminal daughter branches
-					#	$hist{$bin}{$ancestor} += $static_ring_hash{$ind}{$node->get_name()}{$bin}[0]/$static_ring_hash{$ind}{$node->get_name()}{$bin}[1]; #density
+					#	$hist{$bin}{$ancestor} += $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0]/$self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[1]; #density
 					$cumulative_muts += $muts_in_bin;
 					$cumulative_length += $length_of_bin;
 					$hist{$bin} = $cumulative_muts/$cumulative_length; #density
@@ -5522,15 +5526,15 @@ sub egor_smart_site_entrenchment {
 			
 			my $cumulative_muts;
 			my $cumulative_length;
-			my @sorted_keys = sort {$a <=> $b} (keys %{$static_ring_hash{$ind}{$node->get_name()}});
+			my @sorted_keys = sort {$a <=> $b} (keys %{$self->{static_ring_hash}{$ind}{$node->get_name()}});
 			foreach my $bin (@sorted_keys){
-				#print "bin $bin observed ".$static_ring_hash{$ind}{$node->get_name()}{$bin}[0]." totmut $total_muts totlen $total_length\n";
-				my $muts_in_bin = $static_ring_hash{$ind}{$node->get_name()}{$bin}[0];
-				my $length_of_bin = $static_ring_hash{$ind}{$node->get_name()}{$bin}[1];
+				#print "bin $bin observed ".$self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0]." totmut $total_muts totlen $total_length\n";
+				my $muts_in_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0];
+				my $length_of_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[1];
 				$cumulative_muts += $muts_in_bin;
 				$cumulative_length += $length_of_bin;
 				if ($cumulative_length > 0){ #there are some internal nodes with 0-length terminal daughter branches
-					#	$hist{$bin}{$ancestor} += $static_ring_hash{$ind}{$node->get_name()}{$bin}[0]/$static_ring_hash{$ind}{$node->get_name()}{$bin}[1]; #density
+					#	$hist{$bin}{$ancestor} += $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0]/$self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[1]; #density
 
 					$hist{$bin} = $cumulative_muts/$cumulative_length; #density
 				}
@@ -5570,15 +5574,15 @@ sub egor_diff_rings_site_entrenchment {
 			$self->visitor_coat ($node, \@array,\&update_ring,\&has_no_mutation,\@args,0);
 			my $cumulative_muts;
 			my $cumulative_length;
-			my @sorted_keys = sort {$a <=> $b} (keys %{$static_ring_hash{$ind}{$node->get_name()}});
+			my @sorted_keys = sort {$a <=> $b} (keys %{$self->{static_ring_hash}{$ind}{$node->get_name()}});
 			foreach my $bin (@sorted_keys){
-				#print "bin $bin observed ".$static_ring_hash{$ind}{$node->get_name()}{$bin}[0]." totmut $total_muts totlen $total_length\n";
-				my $muts_in_bin = $static_ring_hash{$ind}{$node->get_name()}{$bin}[0];
-				my $length_of_bin = $static_ring_hash{$ind}{$node->get_name()}{$bin}[1];
+				#print "bin $bin observed ".$self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0]." totmut $total_muts totlen $total_length\n";
+				my $muts_in_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0];
+				my $length_of_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[1];
 				$cumulative_muts += $muts_in_bin;
 				$cumulative_length += $length_of_bin;
 				if ($cumulative_length > 0){ #there are some internal nodes with 0-length terminal daughter branches
-					#	$hist{$bin}{$ancestor} += $static_ring_hash{$ind}{$node->get_name()}{$bin}[0]/$static_ring_hash{$ind}{$node->get_name()}{$bin}[1]; #density
+					#	$hist{$bin}{$ancestor} += $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0]/$self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[1]; #density
 					$hist{$bin} = $cumulative_muts/$cumulative_length; #density
 				}
 				else {
@@ -5603,6 +5607,7 @@ sub egor_diff_rings_site_entrenchment {
 	
 }
 
+# obviously not what we need: step = 10! (10.08)
 sub egor_rings_site_entrenchment {
 		my $step = 10;
 	my $root = $static_tree-> get_root;
@@ -5617,13 +5622,13 @@ sub egor_rings_site_entrenchment {
 			my @args = ($ind, $step, $node);
 			$self->visitor_coat ($node, \@array,\&update_ring,\&has_no_mutation,\@args,0);
 
-			my @sorted_keys = sort {$a <=> $b} (keys %{$static_ring_hash{$ind}{$node->get_name()}});
+			my @sorted_keys = sort {$a <=> $b} (keys %{$self->{static_ring_hash}{$ind}{$node->get_name()}});
 			foreach my $bin (@sorted_keys){
-				#print "bin $bin observed ".$static_ring_hash{$ind}{$node->get_name()}{$bin}[0]." totmut $total_muts totlen $total_length\n";
-				my $muts_in_bin = $static_ring_hash{$ind}{$node->get_name()}{$bin}[0];
-				my $length_of_bin = $static_ring_hash{$ind}{$node->get_name()}{$bin}[1];
+				#print "bin $bin observed ".$self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0]." totmut $total_muts totlen $total_length\n";
+				my $muts_in_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0];
+				my $length_of_bin = $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[1];
 				if ($length_of_bin > 0){ #there are some internal nodes with 0-length terminal daughter branches
-					#	$hist{$bin}{$ancestor} += $static_ring_hash{$ind}{$node->get_name()}{$bin}[0]/$static_ring_hash{$ind}{$node->get_name()}{$bin}[1]; #density
+					#	$hist{$bin}{$ancestor} += $self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[0]/$self->{static_ring_hash}{$ind}{$node->get_name()}{$bin}[1]; #density
 					$hist{$bin} = $muts_in_bin/$length_of_bin; #density
 				}
 				else {
