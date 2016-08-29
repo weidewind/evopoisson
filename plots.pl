@@ -5,6 +5,7 @@ use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); #adds working directory to @INC
 use MutMap;
 use Getopt::Long;
+use File::Path qw(make_path remove_tree);
 
 
 
@@ -27,15 +28,6 @@ my $mutmap = MutMap->new({bigdatatag => $input, bigtag => $output, protein => $p
 $mutmap->egor_smart_site_entrenchment($verbose);
 
 
-
-
-
-#Procedure for printing _for_LRT files
-#my $prot = "n1";
-#set_mutmap($prot, "nsyn", "locally");
-#set_distance_matrix($prot, "locally");
-#print_data_for_LRT();
-##
 
 #prepare_real_data("h1",0,0,0,"locally");
 #prepare_real_data("h3",0,0,0,"locally");
