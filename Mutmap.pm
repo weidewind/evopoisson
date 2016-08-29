@@ -2,6 +2,8 @@
 ## This class provides a map of mutations (node_name -> array of sites that mutated on the branch),  
 ## given a tree and sequences of all nodes (including internal ones)
 
+## 
+
 package MutMap;
 
 use strict;
@@ -111,11 +113,18 @@ $| = 1;
 		return $tag;
 	}
 
-	
+	sub printFooter {
+		my $self = shift;
+		my $outputStream = shift;
+		print $outputStream "## protein ".$self->{static_protein}."\n";
+		print $outputStream "## subtract_tallest ".$self->{static_subtract_tallest}."\n";
+		print $outputStream "## state ".$self->{static_state}."\n";
+		print $outputStream "## output_base ".$self->{static_output_base}."\n";
+	}
 	
 	sub new {
 		my ($class, $args) = @_;	
-		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest}), $args->{protein}); 
+		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest})); 
 		my $input_base = File::Spec->catdir(getcwd(), "data", $args->{bigdatatag},);
 		my $treefile = File::Spec->catfile($input_base, $args->{protein}.".l.r.newick");
 		my $static_tree = parse_tree($treefile)  or die "No tree at $treefile";
@@ -192,7 +201,7 @@ $| = 1;
 		return $self;
 	}
 	
-	
+
 
 
 
@@ -2027,9 +2036,11 @@ sub no_check{
 # prints protein_for_LRT files
 sub print_data_for_LRT {
 	my $self = shift;
-	my $dir = File::Spec->catdir(getcwd(),"likelihood", $self->{static_state});
+	# my $dir = File::Spec->catdir(getcwd(),"likelihood", $self->{static_state}); # before august 2016 refactoring 
+	my $dir = File::Spec -> catfile($self->{static_output_base}, "likelihood");
+	make_path($dir);
 	my $filename = File::Spec->catfile($dir, ($self->{static_protein})."_for_LRT.csv");
-	open FILE, ">$filename" or die "Cannot create $filename";
+	open my $file, ">$filename" or die "Cannot create $filename";
 	my $root = $self->{static_tree}-> get_root;
 	my @array;
 	my @group = (1..565);
@@ -2038,7 +2049,7 @@ sub print_data_for_LRT {
 	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
 	my @args = ($root);
 	$self->visitor_coat ($root, \@array,\&lrt_visitor,\&no_check,\@args,0);
-	print FILE "site,ancestor_node,t_branch_start,t_branch_end,event_indicator\n";
+	print $file "site,ancestor_node,t_branch_start,t_branch_end,event_indicator\n";
 	foreach my $ind (@group){
 		foreach my $ancnode(@{$self->{static_nodes_with_sub}{$ind}}){
 			if(ref($ancnode) eq "REF"){
@@ -2046,15 +2057,16 @@ sub print_data_for_LRT {
 			}
 			my $ancnodename = $ancnode->get_name();
 			foreach my $node ( keys %{$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}}){
-				print FILE $ind.",".$ancnodename.",".$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[1].",".
+				print $file $ind.",".$ancnodename.",".$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[1].",".
 				$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[2].",";
 				my $event = 0;
 				if($self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[0]) {$event = 1};
-				print FILE "$event\n";
+				print $file "$event\n";
 			}
 		}
-	}	
-	close FILE;
+	}
+	$self->printFooter($file);	
+	close $file;
 }
 
 
@@ -2599,15 +2611,16 @@ sub median_difference{
 # one hist for one ancestor aa in one site
 # the chosen one (used by r scripts for drawing plots)
 # circles, not rings! ()
+
 sub egor_smart_site_entrenchment {
 	my $self = shift;
 	my $verbose = shift;
 	my $step = 1;
 	my $root = $self->{static_tree}-> get_root;
 	my $file = File::Spec->catfile($self->{static_output_base}, "egor_smart_".$self->{static_protein}.".csv");
-	open PLOTCSV, ">$file" or die "Cannot create $file \n";
+	open my $plotcsv, ">$file" or die "Cannot create $file \n";
 	my @array;
-	print PLOTCSV "radius,site,node,density,cummuts,cumlength\n";
+	print $plotcsv "radius,site,node,density,cummuts,cumlength\n";
 	my $hash_ready;
 	if (exists $self->{static_ring_hash}){
 		warn "Static_ring_hash is ready, egor_smart_site_entrenchment won't change it\n";
@@ -2623,7 +2636,7 @@ sub egor_smart_site_entrenchment {
 			my %hist;
 			#my $ancestor = ${$static_subs_on_node{$node->get_name()}}{$ind}->{"Substitution::ancestral_allele"};
 			my @args = ($ind, $step, $node);
-			unless ($hash_ready) {$self->my_visit_depth_first ($node, \@array,\&update_ring,\&has_no_mutation,\@args,0);} #visitor_coat cannot be used inside a cycle; we still do not want to mess the hash up, so we check for its existance
+			unless ($hash_ready) {$self->my_visit_depth_first ($node, \@array,\&update_ring,\&has_no_mutation,\@args,0);} #visitor_coat cannot be used inside a cycle; we still do not want to mess the hash up, so we check for its existance before this cycle
 			
 			my $cumulative_muts;
 			my $cumulative_length;
@@ -2644,7 +2657,7 @@ sub egor_smart_site_entrenchment {
 				}
 				#if ($muts_in_bin > 0 || $bin == $sorted_keys[0] || $bin == $sorted_keys[-1]){	
 					if ($muts_in_bin > 0){	
-					print PLOTCSV "$bin,$ind,".$node->get_name().",".$hist{$bin}.",".$cumulative_muts.",".$cumulative_length."\n";
+					print $plotcsv "$bin,$ind,".$node->get_name().",".$hist{$bin}.",".$cumulative_muts.",".$cumulative_length."\n";
 				}
 				
 			}
@@ -2655,21 +2668,21 @@ sub egor_smart_site_entrenchment {
 		
 	}
 
-	
-	close PLOTCSV;
+	$self->printFooter($plotcsv);
+	close $plotcsv;
 	
 }
 
-# last egor plots sub. NOT the chosen one (egor_h1.csv are printed by some other method (defined by comparison))
+# last egor plots sub. NOT the chosen one (egor_h1.csv are printed by some other method (discovered by comparison))
 sub egor_diff_rings_site_entrenchment {
 	my $self = shift;
 	print ($self->{static_protein}."\n");
 	my $step = 1;
 	my $root = $self->{static_tree}-> get_root;
 	my $file = File::Spec->catfile($self->{static_output_base}, "egor_diff_rings_".$self->{static_protein}.".csv");
-	open PLOTCSV, ">$file" or die "Cannot create $file \n";
+	open my $plotcsv, ">$file" or die "Cannot create $file \n";
 	my @array;
-	print PLOTCSV "radius,site,node,density,cum_muts,cum_length\n";
+	print $plotcsv "radius,site,node,density,cum_muts,cum_length\n";
 	
 	my $hash_ready;
 	if (exists $self->{static_ring_hash}){
@@ -2705,7 +2718,7 @@ sub egor_diff_rings_site_entrenchment {
 				}
 				#if ($muts_in_bin > 0 || $bin == $sorted_keys[0] || $bin == $sorted_keys[-1]){	
 					if ($muts_in_bin > 0){	
-					print PLOTCSV "$bin,$ind,".$node->get_name().",".$hist{$bin}.",".$cumulative_muts.",".$cumulative_length."\n";
+					print $plotcsv "$bin,$ind,".$node->get_name().",".$hist{$bin}.",".$cumulative_muts.",".$cumulative_length."\n";
 					$cumulative_muts = 0;
 					$cumulative_length = 0;
 				}
@@ -2717,13 +2730,14 @@ sub egor_diff_rings_site_entrenchment {
 		}
 	}
 	
-	close PLOTCSV;
+	close $plotcsv;
 	
 	
 }
 
 
-
+# decorator for my_visit_depth_first, checks for existance of corresponding hash and prevents unintentional changes in it (or deletes it and overwrites)
+# must not be used in loop context!
 
 sub visitor_coat {
 		my $self = shift;
@@ -2807,7 +2821,7 @@ sub visitor_coat {
 
     
     # old version, does not account for  mutations of the other type.
-    # Used in update ring
+    # Used in update ring (for making plots) (that's ok, because plotting subroutines use newer has_no_mutation method to account for background mutations )
  	sub has_no_same_type_mutation { #has_no_same_type_mutation
  		my $self = $_[0];
  		my $node = $_[1];
@@ -2914,7 +2928,7 @@ sub visitor_coat {
  	sub set_distance_matrix {
  		my $self = shift;
  		my $prot = $self->{static_protein};
- 		my $file = $self->{static_input_base}.$prot."_distance_matrix.csv";
+ 		my $file = File::Spec->catfile($self->{static_input_base}, $prot."_distance_matrix.csv");
  		
  		open CSV, "<$file" or die "Cannot open file $file\n";
  		my $header = <CSV>;
@@ -3028,6 +3042,8 @@ sub visitor_coat {
    	}
    	return $bin+1;
    }
+   
+
     
 
 1;
