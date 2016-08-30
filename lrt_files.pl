@@ -1,11 +1,8 @@
 #!/usr/bin/perl
 
-use File::Spec;
-use Cwd qw(abs_path cwd getcwd);
-use lib getcwd(); #adds working directory to @INC
+use lib getcwd(); # adds working directory to @INC
 use MutMap;
 use Getopt::Long;
-use File::Path qw(make_path remove_tree);
 
 
 
@@ -13,12 +10,12 @@ my $protein;
 my $state = 'nsyn';
 my $input = '';
 my $output = '';	# option variable with default value
-#my $verbose;
+
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
 		'input=s' => \$input,
 		'output=s' => \$output,
-#		'verbose'  => \$verbose,
+
 	);
 
 	
