@@ -134,14 +134,17 @@ $| = 1;
 	sub realdata_exists {
 		my $args = shift;
 		my $output_base = pathFinder($args);
-		my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_realdata");
+		my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_".state_tag($args->{state})."_realdata");
+		print "Checking if $realdatapath exists..";
+		if (-f $realdatapath) {print "yes!\n";}
+		else {print "no.\n";}
 		return (-f $realdatapath);
 	}
 	# not to be confused with get_realdata_restriction, which needs realdata as an argument
 	sub check_realdata_restriction{
 		my $args = shift;
 		my $output_base = pathFinder($args);
-		my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_realdata");
+		my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_".state_tag($args->{state})."_realdata");
 		my $realdata = lock_retrieve ($realdatapath) or die "Cannot retrieve ".$realdatapath;
 		return get_realdata_restriction($realdata);
 	}
@@ -157,7 +160,7 @@ $| = 1;
 		make_path($output_base);
 		
 		if ($args->{fromfile}){
-			my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_realdata");
+			my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_".state_tag($args->{state})."_realdata");
 			my $realdata = lock_retrieve ($realdatapath) or die "Cannot retrieve ".$realdatapath;
 			
 			$self = { 
@@ -723,6 +726,27 @@ sub mean_ignore_nulls{
 }
 
 
+# outputs hash of hashes used for construction of observed_vector
+sub get_hashes {
+	my $self = shift;
+	my %res_hash;
+	foreach my $ind(keys $self->{static_nodes_with_sub}){
+		my %x_hash;
+		my %y_hash;
+		foreach my $node($self->{static_tree}->get_nodes){
+			$x_hash{$node->get_name()} = $node->get_branch_length;
+			if ($self->{static_subs_on_node}{$node->get_name()}{$ind}){
+				$y_hash{$node->get_name()} = 1;
+			}
+			else {
+				$y_hash{$node->get_name()} = 0;
+			}
+		}
+		$res_hash{$ind}{"x"} = \%x_hash;
+		$res_hash{$ind}{"y"} = \%y_hash;
+	}
+	return %res_hash;	
+}
 
 
 
@@ -1012,7 +1036,7 @@ sub prepare_real_data {
 	);
 	
 	my $realdatapath = $self->{static_output_base};
-	$realdatapath = File::Spec->catfile($realdatapath, $prot."_".state_tag($self->{state})."_realdata");
+	$realdatapath = File::Spec->catfile($realdatapath, $prot."_".state_tag($self->{static_state})."_realdata");
 	print "Saving real_data to $realdatapath\n";
 
 	store \%realdata, $realdatapath;

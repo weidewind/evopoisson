@@ -1,8 +1,9 @@
 #!/usr/bin/perl
 
+use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); # adds working directory to @INC
-use MutMap qw(realdata_exists check_realdata_restriction);
+use MutMap;
 use Getopt::Long;
 use Getopt::ArgvFile;
 use Groups;
@@ -28,8 +29,9 @@ GetOptions (	'protein=s' => \$protein,
 ## Procedure for printing real_data files
 my %args = (bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest);
 
-if  (!($overwrite) && MutMap->realdata_exists(\%args)) {
-	print "Realdata with specified parameters and restriction ".check_realdata_restriction(\%args)." already exists.\n";
+if  (!($overwrite) && MutMap::realdata_exists(\%args)) {
+	print "Checking existing realdata restriction..\n";
+	print "Realdata with specified parameters and restriction ".MutMap::check_realdata_restriction(\%args)." already exists.\n";
 	print "Won't overwrite without --delete flag.\n";
 	die;
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-
+use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); # adds working directory to @INC
 use MutMap;
 use Getopt::Long;

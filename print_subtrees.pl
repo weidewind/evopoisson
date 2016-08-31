@@ -3,7 +3,7 @@
 use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); #adds working directory to @INC
-use MutMap;
+use MutMap (realdata_exists, check_realdata_restriction);
 use Getopt::Long;
 use Getopt::ArgvFile;
 use File::Path qw(make_path remove_tree);
@@ -26,6 +26,12 @@ my @muts = split(/,/, $muts);
 for (my $i = 0; $i < scalar @muts; $i++){
 	unless ($muts[$i] =~ /^[1-9]\d*$/) {die "Please, enter comma-separated sites and corresponding nodes. Example: 278,INTNODE4195,209,INTNODE4241,209,INTNODE4201";}
 	$i++; #need to check only odd elements
+}
+my %args = (bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest);
+if  (!($overwrite) && realdata_exists(\%args)) {
+	print "Realdata with specified parameters and restriction ".check_realdata_restriction(\%args)." already exists.\n";
+	print "Won't overwrite without --delete flag.\n";
+	die;
 }
 my $mutmap = MutMap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
 
