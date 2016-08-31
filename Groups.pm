@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use MutMap;
+use Switch;
 
 package Groups;
 
@@ -109,16 +110,16 @@ sub prepare_lt_groups {
 		my @final_groups;
 		switch ($prot) {
 			case "h1" {	@leading = @h1_leading_kr;
-						@trailing = @h1_trailing_kr;
+					@trailing = @h1_trailing_kr;
 					  }
 			case "h3" {	@leading = @h3_leading_kr;
-						@trailing = @h3_trailing_kr;
+					@trailing = @h3_trailing_kr;
 					  }
 			case "n1" {	@leading = @n1_leading_kr;
-						@trailing = @n1_trailing_kr;
+					@trailing = @n1_trailing_kr;
 					  }
 			case "n2" {	@leading = @n2_leading_kr;
-						@trailing = @n2_trailing_kr;
+					@trailing = @n2_trailing_kr;
 					  }	
 			else {	print "Panic in prepare_lt_groups! No such protein $prot!\n";
 					die;

@@ -7,6 +7,7 @@ use MutMap;
 use Getopt::Long;
 use File::Path qw(make_path remove_tree);
 use Groups;
+use Getopt::ArgvFile;
 
 
 
@@ -14,31 +15,29 @@ my $protein;
 my $state = 'nsyn';
 my $input = '';
 my $output = '';	# option variable with default value
+my $config = '';
+my $subtract_tallest;
 my $verbose;
+
 
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
 		'input=s' => \$input,
 		'output=s' => \$output,
+		'config=s' => \$conf,
+		'subtract_tallest' => \$subtract_tallest,
 		'verbose'  => \$verbose,
 	);
 
-my $mutmap = MutMap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, fromfile => true});
-my @groups_and_names = $mutmap -> get_groups_and_names_for_protein(); 
+if (defined $conf && (defined $protein || defined $output || defined $input)){
+	die "Mutually exclusive arguments: --config cannot be used with any other parameters";
+}
+
+## 25.01 Procedure for obtaining p-values
 
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
-
-#concat_and_divide_simult ($prot, $tag, \@maxdepths, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}, $syn, $subtract_maxpath);
-#count_pvalues($prot, $tag, \@maxdepths, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}, $dir);
-
-#my $prot = "h3";
-#my $tag = "26_02";
-#my $realdata = lock_retrieve ("/cygdrive/c/Users/weidewind/Documents/CMD/Coevolution/Influenza/perlOutput/epi_or_env_december_2015/".$prot."_realdata");
+my $mutmap = MutMap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1});
 #my @maxdepths = (50, 100, 150);
-#my @groups = (\@h3_shih_epitopes);
-#my @names = ("shih_epitopes");
-##my @groups = (\@h3_antigenic, \@h3_antigenic_koel, \@h3_pocket_closest, \@h3_surface, \@h3_internal, \@h3_host_shift_001, \@h3_leading_kr, \@h3_trailing_kr);
-##my @names = ("antigenic", "antigenic_koel", "pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr");
-#my @groups_and_names = prepare_groups_and_names(\@groups, \@names);
-#concat_and_divide_simult ($prot, $tag, \@maxdepths, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
-#count_pvalues($prot, $tag, \@maxdepths, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+my @groups_and_names = $mutmap-> predefined_groups_and_names();
+$mutmap-> concat_and_divide_simult (\@maxdepths, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+$mutmap-> count_pvalues(\@maxdepths, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;

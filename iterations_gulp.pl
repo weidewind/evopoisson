@@ -1,8 +1,10 @@
 #!/usr/bin/perl
 
+use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); # adds working directory to @INC
 use MutMap;
 use Getopt::Long;
+use Getopt::ArgvFile;
 use Groups;
 
 
@@ -13,6 +15,7 @@ my $input = '';
 my $output = '';	# option variable with default value
 my $tag;
 my $iterations = 500;
+my $subtract_tallest;
 my $verbose;
 
 GetOptions (	'protein=s' => \$protein,
@@ -21,6 +24,7 @@ GetOptions (	'protein=s' => \$protein,
 		'output=s' => \$output,
 		'tag=s' => \$tag,
 		'iterations=i' =>\$iterations,
+		'subtract_tallest' => \$subtract_tallest,
 		'verbose'  => \$verbose,
 	);
 
@@ -30,7 +34,7 @@ GetOptions (	'protein=s' => \$protein,
  
 if ($verbose) { print "Starting gulp $tag of $iterations iterations for protein $prot..\n"; }
 ## for launching iterations you need a mutmap produced from realdata, therefore fromfile => true
-my $mutmap = MutMap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, fromfile => true});
+my $mutmap = MutMap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1});
 $mutmap-> iterations_gulp ($iterations, $tag);
 if ($verbose) { print "Finished gulp $tag of $iterations iterations for protein $prot\n"; }
 ###
@@ -38,22 +42,7 @@ if ($verbose) { print "Finished gulp $tag of $iterations iterations for protein 
 
 
 ## 25.01 Procedure for obtaining p-values
-#my $prot = "n1";
-#my $syn = 0;
-#my $subtract_maxpath = 1;
-#my $tag = "median_vs_mean"."_".syn_tag($syn)."_".maxpath_tag($subtract_maxpath);
-#
-##my $realdata = lock_retrieve ("/cygdrive/c/Users/weidewind/Documents/CMD/Coevolution/Influenza/perlOutput/epi_or_env_december_2015/".$prot."_realdata");
-### For this line to work with local data you will have to change the structure
-#my $dir = File::Spec->catdir(getcwd(),syn_tag($syn), maxpath_tag($subtract_maxpath));
-#my $realdatapath = File::Spec->catfile($dir, $prot."_realdata");
-#my $realdata = lock_retrieve ($realdatapath);
-#my @maxdepths = (50, 100, 150);
 
-my @groups_and_names = $mutmap -> get_groups_and_names_for_protein(); 
-
-#concat_and_divide_simult ($prot, $tag, \@maxdepths, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}, $syn, $subtract_maxpath);
-#count_pvalues($prot, $tag, \@maxdepths, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}, $dir);
 
 #my $prot = "h3";
 #my $tag = "26_02";

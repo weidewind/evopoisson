@@ -480,3 +480,7 @@ radius,site,node,density,cummuts,cumlength
 224,496,INTNODE2434,0.000571102227298686,1,1751
 2,562,INTNODE1441,0.25,1,4
 3,562,INTNODE2231,0.333333333333333,1,3
+## protein h1
+## subtract_tallest 
+## state nsyn
+## output_base /cygdrive/c/Users/weidewind/workspace/evopoisson/output/debugging/nsyn

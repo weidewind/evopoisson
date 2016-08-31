@@ -17,7 +17,7 @@ use Bio::SeqIO;
 use Data::Dumper;
 use Bit::Vector;
 use Try::Tiny;
-use List::Util qw(sum);
+use List::Util qw(sum min);
 use Const::Fast;
 	use Switch;
 
@@ -114,6 +114,7 @@ $| = 1;
 		return $tag;
 	}
 
+
 	sub printFooter {
 		my $self = shift;
 		my $outputStream = shift;
@@ -123,9 +124,32 @@ $| = 1;
 		print $outputStream "## output_base ".$self->{static_output_base}."\n";
 	}
 	
+	sub pathFinder {
+		my $args = shift;	
+		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest})); 
+		return $output_base;
+
+	}
+	
+	sub realdata_exists {
+		my $args = shift;
+		my $output_base = pathFinder($args);
+		my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_realdata");
+		return (-f $realdatapath);
+	}
+	# not to be confused with get_realdata_restriction, which needs realdata as an argument
+	sub check_realdata_restriction{
+		my $args = shift;
+		my $output_base = pathFinder($args);
+		my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_realdata");
+		my $realdata = lock_retrieve ($realdatapath) or die "Cannot retrieve ".$realdatapath;
+		return get_realdata_restriction($realdata);
+	}
+	
 	sub new {
 		my ($class, $args) = @_;	
-		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest})); 
+		#my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest})); 
+		my $output_base = pathFinder ($args);
 		my $input_base = File::Spec->catdir(getcwd(), "data", $args->{bigdatatag},);
 		my $treefile = File::Spec->catfile($input_base, $args->{protein}.".l.r.newick");
 		my $static_tree = parse_tree($treefile)  or die "No tree at $treefile";
@@ -560,6 +584,69 @@ sub get_mrcn {
     }
 
 
+# prints tree with all mutations in the subtree of specified mutation (site, node). 
+# If there is no such mutation, warns and proceeds.
+
+sub print_subtree_with_mutations {
+	my $self = shift;
+	my @muts = @{@_[0]};
+	my $root = $self->{static_tree}-> get_root;
+	my @array;
+	my $myCodonTable   = Bio::Tools::CodonTable->new();
+	
+	my %closest_ancestors;
+	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
+	my @args = ($root);
+	$self->visitor_coat ($root, \@array,\&lrt_visitor,\&no_check,\@args,0);
+	for (my $i = 0; $i < scalar @muts; $i++){
+		my $ind = $muts[$i];
+		$i++;
+		my $ancnodename = $muts[$i];
+		if (!exists $self->{static_subtree_info}{$ancnodename}{$ind}){
+				warn "there is no mutation at $ind , $ancnodename";
+		}
+		
+		my %sites;
+		my %color;
+		my $sub = ${$self -> {static_subs_on_node}{$ancnodename}}{$ind};
+		$sites{$ancnodename} = $ancnodename."_".$ind."_".$sub->{"Substitution::ancestral_allele"}.
+							  "(".$myCodonTable->translate($sub->{"Substitution::ancestral_allele"}).")->".
+							  $sub->{"Substitution::derived_allele"}.
+							  "(".$myCodonTable->translate($sub->{"Substitution::derived_allele"}).")";
+		$color{$ancnodename} = "-16776961";
+		foreach my $node ( keys %{$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}}){
+			if($self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[0]){
+				my $sub = ${$self -> {static_subs_on_node}{$node}}{$ind};
+				print ($sub."\n");
+				$sites{$node} = $node."_".$ind."_".$sub->{"Substitution::ancestral_allele"}.
+							  "(".$myCodonTable->translate($sub->{"Substitution::ancestral_allele"}).")->".
+							  $sub->{"Substitution::derived_allele"}.
+							  "(".$myCodonTable->translate($sub->{"Substitution::derived_allele"}).")";
+				$color{$node} = "-16776961";
+			}
+			else {
+				$color{$node} = "-16776961";
+			
+				#print $file $ind.",".$ancnodename.",".$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[1].",".
+				#$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[2].",";
+				#my $event = 0;
+				#if($self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[0]) {$event = 1};
+				#print $file "$event\n";
+			}
+		}
+		my $file = $self -> {static_protein}."_sites_".$ind."_".$ancnodename.".tre";
+		my $dir = File::Spec -> catdir($self -> {static_output_base}, "trees");
+		make_path($dir);
+		my $filepath = File::Spec -> catfile($dir, $file);
+		open TREE, ">$filepath";
+		print TREE "#NEXUS\n\nbegin trees;\n";
+		print TREE "\ttree $ind = [&R] ";
+		my $tree_name=tree2str($self -> {static_tree},sites => \%sites, color=>\%color);
+		print TREE $tree_name;
+		print TREE "\nend;";
+		close TREE;
+	}
+}
 
 
 
@@ -583,8 +670,12 @@ sub print_static_tree_with_mutations{
 							  "(".$myCodonTable->translate($sub->{"Substitution::derived_allele"}).")";
 		$color{$$n->get_name()} = "-16776961";
 	}
-
-	open TREE, ">".$self -> {static_protein}."_sites_".$site.".tre";
+	
+	my $file = $self -> {static_protein}."_sites_".$site.".tre";
+	my $dir = File::Spec -> catdir($self -> {static_output_base}, "trees");
+	make_path($dir);
+	my $filepath = File::Spec -> catfile($dir, $file);
+	open TREE, ">$filepath";
 	print TREE "#NEXUS\n\nbegin trees;\n";
 	print TREE "\ttree $site = [&R] ";
 	my $tree_name=tree2str($self -> {static_tree},sites => \%sites, color=>\%color);
@@ -729,6 +820,7 @@ sub shuffle_mutator {
 sub iterations_gulp {
 	my $self = shift;
 	my $iterations = shift;
+	my $tag = shift;
 		
 	#my $ancestor_nodes = $_[4];
 	#my $obs_vector = $_[5];
@@ -780,6 +872,25 @@ sub iterations_gulp {
 	
 }
 
+
+sub get_obshash {
+	my $realdata = shift;
+	my $restriction = shift;
+	my $rr = get_realdata_restriction($realdata);
+	unless(defined $rr && $rr <= $restriction ){
+			die "realdata restriction is greater than get_obshash restriction: ".$rr." > $restriction \n";
+	}
+	my $obs_hash = $realdata->{"obs_hash".$rr};
+	return $obs_hash;
+}
+
+# not to be confused with check_realdata_restriction, which gets constructor arguments as an argument
+sub get_realdata_restriction {
+	my $realdata = shift;
+	my @obshash_restriction = map { /^obs_hash(.*)/ ? $1 : () } (keys $realdata);
+	return $obshash_restriction[0];
+}
+
 # 28.12 compute norm for given restriction and/or group
 sub compute_norm {
 	my $self = shift;
@@ -798,11 +909,7 @@ sub compute_norm {
 	
 #	$real_data = lock_retrieve("/export/home/popova/workspace/perlCoevolution/TreeUtils/Phylo/MutMap/".$prot."_realdata") or die "Cannot retrieve real_data";
 	my $realdata = $self->{realdata};
-	my @obshash_restriction = map { /^obs_hash(.*)/ ? $1 : () } (keys $realdata);
-	unless(defined $obshash_restriction[0] && $obshash_restriction[0] <= $restriction ){
-			die "realdata restriction is bigger than compute_norm restriction: ".$obshash_restriction[0]." > $restriction \n";
-	}
-	my $obs_hash = $realdata->{"obs_hash".$obshash_restriction[0]};
+	my $obs_hash = get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	
 	my $norm;
@@ -888,7 +995,8 @@ sub prepare_real_data {
 	
 #	print " NORM50 $norm50  NORM100 $norm100  NORM150 $norm150 \n";
 	my %obs_vectors = $self ->get_observation_vectors();
-
+	
+	
 	my %realdata = (
 		"norm".$restriction => $restricted_norm,
 		restriction => $restriction,
@@ -916,7 +1024,6 @@ sub prepare_real_data {
 	#%static_nodes_with_sub = ();
 	#%static_background_nodes_with_sub = ();
 }
-
 
 	
 	
@@ -1001,14 +1108,6 @@ sub concat_and_divide_simult {
 	#	my $gulp_filename = "/export/home/popova/workspace/perlCoevolution/TreeUtils/Phylo/MutMap/".$prot."_for_enrichment_".$tag.$gulp;
 	my $dirname = File::Spec->catdir($dir, $prot);
 	
-	#if ($syn){
-	#	#$dirname = "/cygdrive/c/Users/weidewind/Documents/CMD/Coevolution/Influenza/perlOutput/epi_or_env_december_2015/".$prot."_syn/";
-	#	 $dirname = File::Spec->catdir($dirname, $prot."_syn");
-	#}
-	#else {
-	#	#$dirname = "/cygdrive/c/Users/weidewind/Documents/CMD/Coevolution/Influenza/perlOutput/epi_or_env_december_2015/".$prot."/";
-	#	$dirname = File::Spec->catdir($dirname, $prot);
-	#}
 	opendir(DH, $dirname);
 	my @files = readdir(DH);
 	closedir(DH);
@@ -1207,15 +1306,13 @@ sub count_pvalues{
 	my $self = $_[0];
 	my $prot = $self -> {static_protein};
 	#my $prot = $_[0];
-	my $tag = $_[1];
-	my @restriction_levels = @{$_[2]};
-	my @groups = @{$_[3]};
-	my @group_names = @{$_[4]};
+	my @restriction_levels = @{$_[1]};
+	my @groups = @{$_[2]};
+	my @group_names = @{$_[3]};
 	my $dir = $self -> {static_output_base};
 	#my $dir = $_[5];
-
 	
-	my $countfile = File::Spec->catfile($dir, $prot."_count_".$tag);
+	my $countfile = File::Spec->catfile($dir, $prot."_count");
 	open COUNTER, ">$countfile" or die "Cannot create $countfile";
 	COUNTER->autoflush(1);
 	
@@ -1224,7 +1321,10 @@ sub count_pvalues{
 	
 	my $maxbin = $realdata->{"maxbin"}; 
 	#print "before cycle\n";
-	my $obs_hash = $realdata->{"obs_hash50"};
+	
+	
+	my $obs_hash = get_obshash($realdata, List::Util->min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
+	#my $obs_hash = $realdata->{"obs_hash50"}; 
 	my $subtree_info = $realdata->{"subtree_info"};
 	for my $restriction(@restriction_levels){
 		print "level $restriction\n";
@@ -1263,7 +1363,7 @@ sub count_pvalues{
 			
 		## end of copypaste	
 			
-		my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]."_".$tag);
+		my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
 		open FILE, ">$file" or die "Cannot create $file";
 				
 		my %histhash;
@@ -1310,7 +1410,7 @@ sub count_pvalues{
 		
 		if ($obs_mean ne "NaN"){
 		
-		my $csvfile = File::Spec->catfile($dir, $prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number]."_".$tag.".csv");
+		my $csvfile = File::Spec->catfile($dir, $prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 		open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 		my $iteration = 0;
 		my @hist_obs;
@@ -1421,7 +1521,7 @@ sub count_pvalues{
 			my $count = scalar keys %obs_hash_restricted;
 			print  COUNTER "$restriction ".$group_names[$group_number]." group $count "; 
 				
-			my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]."_".$tag);
+			my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
 			open FILE, ">$file";
 			
 			
@@ -1465,7 +1565,7 @@ sub count_pvalues{
 			}
 			#print going to read input file\n";		
 				
-			my $csvfile = File::Spec->catfile($dir,$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number]."_".$tag.".csv");
+			my $csvfile = File::Spec->catfile($dir,$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 			open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 			my $iteration = 0;
 			my @group_boot_medians;
@@ -1555,7 +1655,7 @@ sub count_pvalues{
 			my $count = scalar keys %complement_obs_hash_restricted;
 			print  COUNTER " $restriction ".$group_names[$group_number]." complement $count\n"; 
 			
-			my $file = File::Spec->catfile($dir,$prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]."_".$tag);
+			my $file = File::Spec->catfile($dir,$prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
 			open FILE, ">$file" or die "Cannot create $file";
 			my %complement_flat_obs_hash;
 			my %complement_flat_exp_hash;
@@ -1579,7 +1679,7 @@ sub count_pvalues{
 				next;
 			}
 			
-			my $csvfile = File::Spec->catfile($dir,$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number]."_".$tag.".csv");
+			my $csvfile = File::Spec->catfile($dir,$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 			open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 			my $iteration = 0;
 			my @complement_boot_medians;
@@ -2769,7 +2869,11 @@ sub visitor_coat {
 
  	}
    
-   
+   sub predefined_groups_and_names {
+ 	my $self-> shift;
+ 	my $prot = $self->{static_protein};
+ 	Groups->get_predefined_groups_and_names_for_protein($prot);
+   }
    
    sub bin {
    	my $depth = $_[0];
@@ -2782,11 +2886,7 @@ sub visitor_coat {
    	return $bin+1;
    }
    
-   sub predefined_groups_and_names {
- 	my $self-> shift;
- 	my $prot = $self->{static_protein};
- 	Groups->get_predefined_groups_and_names_for_protein($prot);
- }
+
    
 
     
