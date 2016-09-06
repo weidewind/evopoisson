@@ -12,8 +12,8 @@ my $protein;
 my $state = 'nsyn';
 my $input = '';
 my $output = '';	# option variable with default value
-my $subtract_tallest;
-my $restriction = '';
+my $subtract_tallest = 0;
+my $restriction = 50;
 my $delete;
 
 GetOptions (	'protein=s' => \$protein,
@@ -21,20 +21,22 @@ GetOptions (	'protein=s' => \$protein,
 		'restriction=i' => \$restriction,
 		'input=s' => \$input,
 		'output=s' => \$output,
-		'subtract_tallest' => \$subtract_tallest,
+		'subtract_tallest=i' => \$subtract_tallest,
 		'delete'  => \$delete,
 	);
 
 
-## Procedure for printing real_data files
-my %args = (bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest);
 
-if  (!($overwrite) && MutMap::realdata_exists(\%args)) {
+unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1, got $subtract_tallest \n";}
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest};
+
+if  (!($overwrite) && MutMap::realdata_exists($args)) {
 	print "Checking existing realdata restriction..\n";
-	print "Realdata with specified parameters and restriction ".MutMap::check_realdata_restriction(\%args)." already exists.\n";
+	print "Realdata with specified parameters and restriction ".MutMap::check_realdata_restriction($args)." already exists.\n";
 	print "Won't overwrite without --delete flag.\n";
 	die;
 }
-my $mutmap = MutMap->new(\%args);
+## Procedure for printing real_data files
+my $mutmap = MutMap->new($args);
 $mutmap-> prepare_real_data ($restriction);
 ###

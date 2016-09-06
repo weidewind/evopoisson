@@ -14,9 +14,9 @@ my $protein;
 my $state = 'nsyn';
 my $input = '';
 my $output = '';	# option variable with default value
-my $tag;
+my $tag;		# there will be several gulp files in one folder, therefore a tag for each gulp must be specified
 my $iterations = 500;
-my $subtract_tallest;
+my $subtract_tallest = '0';
 my $verbose;
 
 GetOptions (	'protein=s' => \$protein,
@@ -25,19 +25,23 @@ GetOptions (	'protein=s' => \$protein,
 		'output=s' => \$output,
 		'tag=s' => \$tag,
 		'iterations=i' =>\$iterations,
-		'subtract_tallest' => \$subtract_tallest,
+		'subtract_tallest=i' => \$subtract_tallest,
 		'verbose'  => \$verbose,
 	);
 
 
 ## Procedure for launching a gulp of iterations
+unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "--subtract_tallest must be either 0 or 1\n";}
+unless (defined $tag){die "There will be several gulp files in one folder, therefore a --tag for each gulp must be specified (and it should be an integer)";}
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1}; 
+unless  (MutMap::realdata_exists($args)) { die "No such realdata!"; }
+print "realdata restriction is ".MutMap::check_realdata_restriction($args)."\n";
 
- 
-if ($verbose) { print "Starting gulp $tag of $iterations iterations for protein $prot..\n"; }
+if ($verbose) { print "Starting gulp $tag of $iterations iterations for protein $protein..\n"; }
 ## for launching iterations you need a mutmap produced from realdata, therefore fromfile => true
-my $mutmap = MutMap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1});
-$mutmap-> iterations_gulp ($iterations, $tag);
-if ($verbose) { print "Finished gulp $tag of $iterations iterations for protein $prot\n"; }
+my $mutmap = MutMap->new($args);
+$mutmap-> iterations_gulp ($iterations, $tag, $verbose);
+if ($verbose) { print "Finished gulp $tag of $iterations iterations for protein $protein\n"; }
 ###
 
 

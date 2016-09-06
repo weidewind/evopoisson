@@ -114,6 +114,9 @@ $| = 1;
 		return $tag;
 	}
 
+	sub temp_tag {
+			return "temp";
+	}
 
 	sub printFooter {
 		my $self = shift;
@@ -122,6 +125,9 @@ $| = 1;
 		print $outputStream "## subtract_tallest ".$self->{static_subtract_tallest}."\n";
 		print $outputStream "## state ".$self->{static_state}."\n";
 		print $outputStream "## output_base ".$self->{static_output_base}."\n";
+		if ($self->{realdata}){
+			print $outputStream "## realdata restriction ".get_realdata_restriction($self->{realdata})."\n";
+		}
 	}
 	
 	sub pathFinder {
@@ -140,6 +146,7 @@ $| = 1;
 		else {print "no.\n";}
 		return (-f $realdatapath);
 	}
+	
 	# not to be confused with get_realdata_restriction, which needs realdata as an argument
 	sub check_realdata_restriction{
 		my $args = shift;
@@ -158,6 +165,7 @@ $| = 1;
 		my $static_tree = parse_tree($treefile)  or die "No tree at $treefile";
 		my $self;
 		make_path($output_base);
+		make_path(File::Spec->catdir($output_base, temp_tag()));
 		
 		if ($args->{fromfile}){
 			my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_".state_tag($args->{state})."_realdata");
@@ -431,7 +439,7 @@ sub print_incidence_matrix {
 	my $sorted_nodnames_file = File::Spec -> catfile($self->{static_output_base}, $self->{static_protein}."_".$statetag."_sorted_nodnames");
 	
 	# todo check if static_sorted_nodnames exists, if not - throw error and die (where did you take incidence_hash from?)
-	unless ($self->{static_sorted_nodnames} && $self->{static_sorted_sites}) {die "There is no static_sorted_nodnames (or static_sorted_sites) in this mutmapper. Where did you take incidence_hash from?\n";}
+	unless ($self->{static_sorted_nodnames} && $self->{static_sorted_sites}) {die "There is no static_sorted_nodnames (or static_sorted_sites) in this mutmap. Where did you take incidence_hash from?\n";}
 	
 	open MATRIX, ">$matrix_file" or die "Cannot open file ".$matrix_file."\n";
 	foreach my $nodname (@{$self->{static_sorted_nodnames}}){
@@ -811,6 +819,7 @@ sub read_observation_vectors {
 sub myclone {
 	my $self = shift;
 	my $clone = {
+			static_output_base => $self->{static_output_base},
 			static_protein => $self->{static_protein},
 			static_tree =>  $self->{static_tree},
 			static_fasta => $self->{static_fasta},
@@ -845,24 +854,27 @@ sub iterations_gulp {
 	my $self = shift;
 	my $iterations = shift;
 	my $tag = shift;
+	my $verbose = shift;
 		
 	#my $ancestor_nodes = $_[4];
 	#my $obs_vector = $_[5];
 	#my $norm = $_[6];
-		
+	if ($verbose){print "Extracting realdata..\n";}	
 	my $realdata = $self->{realdata};
 	my $maxbin = $realdata->{"maxbin"};
 	my $ancestor_nodes = $realdata->{"ancestor_nodes"};
 	#my $obs_vectors = $realdata->{"obs_vectors"};
-
-	my $mock_mutmap = myclone(); # 25.07 create a new object for shuffling
+	if ($verbose){print "Cloning mutmap..\n";}
+	my $mock_mutmap = $self->myclone(); # 25.07 create a new object for shuffling
 	my @simulated_hists;
 	
 	for (my $i = 1; $i <= $iterations; $i++){
+		if ($verbose){print "Shuffling clone..\n";}
 		$mock_mutmap->shuffle_mutator(); # this method shuffles observation vectors and sets new $static_nodes.. and static_subs..
 		my %hash;
+		
 		# >new iteration string and all the corresponding data  are printed inside this sub:
-		my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths(1,0,$ancestor_nodes, "overwrite", $tag); #bin, restriction (NOT USED), ancestor_nodes, should I overwrite static hash?
+		my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths(1,0,$ancestor_nodes, "overwrite", $tag, $verbose); #bin, restriction (NOT USED), ancestor_nodes, should I overwrite static hash?
 
 		foreach my $bin(1..$maxbin){
 				foreach my $site_node(keys %prehash){
@@ -879,7 +891,7 @@ sub iterations_gulp {
 	# store \@simulated_hists, File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored_".$tag); # was used because I was afraid of loosing a large amount of time because of some mistake
 	# my $arref = retrieve(File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored_".$tag));
 	my $arref = \@simulated_hists;
-	my $csvfile = File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
+	my $csvfile = File::Spec->catfile($self->{static_output_base}, temp_tag(), $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
 	open CSV, ">$csvfile";
 	foreach my $bin(1..$maxbin){
 			print CSV $bin."_obs,".$bin."_exp,";
@@ -1086,7 +1098,56 @@ sub select_ancestor_nodes {
 
 	
 
+sub count_iterations {
+	my $self = shift;
+	my $prot = $self->{static_protein};
+	my $dir = $self->{static_output_base};
+	my $dirname = File::Spec->catdir($dir, $prot); 
+	make_path ($dirname);
+	opendir(DH, $dirname);
+	my @files = readdir(DH);
+	closedir(DH);
+	unless (scalar @files > 0){
+		return 0;
+	}
+	my $counter = 0;
+	foreach my $gulp_filename(@files){
+		next if (-d $gulp_filename);
+		my $fullpath = File::Spec -> catfile($dirname, $gulp_filename);
+		open GULP, "<$fullpath" or die "Cannot open $fullpath";
+		while(<GULP>){
+			if ($_ =~ /^>.*/){$counter++;}
+		}
+	}
+	return $counter;
+}
 
+sub iterations_maxtag {
+	my $self = shift;
+	my $prot = $self->{static_protein};
+	my $dir = $self->{static_output_base};
+	my $dirname = File::Spec->catdir($dir, $prot); 
+	make_path ($dirname);
+	opendir(DH, $dirname);
+	my @files = readdir(DH);
+	closedir(DH);
+	unless (scalar @files > 0){
+		return 0;
+	}
+	my @tags = 0;
+	foreach my $gulp_filename(@files){
+		next if (-d $gulp_filename);
+		if ($gulp_filename =~ /.*_([0-9]+)$/){
+			push @tags, $1;
+		}
+		else {
+			print "Strange tag in iterations file $gulp_filename ! It might be an error, and it might not.\nWon't change my behavior because of some stupid tag, just wanted you to be aware of it.\n";
+
+		}
+	}
+	my $maxtag = List::Util::max(@tags);
+	return $maxtag;
+}
 
 
 #27.01 writes to files immediately, does not hold hash of iterations in memory	
@@ -1130,10 +1191,12 @@ sub concat_and_divide_simult {
 	
 	#foreach my $gulp(1..$gulps){
 	#	my $gulp_filename = "/export/home/popova/workspace/perlCoevolution/TreeUtils/Phylo/MutMap/".$prot."_for_enrichment_".$tag.$gulp;
-	my $dirname = File::Spec->catdir($dir, $prot);
 	
+	my $dirname = File::Spec->catdir($dir, $prot); 
+	make_path ($dirname);
 	opendir(DH, $dirname);
 	my @files = readdir(DH);
+	unless (scalar @files > 0){die "No simulation files found in folder $dirname\n";}
 	closedir(DH);
 	
 	my %filehandles;
@@ -1141,7 +1204,7 @@ sub concat_and_divide_simult {
 	foreach my $md(@maxdepths){
 		foreach my $group_number(0.. scalar @groups - 1){
 			local *FILE;
-			my $csvfile =  File::Spec->catfile($dir, $prot."_gulpselector_vector_".$md."_".$group_names[$group_number].".csv");
+			my $csvfile =  File::Spec->catfile($dir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$group_names[$group_number].".csv");
 			open FILE, ">$csvfile" or die "Cannot create $csvfile";
 			
 			FILE->autoflush(1);
@@ -1347,7 +1410,7 @@ sub count_pvalues{
 	#print "before cycle\n";
 	
 	
-	my $obs_hash = get_obshash($realdata, List::Util->min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
+	my $obs_hash = get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
 	#my $obs_hash = $realdata->{"obs_hash50"}; 
 	my $subtree_info = $realdata->{"subtree_info"};
 	for my $restriction(@restriction_levels){
@@ -1359,7 +1422,7 @@ sub count_pvalues{
 		my %group_hash;
 		print " size ".scalar @{$groups[$group_number]};
 		foreach my $site(@{$groups[$group_number]}){
-			print "test-1 $site\n";
+			#print "test-1 $site\n";
 			$group_hash{$site} = 1;
 		}
 		my %obs_hash_restricted;
@@ -1434,7 +1497,7 @@ sub count_pvalues{
 		
 		if ($obs_mean ne "NaN"){
 		
-		my $csvfile = File::Spec->catfile($dir, $prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
+		my $csvfile = File::Spec->catfile($dir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 		open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 		my $iteration = 0;
 		my @hist_obs;
@@ -1589,7 +1652,7 @@ sub count_pvalues{
 			}
 			#print going to read input file\n";		
 				
-			my $csvfile = File::Spec->catfile($dir,$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
+			my $csvfile = File::Spec->catfile($dir,temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 			open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 			my $iteration = 0;
 			my @group_boot_medians;
@@ -1703,7 +1766,7 @@ sub count_pvalues{
 				next;
 			}
 			
-			my $csvfile = File::Spec->catfile($dir,$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
+			my $csvfile = File::Spec->catfile($dir,temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 			open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 			my $iteration = 0;
 			my @complement_boot_medians;
@@ -1937,21 +2000,25 @@ sub print_data_for_LRT {
 ## Since 5.02
 sub depth_groups_entrenchment_optimized_selection_alldepths {
 	my $self = shift;
-	my $step = $_[0];
+	my $step = $_[0]; #restriction $_[1] is never used
 	my $ancestral_nodes = $_[2];
 	my $overwrite = $_[3];
 	my $tag = $_[4];
-	make_path(File::Spec->catdir($self->{static_output_base}, $self->{static_protein}));
-	my $filename = File::Spec->catfile($self->{static_output_base}, $self->{static_protein}, $self->{static_protein}."_for_enrichment_".$tag);
-	open FILE, ">>$filename";
+	my $verbose = $_[5];
+	my $gr = $_[6];
+	my $dir = File::Spec->catdir($self->{static_output_base}, $self->{static_protein});
+	make_path($dir);
+	my $filename = File::Spec->catfile($dir, $self->{static_protein}."_for_enrichment_".$tag);
+	if ($verbose){print "Going to print in file $filename \n";}
+	open my $file, ">>$filename" or die "Cannot create $filename\n";
 	my $root = $self->{static_tree}-> get_root;
 	my @array;
 	my %hist;
-	print FILE ">new iteration\n";
+	print $file ">new iteration\n";
 	
 	my @group;
-	if ($_[5]){
-		@group = @{$_[5]};
+	if ($gr){ 
+		@group = @{$gr};
 	}
 	else {
 		@group = (1..565);
@@ -2028,7 +2095,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 				#if ($total_length > 0 && $total_muts/$total_length < 0.005){
 				if ($total_length > 0){
 					#print "total muts $total_muts \n";
-					print FILE "site $ind node ".$node->get_name()." maxdepth ".$self->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n";
+					print $file "site $ind node ".$node->get_name()." maxdepth ".$self->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n";
 					my $check_local_lengths_sum;
 					my $check_total_obs;
 					my $check_total_exp;
@@ -2050,7 +2117,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 						    	$hist{$site_node}{$bin}[1] += 0;
 						    }
 
-	 print FILE "$bin,".$hist{$site_node}{$bin}[0].",".$hist{$site_node}{$bin}[1]."\n";
+	 print $file "$bin,".$hist{$site_node}{$bin}[0].",".$hist{$site_node}{$bin}[1]."\n";
 	 $check_total_obs += $hist{$site_node}{$bin}[0];
 	 $check_total_exp += $hist{$site_node}{$bin}[1];
 				}
@@ -2073,7 +2140,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 			
 		}
 	}	
-	close FILE;
+	close $file;
 	#foreach my $bin (sort {$a <=> $b} keys %hist){
 	#	print " up to ".$bin*$step."\t".$hist{$bin}[0]."\t".$hist{$bin}[1]."\n";
 	#}
@@ -2894,9 +2961,9 @@ sub visitor_coat {
  	}
    
    sub predefined_groups_and_names {
- 	my $self-> shift;
+ 	my $self = shift;
  	my $prot = $self->{static_protein};
- 	Groups->get_predefined_groups_and_names_for_protein($prot);
+ 	Groups::get_predefined_groups_and_names_for_protein($prot);
    }
    
    sub bin {
