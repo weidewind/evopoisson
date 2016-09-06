@@ -73,25 +73,26 @@ print "New iteration tags will start from $newtag\n";
 my $sim = $simnumber-$ready;
 my $its_for_proc = List::Util::min(500, int($sim/$maxprocs));
 my $proc_num = int($sim/$its_for_proc);
+print "At least $proc_num files, each of them containing $its_for_proc iterations, will be produced\n";
 my @commands;
 for (my $tag = $newtag; $tag < $proc_num+$newtag; $tag++){
-	my $command = mycomm($tag, $its_for_proc);
+	my $command = mockcomm($tag, $its_for_proc);
 	push @commands, $command;
 	print $command."\n";	
 }
 my $remainder = $sim%$its_for_proc;
 print "Remainder is $remainder\n";
 if ( $remainder > 0) { 
-	my $command = mycomm($proc_num+$newtag, $remainder);
+	my $command = mockcomm($proc_num+$newtag, $remainder);
 	push @commands,$command;
 	print $command."\n";
 }
-#my $manager = new Parallel::ForkManager($maxprocs);
-#foreach my $command (@commands) {
-#      $manager->start and next;
-#      system( $command );
-#      $manager->finish;
-#   };
+my $manager = new Parallel::ForkManager($maxprocs);
+foreach my $command (@commands) {
+      $manager->start and next;
+      system( $command );
+      $manager->finish;
+   };
 
 
 ## 25.01 Procedure for obtaining p-values
@@ -103,8 +104,16 @@ if ( $remainder > 0) {
 sub mycomm {
 	my $tag = shift;
 	my $its = shift;
-	my $command = "perl iterations_gulp.pl -p $protein -o $output --input $input -s $state --iterations $its --tag $tag --subtract_tallest $subtract_tallest";
-	if ($verbose){ $command = $command." --verbose";}
+	my $command = "perl iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag ";
+	if($output){$command = $command."--output $output ";}
+	if($input){$command = $command."--input $input ";}
+	if ($verbose){ $command = $command." --verbose ";}
 	return $command;
 	
+}
+
+sub mockcomm {
+	my $tag = shift;
+	sleep(5);
+	print "$tag is OK\n";
 }
