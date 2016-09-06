@@ -10,7 +10,8 @@ use Groups;
 use Getopt::ArgvFile;
 use List::Util;
 use POSIX qw(floor ceil);
-use Parallel::ForkManager;
+use threads;
+use threads::shared;
 
 my $protein;
 my $state = 'nsyn';
@@ -64,7 +65,8 @@ else {
 }
 ##
 ## Counting existing number of iterations, launching a series of new iteration_gulps if needed
-my $mutmap = MutMap->new($args); # from file
+my $mutmap :shared;
+$mutmap = MutMap->new($args); # from file
 my $ready = $mutmap-> count_iterations();
 print "Already have $ready iterations (know nothing about their restriction, mind you)\n";
 my $newtag = $mutmap-> iterations_maxtag() + 1;
@@ -76,23 +78,19 @@ my $proc_num = int($sim/$its_for_proc);
 print "At least $proc_num files, each of them containing $its_for_proc iterations, will be produced\n";
 my @commands;
 for (my $tag = $newtag; $tag < $proc_num+$newtag; $tag++){
-	my $command = mockcomm($tag, $its_for_proc);
-	push @commands, $command;
-	print $command."\n";	
+	my $thr = threads->create('thread_func', $tag, $its_for_proc); #new thread
+	my $tid = $thr->tid();
+	$thr->join();	
 }
 my $remainder = $sim%$its_for_proc;
 print "Remainder is $remainder\n";
 if ( $remainder > 0) { 
-	my $command = mockcomm($proc_num+$newtag, $remainder);
-	push @commands,$command;
-	print $command."\n";
+	my $thr = threads->create('thread_func',$proc_num+$newtag, $remainder);
+	my $tid = $thr->tid();
+	$thr->join();	
 }
-my $manager = new Parallel::ForkManager($maxprocs);
-foreach my $command (@commands) {
-      $manager->start and next;
-      system( $command );
-      $manager->finish;
-   };
+
+##
 
 
 ## 25.01 Procedure for obtaining p-values
@@ -104,11 +102,14 @@ foreach my $command (@commands) {
 sub mycomm {
 	my $tag = shift;
 	my $its = shift;
-	my $command = "perl iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag ";
-	if($output){$command = $command."--output $output ";}
-	if($input){$command = $command."--input $input ";}
-	if ($verbose){ $command = $command." --verbose ";}
-	return $command;
+	if ($verbose) { print "Starting gulp $tag of $iterations iterations for protein $protein..\n"; }
+	$mutmap-> iterations_gulp ($its, $tag, $verbose);
+	if ($verbose) { print "Finished gulp $tag of $iterations iterations for protein $protein\n"; }
+	#my $command = "perl iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag ";
+	#if($output){$command = $command."--output $output ";}
+	#if($input){$command = $command."--input $input ";}
+	#if ($verbose){ $command = $command." --verbose ";}
+	#return $command;
 	
 }
 
@@ -117,3 +118,10 @@ sub mockcomm {
 	sleep(5);
 	print "$tag is OK\n";
 }
+
+sub thread_func {
+		my $tag = shift;
+		my $its = shift;
+		my $tid = threads->tid();
+		system(mycomm($tag,$its));
+	}
