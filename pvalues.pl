@@ -17,7 +17,7 @@ my $state = 'nsyn';
 my $input = '';
 my $output = '';	# option variable with default value
 my $subtract_tallest = '0';
-my $restrictions = '50,100,150';
+my $restriction = '50,100,150';
 my $verbose;
 
 
