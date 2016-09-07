@@ -65,8 +65,7 @@ else {
 }
 ##
 ## Counting existing number of iterations, launching a series of new iteration_gulps if needed
-my $mutmap :shared;
-$mutmap = MutMap->new($args); # from file
+my $mutmap :shared = MutMap->new($args); # from file
 my $ready = $mutmap-> count_iterations();
 print "Already have $ready iterations (know nothing about their restriction, mind you)\n";
 my $newtag = $mutmap-> iterations_maxtag() + 1;
@@ -123,5 +122,5 @@ sub thread_func {
 		my $tag = shift;
 		my $its = shift;
 		my $tid = threads->tid();
-		system(mycomm($tag,$its));
+		system(mockcomm($tag,$its));
 	}
