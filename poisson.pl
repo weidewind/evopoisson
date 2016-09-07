@@ -11,6 +11,10 @@ use Getopt::ArgvFile;
 use List::Util;
 use POSIX qw(floor ceil);
 use Parallel::ForkManager;
+use Memory::Usage;
+
+my $mu = Memory::Usage->new();
+$mu->record('starting work');
 
 my $protein;
 my $state = 'nsyn';
@@ -62,9 +66,12 @@ else {
 		print "Going to use existing realdata with restriction $rr\n";
 	}
 }
+
+$mu->record('just before mutmap creation');
 ##
-## Counting existing number of iterations, launching a series of new iteration_gulps if needed
+## Computing the number of iterations and size of gulps
 my $mutmap = MutMap->new($args); # from file
+$mu->record('mutmap created');
 my $ready = $mutmap-> count_iterations();
 print "Already have $ready iterations (know nothing about their restriction, mind you)\n";
 my $newtag = $mutmap-> iterations_maxtag() + 1;
@@ -74,6 +81,8 @@ my $sim = $simnumber-$ready;
 my $its_for_proc = List::Util::min(500, int($sim/$maxprocs));
 my $proc_num = int($sim/$its_for_proc);
 print "At least $proc_num files, each of them containing $its_for_proc iterations, will be produced\n";
+##
+## Preparing commands for Forkmanager
 my @commands;
 for (my $tag = $newtag; $tag < $proc_num+$newtag; $tag++){
 	my $command = mockcomm($tag, $its_for_proc);
@@ -87,13 +96,44 @@ if ( $remainder > 0) {
 	push @commands,$command;
 	print $command."\n";
 }
+##
+## Forkmanager setup
 my $manager = new Parallel::ForkManager($maxprocs);
+$manager->run_on_start( 
+      sub {
+         my ($pid) = @_;
+         print "Starting processes under process id $pid\n";
+         $mu->record("Starting processes under process id $pid\n");
+      }
+    );
+$manager->run_on_finish( 
+      sub {
+         my ( $pid, $exit_code, $signal, $core ) = @_;
+         if ( $core ) {
+         	print "Process (pid: $pid) core dumped.\n";
+            $mu->record("Process (pid: $pid) core dumped.\n");
+         } else {
+         	print "Process (pid: $pid) exited with code $exit_code and signal $signal.\n";
+            $mu->record("Process (pid: $pid) exited with code $exit_code and signal $signal.\n");
+         }
+      }
+   );
+$manager->run_on_wait( 
+      sub {
+         print "Waiting ... \n";
+      },
+      3 # time interval between checks
+   ); 
+##
+## Launching a series of new iteration_gulps if needed 
 foreach my $command (@commands) {
       $manager->start and next;
       system( $command );
       $manager->finish;
    };
-
+$manager->wait_all_children;
+$mu->dump();
+##
 
 ## 25.01 Procedure for obtaining p-values
 #my $mutmap = MutMap->new($args);
