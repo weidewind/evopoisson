@@ -37,6 +37,7 @@ use Sub::Identify ':all';
 use File::Path qw(make_path remove_tree);
 use autodie;
 use Groups;
+use Locker;
 
 $| = 1;
 
@@ -875,7 +876,7 @@ sub iterations_gulp {
 		
 		# >new iteration string and all the corresponding data  are printed inside this sub:
 		my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths(1,0,$ancestor_nodes, "overwrite", $tag, $verbose); #bin, restriction (NOT USED), ancestor_nodes, should I overwrite static hash?
-
+		
 		foreach my $bin(1..$maxbin){
 				foreach my $site_node(keys %prehash){
 					$hash{$bin}[1] += $prehash{$site_node}{$bin}[1];
@@ -887,7 +888,8 @@ sub iterations_gulp {
 		#%static_ring_hash = (); # must be cleaned in visitor_coat
 		#%static_subtree_info = (); # must be cleaned in visitor_coat
 	}
-
+	my $locker = Locker->get_locker($self);
+	$locker->print_memusage();
 	# store \@simulated_hists, File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored_".$tag); # was used because I was afraid of loosing a large amount of time because of some mistake
 	# my $arref = retrieve(File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored_".$tag));
 	my $arref = \@simulated_hists;

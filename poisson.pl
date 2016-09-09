@@ -4,6 +4,7 @@ use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); # adds working directory to @INC
 use MutMap;
+use Locker;
 use Getopt::Long;
 use File::Path qw(make_path remove_tree);
 use Groups;
@@ -89,75 +90,33 @@ if ($sim > 0){
 	## Preparing commands for Forkmanager
 	my @commands;
 	for (my $tag = $newtag; $tag < $proc_num+$newtag; $tag++){
-		my $command = mockcomm($tag, $its_for_proc);
+		my $command = mycomm($tag, $its_for_proc);
 		push @commands, $command;
 		print $command."\n";	
 	}
 	my $remainder = $sim%$its_for_proc;
 	print "Remainder is $remainder\n";
 	if ( $remainder > 0) { 
-		my $command = mockcomm($proc_num+$newtag, $remainder);
+		my $command = mycomm($proc_num+$newtag, $remainder);
 		push @commands,$command;
 		print $command."\n";
 	}
 	##
 	## Forkmanager setup
 	my $manager = new Parallel::ForkManager($maxprocs);
-	my $lockfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}, "lock");
-	open LOCK, ">$lockfile" or die $!;
-	close LOCK;
-	$manager->run_on_start( 
-	      sub {
-	      	while(){
-		      	 open LOCK, "+<$lockfile" or die; # open for update (you can read and update!)
-		      	 flock (LOCK, 2); # it also checks for any locks and waits if finds any
-		      	 my $proc_memusage = <LOCK>; # undef on start and while first process is running 
-		      	 chomp ($proc_memusage);
-	#	      	 unless ($proc_memusage && $proc_memusage ne '' && $proc_memusage ne "\n" )  {$proc_memusage = 0;}
-		      	 my $num_running = <LOCK>; # undef on start
-		      	 chomp($num_running);
-	#	      	 unless ($num_running && $num_running ne '' && $num_running ne "\n") {$num_running = 0;}
-		      	 if (!$num_running || ($proc_memusage && $maxmem > ($num_running+1)*$proc_memusage)){
-		      	 	seek LOCK, 0, SEEK_SET;
-		      	 	truncate(LOCK,0); # empty the file
-		      	 	print LOCK $proc_memusage."\n".($num_running+1);
-		      	 	print "Starting: already printed to lock ".$proc_memusage." ".($num_running+1)."eof\n";
-		      	 	close LOCK;
-		         	my ($pid) = @_;
-		         	print "Starting processes under process id $pid\n";
-		         	$mu->record("Starting processes under process id $pid\n");
-		         	last;
-		         	
-		      	 }
-		      	 else {
-		      	 	close LOCK;
-		      	 	print "not ready, going to sleep..\n";
-		      	 	sleep (5);
-		      	 }
-	      	}
-	      }
-	    );
+	my $locker = Locker->new($mutmap, $maxmem);
+
 	$manager->run_on_finish( 
 	      sub {
 	         my ( $pid, $exit_code, $signal, $core ) = @_;
+	         print "entered finish\n";
 	         if ( $core ) {
+	         	$locker->delete_entry();
 	         	print "Process (pid: $pid) core dumped.\n";
 	            $mu->record("Process (pid: $pid) core dumped.\n");
 	         } else {
-	         	open LOCK, "+<$lockfile" or die; # open for update
-	      	 	flock (LOCK, 2); # it also checks for any locks and waits if finds any
-	      	 	my $proc_memusage = <LOCK>; # undef on start and while first process is running 
-		      	chomp ($proc_memusage);
-	#	      	unless ($proc_memusage && $proc_memusage ne '' && $proc_memusage ne "\n" )  {$proc_memusage = 0;}
-		      	my $num_running = <LOCK>; # undef on start
-		      	chomp($num_running);
-	      	 	unless ($num_running && $num_running ne '' && $num_running ne "\n") {$num_running = 0;}
-	      	 	seek LOCK, 0, SEEK_SET;
-	      	 	truncate(LOCK,0);
-	      	 	print LOCK $proc_memusage."\n".($num_running-1);
-	      	 	print "Exiting: already printed to lock ".$proc_memusage." ".($num_running-1)."eof\n";
-	      	 	close LOCK;
-	         	print "Process (pid: $pid) exited with code $exit_code and signal $signal.\n";
+	         	print "Going to finish $pid..\n";
+				$locker->delete_entry();
 	            $mu->record("Process (pid: $pid) exited with code $exit_code and signal $signal.\n");
 	         }
 	      }
@@ -171,10 +130,17 @@ if ($sim > 0){
 	##
 	## Launching a series of new iteration_gulps if needed 
 	foreach my $command (@commands) {
-	      $manager->start and next;
-	      system( $command );
-	      $manager->finish;
-	   };
+	    my $success;
+	    while(!$success){
+			$success = $locker->try_and_start();
+	    }
+	    print "Starting $command\n";
+        $mu->record("Starting $command\n");
+	    $manager->start and next;
+	    eval {system( $command )};
+	    print ("Went out of eval\n");
+		$manager->finish;
+	};
 	$manager->wait_all_children;
 	$mu->dump();
 	##
@@ -201,4 +167,5 @@ sub mockcomm {
 	my $tag = shift;
 	sleep(10);
 	print "$tag is OK\n";
+	return "echo Hi!\n";
 }
