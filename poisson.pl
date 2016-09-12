@@ -90,14 +90,14 @@ if ($sim > 0){
 	## Preparing commands for Forkmanager
 	my @commands;
 	for (my $tag = $newtag; $tag < $proc_num+$newtag; $tag++){
-		my $command = mycomm($tag, $its_for_proc);
+		my $command = mockcomm($tag, $its_for_proc);
 		push @commands, $command;
 		print $command."\n";	
 	}
 	my $remainder = $sim%$its_for_proc;
 	print "Remainder is $remainder\n";
 	if ( $remainder > 0) { 
-		my $command = mycomm($proc_num+$newtag, $remainder);
+		my $command = mockcomm($proc_num+$newtag, $remainder);
 		push @commands,$command;
 		print $command."\n";
 	}
@@ -129,22 +129,40 @@ if ($sim > 0){
 	   ); 
 	##
 	## Launching a series of new iteration_gulps if needed 
+	my $pid;
 	foreach my $command (@commands) {
-	    my $success;
-	    while(!$success){
-			$success = $locker->try_and_start();
-	    }
-	    print "Starting $command\n";
-        $mu->record("Starting $command\n");
-	    $manager->start and next;
-	    eval {system( $command )};
-	    print ("Went out of eval\n");
+		
+		my $success;
+		while(!$success){
+		    	$success = 1;
+		    	print "my pid is $pid\n"; # previous child pid
+		    	sleep(10);
+		    	print "I am awake\n";
+		    	sleep(10);
+		    	print "I am awake\n";
+		    	$manager->wait_children();
+		    	sleep(10);
+		    	print "I am awake\n";
+		    	sleep(10);
+		    	print "Getting up\n";
+				#$success = $locker->try_and_start(); # commented out for debugging
+		 }
+	  #  print "Starting $command\n";
+      #  $mu->record("Starting $command\n");
+	    #$pid = $manager->start && next; # fork! parent gets child pid, child gets 0. && means that "next" is never read if first argument evaluates to 0
+	    $pid = $manager->start and next;
+	    system( $command );
+	    print (" Went out\n"); # must be 0
 		$manager->finish;
 	};
 	$manager->wait_all_children;
 	$mu->dump();
 	##
 }
+
+
+
+
 ## 25.01 Procedure for obtaining p-values
 #my $mutmap = MutMap->new($args);
 #my @groups_and_names = $mutmap-> predefined_groups_and_names();
