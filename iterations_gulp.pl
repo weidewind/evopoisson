@@ -18,6 +18,7 @@ my $tag;		# there will be several gulp files in one folder, therefore a tag for 
 my $iterations = 500;
 my $subtract_tallest = '0';
 my $verbose;
+my $memusage;
 
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
@@ -27,6 +28,7 @@ GetOptions (	'protein=s' => \$protein,
 		'iterations=i' =>\$iterations,
 		'subtract_tallest=i' => \$subtract_tallest,
 		'verbose'  => \$verbose,
+		'memusage'  => \$memusage, # should i print memusage in file?
 	);
 
 
@@ -40,7 +42,7 @@ print "realdata restriction is ".MutMap::check_realdata_restriction($args)."\n";
 if ($verbose) { print "Starting gulp $tag of $iterations iterations for protein $protein..\n"; }
 ## for launching iterations you need a mutmap produced from realdata, therefore fromfile => true
 my $mutmap = MutMap->new($args);
-$mutmap-> iterations_gulp ($iterations, $tag, $verbose);
+$mutmap-> iterations_gulp ($iterations, $tag, $verbose, $memusage);
 if ($verbose) { print "Finished gulp $tag of $iterations iterations for protein $protein\n"; }
 ###
 

@@ -37,6 +37,7 @@ use Sub::Identify ':all';
 use File::Path qw(make_path remove_tree);
 use autodie;
 use Groups;
+use Memusage;
 
 $| = 1;
 
@@ -855,6 +856,7 @@ sub iterations_gulp {
 	my $iterations = shift;
 	my $tag = shift;
 	my $verbose = shift;
+	my $memusage = shift;
 		
 	#my $ancestor_nodes = $_[4];
 	#my $obs_vector = $_[5];
@@ -887,7 +889,10 @@ sub iterations_gulp {
 		#%static_ring_hash = (); # must be cleaned in visitor_coat
 		#%static_subtree_info = (); # must be cleaned in visitor_coat
 	}
-
+	if ($memusage){
+		my $locker = Memusage->get_locker($self);
+		$locker->print_memusage();
+	}
 	# store \@simulated_hists, File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored_".$tag); # was used because I was afraid of loosing a large amount of time because of some mistake
 	# my $arref = retrieve(File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored_".$tag));
 	my $arref = \@simulated_hists;
@@ -907,6 +912,7 @@ sub iterations_gulp {
 	close CSV;
 	
 }
+
 
 
 sub get_obshash {
@@ -1195,7 +1201,7 @@ sub concat_and_divide_simult {
 	my $dirname = File::Spec->catdir($dir, $prot); 
 	make_path ($dirname);
 	opendir(DH, $dirname);
-	my @files = readdir(DH);
+	my @files = grep { /.*_[0-9]+/ }readdir(DH);
 	unless (scalar @files > 0){die "No simulation files found in folder $dirname\n";}
 	closedir(DH);
 	

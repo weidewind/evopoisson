@@ -15,7 +15,7 @@ use Memory::Usage;
 
 my $mu = Memory::Usage->new();
 $mu->record('starting work');
-my $maxmem = 4000000;
+
 
 
 my $protein;
@@ -25,7 +25,7 @@ my $output = '';	# option variable with default value
 my $subtract_tallest = '0';
 my $restriction = '50,100,150';
 my $simnumber = 10000;
-my $maxprocs = 2;
+my $maxmem = 4000000;
 my $verbose;
 
 
@@ -36,7 +36,7 @@ GetOptions (	'protein=s' => \$protein,
 		'subtract_tallest=i' => \$subtract_tallest,
 		'restrictions=s' => \$restrictions,
 		'simnumber=i' => \$simnumber,
-		'maxprocs=i' => \$maxprocs,
+		'maxmem=i' => \$maxmem,
 		'verbose'  => \$verbose,
 	);
 
@@ -46,7 +46,7 @@ unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
 my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1}; 
 
-## Checking if appropriate realdata exists
+## Checking if appropriate realdata exists, initializing
 my @restriction_levels = split(/,/, $restrictions);
 my $specified_restriction = List::Util::min(@restriction_levels);
 
@@ -70,71 +70,69 @@ else {
 }
 
 $mu->record('just before mutmap creation');
-##
-## Computing the number of iterations and size of gulps
 my $mutmap = MutMap->new($args); # from file
 $mu->record('mutmap created');
 my $ready = $mutmap-> count_iterations();
 print "Already have $ready iterations (know nothing about their restriction, mind you)\n";
 my $newtag = $mutmap-> iterations_maxtag() + 1;
 print "New iteration tags will start from $newtag\n";
-
+##
+## First iterations_gulp runs separately - to estimate memusage
+my $probe = 5; # first iterations-Gulp size, used for memusage esttimation, is not used afterwards
+my $command = mycomm("probe", $probe, "memusage"); # prints memusage in file
+system( $command );
+my $locker = Memusage->get_locker($mutmap);
+my $memusage = $locker->get_memusage();
+print
+## 
+## Computing gulp sizes and number of concurrent processes
 my $sim = $simnumber-$ready;
 if ($sim > 0){
-	my $its_for_proc = List::Util::min(500, int($sim/$maxprocs));
-	if ($its_for_proc == 0) {$its_for_proc = 1};
-	my $proc_num = int($sim/$its_for_proc);
-	print "At least $proc_num files, each of them containing $its_for_proc iterations, will be produced\n";
+	my $max_proc_num = int($maxmem/$memusage);
+	print " Max proc num $max_proc_num\n";
+	unless ($max_proc_num > 0) {die "Error: Memory usage is $memusage - more than you specified with masmem parameter\n"};
+	my @iters;
+	my $its_for_proc;
+	if ($sim/$max_proc_num < 1) {
+		$its_for_proc = 1;
+		for (my $i = 0; $i < $sim; $i++){
+			push @iters, $its_for_proc;
+		}
+	}
+	else {
+		$its_for_proc = int($sim/$max_proc_num);
+		print " its for proc $its_for_proc\n";
+		my $remainder = $sim%$max_proc_num;
+		print " remainder $remainder\n";
+		for (my $i = 0; $i < $max_proc_num; $i++){
+			push @iters, $its_for_proc;
+		}
+		for (my $i = 0; $i < $remainder; $i++){
+			$iters[$i] = $iters[$i] + 1;
+		}
+	}
+	my $numfiles = scalar @iters;
+	print "$numfiles files, each of them containing $its_for_proc or ".($its_for_proc+1)." iterations, will be produced\n";
 	##
 	## Preparing commands for Forkmanager
 	my @commands;
-	for (my $tag = $newtag; $tag < $proc_num+$newtag; $tag++){
-		my $command = mockcomm($tag, $its_for_proc);
+	my $tag = $newtag;
+	foreach my $it(@iters){	
+		my $command = mycomm($tag, $it);
 		push @commands, $command;
 		print $command."\n";	
-	}
-	my $remainder = $sim%$its_for_proc;
-	print "Remainder is $remainder\n";
-	if ( $remainder > 0) { 
-		my $command = mockcomm($proc_num+$newtag, $remainder);
-		push @commands,$command;
-		print $command."\n";
+		$tag++;
 	}
 	##
 	## Forkmanager setup
 	my $manager = new Parallel::ForkManager($maxprocs);
 	my $lockfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}, "lock");
-	open LOCK, ">$lockfile" or die $!;
-	close LOCK;
+
 	$manager->run_on_start( 
 	      sub {
-	      	while(){
-		      	 open LOCK, "+<$lockfile" or die; # open for update (you can read and update!)
-		      	 flock (LOCK, 2); # it also checks for any locks and waits if finds any
-		      	 my $proc_memusage = <LOCK>; # undef on start and while first process is running 
-		      	 chomp ($proc_memusage);
-	#	      	 unless ($proc_memusage && $proc_memusage ne '' && $proc_memusage ne "\n" )  {$proc_memusage = 0;}
-		      	 my $num_running = <LOCK>; # undef on start
-		      	 chomp($num_running);
-	#	      	 unless ($num_running && $num_running ne '' && $num_running ne "\n") {$num_running = 0;}
-		      	 if (!$num_running || ($proc_memusage && $maxmem > ($num_running+1)*$proc_memusage)){
-		      	 	seek LOCK, 0, SEEK_SET;
-		      	 	truncate(LOCK,0); # empty the file
-		      	 	print LOCK $proc_memusage."\n".($num_running+1);
-		      	 	print "Starting: already printed to lock ".$proc_memusage." ".($num_running+1)."eof\n";
-		      	 	close LOCK;
-		         	my ($pid) = @_;
-		         	print "Starting processes under process id $pid\n";
-		         	$mu->record("Starting processes under process id $pid\n");
-		         	last;
-		         	
-		      	 }
-		      	 else {
-		      	 	close LOCK;
-		      	 	print "not ready, going to sleep..\n";
-		      	 	sleep (5);
-		      	 }
-	      	}
+	      	my $pid = shift;
+	      	print "Starting child processes under process id $pid\n";
+	      	$mu->record("Process (pid: $pid) started.\n");
 	      }
 	    );
 	$manager->run_on_finish( 
@@ -144,19 +142,6 @@ if ($sim > 0){
 	         	print "Process (pid: $pid) core dumped.\n";
 	            $mu->record("Process (pid: $pid) core dumped.\n");
 	         } else {
-	         	open LOCK, "+<$lockfile" or die; # open for update
-	      	 	flock (LOCK, 2); # it also checks for any locks and waits if finds any
-	      	 	my $proc_memusage = <LOCK>; # undef on start and while first process is running 
-		      	chomp ($proc_memusage);
-	#	      	unless ($proc_memusage && $proc_memusage ne '' && $proc_memusage ne "\n" )  {$proc_memusage = 0;}
-		      	my $num_running = <LOCK>; # undef on start
-		      	chomp($num_running);
-	      	 	unless ($num_running && $num_running ne '' && $num_running ne "\n") {$num_running = 0;}
-	      	 	seek LOCK, 0, SEEK_SET;
-	      	 	truncate(LOCK,0);
-	      	 	print LOCK $proc_memusage."\n".($num_running-1);
-	      	 	print "Exiting: already printed to lock ".$proc_memusage." ".($num_running-1)."eof\n";
-	      	 	close LOCK;
 	         	print "Process (pid: $pid) exited with code $exit_code and signal $signal.\n";
 	            $mu->record("Process (pid: $pid) exited with code $exit_code and signal $signal.\n");
 	         }
@@ -164,7 +149,7 @@ if ($sim > 0){
 	   );
 	$manager->run_on_wait( 
 	      sub {
-	         print "Waiting ... \n";
+	         print "Waiting for all children to terminate... \n";
 	      },
 	      5 # time interval between checks
 	   ); 
@@ -189,10 +174,12 @@ if ($sim > 0){
 sub mycomm {
 	my $tag = shift;
 	my $its = shift;
+	my $memusage = shift;
 	my $command = "perl iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag ";
 	if($output){$command = $command."--output $output ";}
 	if($input){$command = $command."--input $input ";}
 	if ($verbose){ $command = $command." --verbose ";}
+	if ($memusage){ $command = $command." --memusage ";}
 	return $command;
 	
 }
