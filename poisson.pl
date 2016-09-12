@@ -133,15 +133,10 @@ if ($sim > 0){
 	foreach my $command (@commands) {
 		
 		my $success;
-		while(!$success){
+		while(!$success){ # previous children won't terminate, while we are here :( So we can't launch $locker->try_and_start() for checking their results
 		    	$success = 1;
 		    	print "my pid is $pid\n"; # previous child pid
-		    	sleep(10);
-		    	print "I am awake\n";
-		    	sleep(10);
-		    	print "I am awake\n";
-		    	$manager->wait_children();
-		    	sleep(10);
+		    	sleep(10); #debugging
 		    	print "I am awake\n";
 		    	sleep(10);
 		    	print "Getting up\n";
