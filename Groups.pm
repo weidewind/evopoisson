@@ -31,27 +31,8 @@ sub get_predefined_groups_and_names_for_protein {
 }
 
 	
-sub prepare_groups {
-	my @groups = @{$_[0]};
-	my @final_groups;
-	foreach my $pregroup (@groups){
-		my %ghash;
-		my @group;
-		foreach my $s(@{$pregroup}){
-			$ghash{$s} = 1;
-			push @group, $s;
-		}
-		my @complement;
-		foreach my $s(1..565){
-			if (!$ghash{$s}){
-				push @complement, $s;
-			}
-		}
-		push @final_groups, \@group;
-		push @final_groups, \@complement;
-	}
-	return @final_groups;
-}	
+
+
 
 sub prepare_groups_and_names {
 	my @pregroups = @{$_[0]};
@@ -82,6 +63,28 @@ sub prepare_groups_and_names {
 	
 	return (\@groups, \@group_names);
 }
+
+sub prepare_groups {
+	my @groups = @{$_[0]};
+	my @final_groups;
+	foreach my $pregroup (@groups){
+		my %ghash;
+		my @group;
+		foreach my $s(@{$pregroup}){
+			$ghash{$s} = 1;
+			push @group, $s;
+		}
+		my @complement;
+		foreach my $s(1..565){
+			if (!$ghash{$s}){
+				push @complement, $s;
+			}
+		}
+		push @final_groups, \@group;
+		push @final_groups, \@complement;
+	}
+	return @final_groups;
+}	
 
 #16.02 complement to leading is trailing, and vice versa
 sub prepare_lt_groups_and_names {

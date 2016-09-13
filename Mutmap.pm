@@ -1393,6 +1393,205 @@ sub concat_and_divide_simult {
 #			close CSV150;
 }	
 	
+
+#13.09.2016 prints one file for one ancestor site_node (instead of group of nodes) 	
+	
+sub concat_and_divide_simult_single_sites {
+	my $self = shift;
+	my $prot = $self->{static_protein};
+	my @maxdepths = @{$_[0]};
+	my @groups = @{$_[1]};
+	my @group_names = @{$_[2]};
+	my $subtract_maxpath = $self->{static_subtract_tallest};
+	my $dir = $self->{static_output_base};
+	my $nodecount_file = File::Spec->catfile($dir, $prot."_nodecount");
+	open NODECOUNT, ">$nodecount_file" or die "Cannot create $nodecount_file";
+	
+	my $realdata = $self->{realdata};
+	my %hash;
+	my $iteration_number = 1;
+	my $maxbin = $realdata->{"maxbin"};
+	
+	my %norms;
+	foreach my $md(@maxdepths){
+		foreach my $group_number(0.. scalar @groups - 1){
+			$norms{$md}[$group_number] = $self->compute_norm($md, $groups[$group_number]);
+		}
+		
+	}
+	
+	my %group_hashes;
+	foreach my $md(@maxdepths){
+		foreach my $group_number(0.. scalar @groups - 1){
+			my %node_hash = $self->select_ancestor_nodes($md, \@{$groups[$group_number]}); # contains 1 for selected nodes (node_names, not site_node or something else)
+			foreach my $node_name (keys %node_hash){
+				$group_hashes{$md}[$group_number]{$node_name} = $node_hash{$node_name};
+			}
+		}
+		
+	}
+	
+	
+	my $dirname = File::Spec->catdir($dir, $prot); 
+	make_path ($dirname);
+	opendir(DH, $dirname);
+	my @files = grep { /.*_[0-9]+/ }readdir(DH);
+	unless (scalar @files > 0){die "No simulation files found in folder $dirname\n";}
+	closedir(DH);
+	
+	my %filehandles;
+
+	foreach my $md(@maxdepths){
+		foreach my $group_number(0.. scalar @groups - 1){
+			local *FILE;
+			my $csvfile =  File::Spec->catfile($dir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$group_names[$group_number].".csv");
+			open FILE, ">$csvfile" or die "Cannot create $csvfile";
+			
+			FILE->autoflush(1);
+			$filehandles{$md}{$group_number} = *FILE;
+		}
+		
+	}
+
+	
+	foreach my $gulp_filename(@files){
+	next if (-d $gulp_filename);
+	my $fullpath = File::Spec -> catfile($dirname, $gulp_filename);
+	open GULP, "<$fullpath" or die "Cannot open $fullpath";
+	
+	my $site; # careful	
+	my $node_name;
+	while (<GULP>){
+
+			my $max_depth;
+			my @str_array;
+			my $str = <GULP>;
+			
+			my %sums;
+			my %hash;
+			
+			my $test_obs_summ;
+			my $test_exp_summ;
+			
+			while ($str =~ /^[^>]/){ 
+
+				if ($str =~ /^site/){
+					if ($test_obs_summ - $test_exp_summ < 0.0001 && -$test_obs_summ + $test_exp_summ < 0.0001){
+						print "summtest ok\n";
+					}
+					else {
+						print "summtest failed! $site $node_name obssum $test_obs_summ, expsum $test_exp_summ\n";
+					}
+					$test_obs_summ = 0;
+					$test_exp_summ = 0;	
+				
+					my @str_array = split(/\s+/, $str);
+					$site = $str_array[1]; # careful (never used afterwards)
+					$node_name = $str_array[3];
+					$max_depth = $str_array[5];
+					
+					## 15.02 iterations: count number of nodes in each group
+					foreach my $md(@maxdepths){
+						if ($max_depth > $md){
+							foreach my $group_number(0..scalar @groups-1){
+								if ($group_hashes{$md}[$group_number]{$node_name}){
+									print NODECOUNT "maxdepth $md group ".$group_names[$group_number]." node $node_name\n";
+								}
+							}
+						}	
+					}
+					##
+					
+					#print $site." site,".$node_name." node,".$max_depth." maxdepth\n";
+					#5.02 my $str = <GULP>; 
+					$str = <GULP>; #5.02
+				}
+				@str_array = split(/,/, $str);
+				
+				$test_obs_summ += $str_array[1];
+				$test_exp_summ += $str_array[2];
+				
+				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
+				foreach my $md(@maxdepths){
+					if ($max_depth > $md){
+						foreach my $group_number(0..scalar @groups-1){
+							if ($group_hashes{$md}[$group_number]{$node_name}){
+							#print "group number $group_number md $md node name $node_name\n";
+								$sums{$md}[$group_number] += $str_array[1];
+								$hash{$md}[$group_number]{$str_array[0]}[1] += $str_array[2];
+								$hash{$md}[$group_number]{$str_array[0]}[0] += $str_array[1];
+								#print $hash{$md}[$group_number]{$str_array[0]}[0]." obs integral\n";
+							}
+						}
+					}
+				}
+
+				
+				$str = <GULP>;
+				
+			}
+			## parsed all information about this iteration 
+
+			# maxbins are different for every iteration. Find maximum and use it.
+
+			$maxbin = max($maxbin, $str_array[0]);
+#print "maxbin $maxbin, iteration number $iteration_number\n";	
+#print "sum50 $sum50 sum100 $sum100 sum150 $sum150 norm 50 $norm50 norm 100 $norm100 norm 150 $norm150\n";		
+			
+			foreach my $md(@maxdepths){ 
+				foreach my $group_number(0..scalar @groups-1){
+					#print "maxdepth $md group number $group_number \n";
+					if ($sums{$md}[$group_number] == 0){
+						foreach my $bin(1..$maxbin){
+							$hash{$md}[$group_number]{$bin}[0] = "NA";
+							$hash{$md}[$group_number]{$bin}[1] = "NA";
+						}
+					}
+					else {
+						foreach my $bin(1..$maxbin){
+							#print "in hash: ".$hash{$md}[$group_number]{$bin}[0]."\n";
+							#print "norm ".$norms{$md}[$group_number]."\n";
+							#print "sum ".$sums{$md}[$group_number]."\n";
+							$hash{$md}[$group_number]{$bin}[0] = $hash{$md}[$group_number]{$bin}[0]*$norms{$md}[$group_number]/$sums{$md}[$group_number];
+							$hash{$md}[$group_number]{$bin}[1] = $hash{$md}[$group_number]{$bin}[1]*$norms{$md}[$group_number]/$sums{$md}[$group_number];
+						}
+					}
+					
+					my $filehandle = $filehandles{$md}{$group_number};
+					print "going to print something\n";
+					foreach my $bin(1..$maxbin){
+						print $filehandle $hash{$md}[$group_number]{$bin}[0].",".$hash{$md}[$group_number]{$bin}[1].",";
+					}
+					print $filehandle "\n";
+				
+				
+				}
+			}
+			
+			
+			$iteration_number++;
+			print $iteration_number."\n";
+		}
+		
+		close GULP;
+		
+	}
+	
+	close NODECOUNT;
+	
+	foreach my $md(@maxdepths){
+		foreach my $group_number(0.. scalar @groups - 1){
+					my $filehandle = $filehandles{$md}{$group_number};
+					close $filehandle;
+		}
+		
+	}
+	
+
+}	
+	
+	
+	
 	
 # 19.12 after concat_and_divide	
 sub count_pvalues{	
@@ -1595,7 +1794,7 @@ sub count_pvalues{
 			my %obs_hash_restricted;
 			my $norm_restricted;
 			## copyaste from prepare: create restricted hash	
-			# Bewar! obs_hash50 from real_data really contains restricted data (maxdepth>50)
+			# Beware! obs_hash50 from real_data really contains restricted data (maxdepth>50)
 			foreach my $site_node(keys %{$obs_hash}){
 				my ($site, $node_name) = split(/_/, $site_node);
 				my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
@@ -1957,6 +2156,169 @@ sub count_pvalues{
 	close COUNTER;
 }
 
+# 13.09.2016 pvalues for every ancestor node in the tree	
+sub count_single_site_pvalues{	
+	my $self = $_[0];
+	my $prot = $self -> {static_protein};
+	my @restriction_levels = @{$_[1]};
+	my $dir = $self -> {static_output_base};
+	
+	my $countfile = File::Spec->catfile($dir, $prot."_count");
+	open COUNTER, ">$countfile" or die "Cannot create $countfile";
+	COUNTER->autoflush(1);
+	
+	my $realdata =  $self -> {realdata};
+	my $maxbin = $realdata->{"maxbin"}; 
+	#print "before cycle\n";
+	
+	my $obs_hash = get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
+	my $subtree_info = $realdata->{"subtree_info"};
+
+	my $restriction = List::Util::min(@restriction_levels); # todo: print maxdepth instead of restriction level in filenames (or somewhere inside the output file), so that we analyse each site_node only once
+		print "level $restriction\n";
+		my %obs_hash_restricted;
+		my %norm_restricted;
+		
+		## create restricted hash	
+		foreach my $site_node(keys %{$obs_hash}){
+			my ($site, $node_name) = split(/_/, $site_node);
+			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
+			if ($maxdepth > $restriction){ 
+			foreach my $bin(keys %{$obs_hash->{$site_node}}){
+					$maxbin = max($bin, $maxbin);
+					$norm_restricted{$site_node} += $obs_hash->{$site_node}->{$bin}->[0];
+					$obs_hash_restricted{$site_node}{$bin}[0] = $obs_hash->{$site_node}->{$bin}->[0];
+					$obs_hash_restricted{$site_node}{$bin}[1] = $obs_hash->{$site_node}->{$bin}->[1];
+				}
+		
+			}
+		}
+		##
+		my $count = scalar keys %obs_hash_restricted;
+		print COUNTER "Total for $restriction all $count\n";
+	
+		my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_single_sites");
+		open FILE, ">$file" or die "Cannot create $file";
+				
+		print FILE "site_node\tbin\tobs\texp\n";
+		#my @sorted_bins = sort { $a <=> $b } keys %histhash;
+		
+		foreach my $site_node(keys %{$obs_hash}){ #new
+		my @sorted_bins = sort { $a <=> $b } keys $obs_hash_restricted{$site_node};
+			foreach my $bin (@sorted_bins){
+				#print FILE $bin."\t".$histhash{$bin}[0]."\t".$histhash{$bin}[1]."\n";
+				print FILE $site_node."\t".$bin."\t".$obs_hash_restricted{$bin}[0]."\t".$obs_hash_restricted{$bin}[1]."\n";
+			}
+		} #new
+			
+
+		foreach my $site_node (keys %obs_hash_restricted){
+			my %flat_obs_hash;
+			my %flat_exp_hash;
+			foreach my $bin(1..$maxbin){
+				$flat_obs_hash{$bin} += $obs_hash_restricted{$site_node}{$bin}[0]; 
+				$flat_exp_hash{$bin} += $obs_hash_restricted{$site_node}{$bin}[1]; 
+			}
+			my $obs_median = hist_median_for_hash(\%flat_obs_hash);
+			my $exp_median = hist_median_for_hash(\%flat_exp_hash);
+			my $obs_mean = hist_mean_for_hash(\%flat_obs_hash); # 18.03 - added the same statistics based on histogram mean (instead of median)
+			my $exp_mean = hist_mean_for_hash(\%flat_exp_hash);
+			
+			print FILE "\n site_node: $site_node\n";
+			print FILE "\n observed median: $obs_median\n";
+			print FILE "\n poisson expected median: $exp_median\n";
+			print FILE "\n observed mean: $obs_mean\n";
+			print FILE "\n poisson expected mean: $exp_mean\n";
+			
+			my $pval_epi;
+			my $pval_env;
+			my $pval_epi_for_mean;
+			my $pval_env_for_mean;
+			
+		
+		## ---- todo change csvfile reader and writer (concat..)
+		if ($obs_mean ne "NaN"){
+		
+		my $csvfile = File::Spec->catfile($dir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$site_node.".csv");
+		open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
+		my $iteration = 0;
+		my @hist_obs;
+		my @hist_exp;
+		my @array_obs_minus_exp;
+		while(<CSVFILE>){
+			my %boot_obs_hash;
+			my %boot_exp_hash;
+			my @splitter = split(/,/, $_);
+			my @diff_10bin_array;
+			for (my $i = 0; $i < scalar @splitter; $i++){
+				my $bin = ($i/2)+1;
+				my $obs = $splitter[$i];
+				$boot_obs_hash{$bin} = $splitter[$i];
+				#print " i $i bin $bin value  $splitter[$i]\n";
+				$hist_obs[$bin] += $splitter[$i];
+				
+				$i++;
+				my $exp = $splitter[$i];
+				$boot_exp_hash{$bin} = $splitter[$i];
+				$hist_exp[$bin] += $splitter[$i];
+				$diff_10bin_array[int($bin/10)] += $obs-$exp;
+				#push @{$array_obs_minus_exp[$bin]}, $obs-$exp;
+			}
+			
+			for (my $bin10 = 0; $bin10 < scalar @diff_10bin_array; $bin10++){
+				push @{$array_obs_minus_exp[$bin10]}, $diff_10bin_array[$bin10];
+			}
+			
+			
+			
+			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash);
+			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash);
+			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash);
+			my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash);
+			print FILE "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
+			print FILE "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
+			if ($boot_obs_median - $boot_exp_median >= $obs_median - $exp_median){
+				$pval_env += 1;
+			}
+			if ($boot_obs_median - $boot_exp_median <= $obs_median - $exp_median){
+				$pval_epi += 1;
+			}
+			if ($boot_obs_mean - $boot_exp_mean >= $obs_mean - $exp_mean){
+				$pval_env_for_mean += 1;
+			}
+			if ($boot_obs_mean - $boot_exp_mean <= $obs_mean - $exp_mean){
+				$pval_epi_for_mean += 1;
+			}
+			$iteration++;
+		}
+		
+		for (my $j = 0; $j < scalar @hist_obs; $j++){
+			my $mean_obs = $hist_obs[$j]/$iteration;
+			my $mean_exp = $hist_exp[$j]/$iteration;
+			my $stat_obs = Statistics::Descriptive::Full->new();
+			$stat_obs->add_data(\@{$array_obs_minus_exp[$j]});
+			print FILE "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
+		}
+	
+	
+	
+		close CSVFILE;
+		
+		print FILE "- pvalue_epistasis  pvalue_environment\n";
+		print FILE "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
+		print FILE "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
+	
+		close FILE;	
+		
+		}
+		else {
+			print FILE "hist sum is 0";
+			close FILE;
+		}
+		}
+		
+	close COUNTER;
+}
 
 
 sub no_check{
@@ -2610,6 +2972,8 @@ sub egor_smart_site_entrenchment {
 }
 
 # last egor plots sub. NOT the chosen one (egor_h1.csv are printed by some other method (discovered by comparison))
+# honest rings, can be used for mann-kendall analysis
+
 sub egor_diff_rings_site_entrenchment {
 	my $self = shift;
 	print ($self->{static_protein}."\n");
@@ -2971,6 +3335,8 @@ sub visitor_coat {
  	my $prot = $self->{static_protein};
  	Groups::get_predefined_groups_and_names_for_protein($prot);
    }
+
+   
    
    sub bin {
    	my $depth = $_[0];
