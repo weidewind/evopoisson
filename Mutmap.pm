@@ -972,6 +972,47 @@ sub compute_norm {
 	return $norm;
 }
 
+
+# 13.09.2016 compute_norm for one site_node (for single site poisson analysis)
+sub compute_norm_single_site {
+	my $self = shift;
+	my $restriction = $_[0];
+	my @group;
+	if ($_[1]){
+		@group = @{$_[1]};
+	}
+	else {
+		@group = (1..565);
+	}
+	my %group_hash;
+	foreach my $ind(@group){
+		$group_hash{$ind} = 1;
+	}
+	
+#	$real_data = lock_retrieve("/export/home/popova/workspace/perlCoevolution/TreeUtils/Phylo/MutMap/".$prot."_realdata") or die "Cannot retrieve real_data";
+	my $realdata = $self->{realdata};
+	my $obs_hash = get_obshash($realdata, $restriction);
+	my $subtree_info = $realdata->{"subtree_info"};
+	
+	my $norm;
+	
+	foreach my $site_node(keys %{$obs_hash}){
+		my ($site, $node_name) = split(/_/, $site_node);
+		if ($group_hash{$site}){
+			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
+			foreach my $bin(keys %{$obs_hash->{$site_node}}){
+			
+				if ($maxdepth > $restriction){
+					$norm += $obs_hash->{$site_node}->{$bin}->[0];
+				}
+
+			}
+		}
+	}
+	return $norm;
+}
+
+
 #26.02 N groups
 
 sub print_nodes_in_analysis {
