@@ -1711,8 +1711,11 @@ sub count_pvalues{
 			my %boot_obs_hash;
 			my %boot_exp_hash;
 			my @splitter = split(/,/, $_);
+			if ($splitter[0] eq "NA"){ # if no appropriate nodes were produced in this iteration, it is skipped
+				next;
+			}
 			my @diff_10bin_array;
-			for (my $i = 0; $i < scalar @splitter; $i++){
+			for (my $i = 0; $i < scalar @splitter; $i++){ 
 				my $bin = ($i/2)+1;
 				my $obs = $splitter[$i];
 				$boot_obs_hash{$bin} = $splitter[$i];
@@ -1868,7 +1871,9 @@ sub count_pvalues{
 				my %boot_obs_hash;
 				my %boot_exp_hash;
 				my @splitter = split(/,/, $_);
-				
+				if ($splitter[0] eq "NA"){ # if no appropriate nodes were produced in this iteration, it is skipped
+					next;
+				}
 				## copypaste 5.02
 				my @gbo_minus_gbe_10bin_array;
 				for (my $i = 0; $i < scalar @splitter; $i++){
@@ -1982,7 +1987,9 @@ sub count_pvalues{
 				my %boot_obs_hash;
 				my %boot_exp_hash;
 				my @splitter = split(/,/, $_);
-				
+				if ($splitter[0] eq "NA"){ # if no appropriate nodes were produced in this iteration, it is skipped
+					next;
+				}
 				## copypaste 5.02
 				my @cbo_minus_cbe_10bin_array;
 				for (my $i = 0; $i < scalar @splitter; $i++){
@@ -2248,6 +2255,9 @@ sub count_single_site_pvalues{
 			my %boot_obs_hash;
 			my %boot_exp_hash;
 			my @splitter = split(/,/, $_);
+			if ($splitter[0] eq "NA"){ # if no appropriate nodes were produced in this iteration, it is skipped
+				next;
+			}
 			my @diff_10bin_array;
 			for (my $i = 0; $i < scalar @splitter; $i++){
 				my $bin = ($i/2)+1;
