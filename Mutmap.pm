@@ -3226,8 +3226,10 @@ sub visitor_coat {
  		#print "depth $depth step $step bin ".(bin($depth,$step))."\n";
  		if (!($self->has_no_same_type_mutation($_[1], \@{$_[2]}))){ #has_no_same_type_mutation
  			$self->{static_ring_hash}{$site_index}{$starting_node->get_name()}{bin($depth,$step)}[0] += 1;
+ 			#$self->{static_ring_hash}{$site_index}{$starting_node->get_name()}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2 # 19.09.2016 mutations happen in the middle of a branch; todo
  			#print "addded to 0\n";
  		}
+ 		#my $newdepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()} - ($node->get_branch_length)/2; # 19.09.2016 mutations happen in the middle of a branch; todo
  		$self->{static_ring_hash}{$site_index}{$starting_node->get_name()}{bin($depth,$step)}[1] += $node->get_branch_length;
  		#print "addded to 1\n";
  	}
@@ -3257,13 +3259,14 @@ sub visitor_coat {
    # Added at 08.10 for testing whether this will improve correspondence between simulation_observed and simulation_expected.
    # stopped using it at 15.09.2016    
    # 15.09.2016 version: halves of branches with foreground mutations are trimmed 
+   # 19.09.2016: corrected
    	sub entrenchment_visitor {
  		my $self = shift;
  		my $node = $_[0];
  		my $step = $_[1]->[0];
  		my $subtract_tallest = $self->{static_subtract_tallest};
 		if (!$node->is_root){
-		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation for this node, key is a site number
+		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation node for this node, key is a site number
 		
 		if (%closest_ancestors){
 			foreach my $site_index(keys %closest_ancestors){ 
@@ -3291,11 +3294,13 @@ sub visitor_coat {
 		foreach my $site_index(keys %{$self->{static_subs_on_node}{$node->get_name()}}){
 			if ($closest_ancestors{$site_index}){
 				my $anc_node = $closest_ancestors{$site_index};
-				my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()} - ($node->get_branch_length)/2;
+				my $halfdepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()} - ($node->get_branch_length)/2; #19.09.2016 
+				my $fulldepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()}; #19.09.2016 
 			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
 			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
-				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[0] += 1;
-				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2; # 15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
+				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[0] += 1; #19.09.2016 
+				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += ($node->get_branch_length)/2; # #19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
+				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] -= $node->get_branch_length; #19.09.2016 we added this length before, but shouldn't have done it
 			#	print "mutation! anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				
 			}
