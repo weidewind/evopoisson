@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-use MutMap;
+use Mutmap;
 use Switch;
 
 package Groups;

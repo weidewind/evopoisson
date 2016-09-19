@@ -3,7 +3,7 @@
 use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); #adds working directory to @INC
-use MutMap;
+use Mutmap;
 use Getopt::Long;
 use Getopt::ArgvFile;
 use File::Path qw(make_path remove_tree);
@@ -22,7 +22,7 @@ GetOptions (	'protein=s' => \$protein,
 		'verbose'  => \$verbose,
 	);
 
-my $mutmap = MutMap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
+my $mutmap = Mutmap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
 
 ## prints files for drawing the chosen version of plots: mutations_density_in_circles(distance from ancestral mutation), points correspond to mutations
 ## There could be more than one mutation at the given distance, so number of points on the plot can be less than the number of mutations in the subtree under analysis 

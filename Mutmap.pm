@@ -4,7 +4,7 @@
 
 ## 
 
-package MutMap;
+package Mutmap;
 
 use strict;
 use Bio::Phylo::IO;
@@ -116,7 +116,7 @@ $| = 1;
 	}
 
 	sub temp_tag {
-			return "temp";
+			return "unreadable";
 	}
 
 	sub printFooter {
@@ -976,38 +976,15 @@ sub compute_norm {
 # 13.09.2016 compute_norm for one site_node (for single site poisson analysis)
 sub compute_norm_single_site {
 	my $self = shift;
-	my $restriction = $_[0];
-	my @group;
-	if ($_[1]){
-		@group = @{$_[1]};
-	}
-	else {
-		@group = (1..565);
-	}
-	my %group_hash;
-	foreach my $ind(@group){
-		$group_hash{$ind} = 1;
-	}
-	
-#	$real_data = lock_retrieve("/export/home/popova/workspace/perlCoevolution/TreeUtils/Phylo/MutMap/".$prot."_realdata") or die "Cannot retrieve real_data";
+	my $site_node = shift;
+
 	my $realdata = $self->{realdata};
-	my $obs_hash = get_obshash($realdata, $restriction);
+	my $obs_hash = get_obshash($realdata, 1000); # 1000 is supposed to be bigger than any restriction in realdata, so this will just silently give you obshash from realdata
 	my $subtree_info = $realdata->{"subtree_info"};
 	
 	my $norm;
-	
-	foreach my $site_node(keys %{$obs_hash}){
-		my ($site, $node_name) = split(/_/, $site_node);
-		if ($group_hash{$site}){
-			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
-			foreach my $bin(keys %{$obs_hash->{$site_node}}){
-			
-				if ($maxdepth > $restriction){
-					$norm += $obs_hash->{$site_node}->{$bin}->[0];
-				}
-
-			}
-		}
+	foreach my $bin(keys %{$obs_hash->{$site_node}}){
+		$norm += $obs_hash->{$site_node}->{$bin}->[0];
 	}
 	return $norm;
 }
@@ -1297,12 +1274,12 @@ sub concat_and_divide_simult {
 			
 				if ($str =~ /^site/){
 				
-			if ($test_obs_summ - $test_exp_summ < 0.0001 && -$test_obs_summ + $test_exp_summ < 0.0001){
-				print "summtest ok\n";
-			}
-			else {
-				print "summtest failed! $site $node_name obssum $test_obs_summ, expsum $test_exp_summ\n";
-			}
+		#	if ($test_obs_summ - $test_exp_summ < 0.0001 && -$test_obs_summ + $test_exp_summ < 0.0001){
+		#		print "summtest ok\n";
+		#	}
+		#	else {
+		#		print "summtest failed! $site $node_name obssum $test_obs_summ, expsum $test_exp_summ\n";
+		#	}
 			$test_obs_summ = 0;
 			$test_exp_summ = 0;	
 				
@@ -1381,7 +1358,7 @@ sub concat_and_divide_simult {
 					}
 					
 					my $filehandle = $filehandles{$md}{$group_number};
-					print "going to print something\n";
+			#		print "going to print something\n";
 					foreach my $bin(1..$maxbin){
 						print $filehandle $hash{$md}[$group_number]{$bin}[0].",".$hash{$md}[$group_number]{$bin}[1].",";
 					}
@@ -1441,55 +1418,48 @@ sub concat_and_divide_simult_single_sites {
 	my $self = shift;
 	my $prot = $self->{static_protein};
 	my @maxdepths = @{$_[0]};
-	my @groups = @{$_[1]};
-	my @group_names = @{$_[2]};
+	#my @groups = @{$_[1]};
+	#my @group_names = @{$_[2]};
 	my $subtract_maxpath = $self->{static_subtract_tallest};
 	my $dir = $self->{static_output_base};
-	my $nodecount_file = File::Spec->catfile($dir, $prot."_nodecount");
-	open NODECOUNT, ">$nodecount_file" or die "Cannot create $nodecount_file";
 	
 	my $realdata = $self->{realdata};
+	my $obs_hash = get_obshash($realdata, List::Util::min(@maxdepths));
+	my $subtree_info = $realdata->{"subtree_info"};
+	
 	my %hash;
 	my $iteration_number = 1;
 	my $maxbin = $realdata->{"maxbin"};
 	
-	my %norms;
+	my %norms; #previous: $norms{$md}[$group_number] = norm
 	foreach my $md(@maxdepths){
-		foreach my $group_number(0.. scalar @groups - 1){
-			$norms{$md}[$group_number] = $self->compute_norm($md, $groups[$group_number]);
-		}
-		
+		foreach my $site_node(keys %{$obs_hash}){
+			my ($site, $node_name) = split(/_/, $site_node);
+			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
+			if ($maxdepth > $md){
+				$norms{$md}{$site_node} = $self->compute_norm_single_site($site_node);
+			}
+		}	
 	}
 	
-	my %group_hashes;
-	foreach my $md(@maxdepths){
-		foreach my $group_number(0.. scalar @groups - 1){
-			my %node_hash = $self->select_ancestor_nodes($md, \@{$groups[$group_number]}); # contains 1 for selected nodes (node_names, not site_node or something else)
-			foreach my $node_name (keys %node_hash){
-				$group_hashes{$md}[$group_number]{$node_name} = $node_hash{$node_name};
-			}
-		}
-		
-	}
 	
 	
 	my $dirname = File::Spec->catdir($dir, $prot); 
 	make_path ($dirname);
 	opendir(DH, $dirname);
-	my @files = grep { /.*_[0-9]+/ }readdir(DH);
+	my @files = grep { /.*_[0-9]+$/ }readdir(DH); 
 	unless (scalar @files > 0){die "No simulation files found in folder $dirname\n";}
 	closedir(DH);
 	
 	my %filehandles;
 
 	foreach my $md(@maxdepths){
-		foreach my $group_number(0.. scalar @groups - 1){
+		foreach my $site_node(keys %{$obs_hash}){
 			local *FILE;
-			my $csvfile =  File::Spec->catfile($dir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$group_names[$group_number].".csv");
+			my $csvfile =  File::Spec->catfile($dir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$site_node.".csv");
 			open FILE, ">$csvfile" or die "Cannot create $csvfile";
-			
 			FILE->autoflush(1);
-			$filehandles{$md}{$group_number} = *FILE;
+			$filehandles{$md}{$site_node} = *FILE;
 		}
 		
 	}
@@ -1517,31 +1487,20 @@ sub concat_and_divide_simult_single_sites {
 			while ($str =~ /^[^>]/){ 
 
 				if ($str =~ /^site/){
-					if ($test_obs_summ - $test_exp_summ < 0.0001 && -$test_obs_summ + $test_exp_summ < 0.0001){
-						print "summtest ok\n";
-					}
-					else {
-						print "summtest failed! $site $node_name obssum $test_obs_summ, expsum $test_exp_summ\n";
-					}
+					#if ($test_obs_summ - $test_exp_summ < 0.0001 && -$test_obs_summ + $test_exp_summ < 0.0001){
+					#	print "summtest ok\n";
+					#}
+					#else {
+					#	print "summtest failed! $site $node_name obssum $test_obs_summ, expsum $test_exp_summ\n";
+					#}
 					$test_obs_summ = 0;
 					$test_exp_summ = 0;	
 				
 					my @str_array = split(/\s+/, $str);
-					$site = $str_array[1]; # careful (never used afterwards)
+					$site = $str_array[1]; # careful (never used afterwards, only for debugging)
 					$node_name = $str_array[3];
 					$max_depth = $str_array[5];
 					
-					## 15.02 iterations: count number of nodes in each group
-					foreach my $md(@maxdepths){
-						if ($max_depth > $md){
-							foreach my $group_number(0..scalar @groups-1){
-								if ($group_hashes{$md}[$group_number]{$node_name}){
-									print NODECOUNT "maxdepth $md group ".$group_names[$group_number]." node $node_name\n";
-								}
-							}
-						}	
-					}
-					##
 					
 					#print $site." site,".$node_name." node,".$max_depth." maxdepth\n";
 					#5.02 my $str = <GULP>; 
@@ -1555,13 +1514,13 @@ sub concat_and_divide_simult_single_sites {
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
 				foreach my $md(@maxdepths){
 					if ($max_depth > $md){
-						foreach my $group_number(0..scalar @groups-1){
-							if ($group_hashes{$md}[$group_number]{$node_name}){
+						foreach my $site_node(keys %{$obs_hash}){
+							if ($norms{$md}{$site_node}){
 							#print "group number $group_number md $md node name $node_name\n";
-								$sums{$md}[$group_number] += $str_array[1];
-								$hash{$md}[$group_number]{$str_array[0]}[1] += $str_array[2];
-								$hash{$md}[$group_number]{$str_array[0]}[0] += $str_array[1];
-								#print $hash{$md}[$group_number]{$str_array[0]}[0]." obs integral\n";
+								$sums{$md}{$site_node} += $str_array[1];
+								$hash{$md}{$site_node}{$str_array[0]}[1] += $str_array[2];
+								$hash{$md}{$site_node}{$str_array[0]}[0] += $str_array[1];
+								#print $hash{$md}{$site_node}{$str_array[0]}[0]." obs integral\n";
 							}
 						}
 					}
@@ -1580,12 +1539,12 @@ sub concat_and_divide_simult_single_sites {
 #print "sum50 $sum50 sum100 $sum100 sum150 $sum150 norm 50 $norm50 norm 100 $norm100 norm 150 $norm150\n";		
 			
 			foreach my $md(@maxdepths){ 
-				foreach my $group_number(0..scalar @groups-1){
+				foreach my $site_node(keys %{$obs_hash}){
 					#print "maxdepth $md group number $group_number \n";
-					if ($sums{$md}[$group_number] == 0){
+					if ($sums{$md}{$site_node} == 0){
 						foreach my $bin(1..$maxbin){
-							$hash{$md}[$group_number]{$bin}[0] = "NA";
-							$hash{$md}[$group_number]{$bin}[1] = "NA";
+							$hash{$md}{$site_node}{$bin}[0] = "NA";
+							$hash{$md}{$site_node}{$bin}[1] = "NA";
 						}
 					}
 					else {
@@ -1593,15 +1552,15 @@ sub concat_and_divide_simult_single_sites {
 							#print "in hash: ".$hash{$md}[$group_number]{$bin}[0]."\n";
 							#print "norm ".$norms{$md}[$group_number]."\n";
 							#print "sum ".$sums{$md}[$group_number]."\n";
-							$hash{$md}[$group_number]{$bin}[0] = $hash{$md}[$group_number]{$bin}[0]*$norms{$md}[$group_number]/$sums{$md}[$group_number];
-							$hash{$md}[$group_number]{$bin}[1] = $hash{$md}[$group_number]{$bin}[1]*$norms{$md}[$group_number]/$sums{$md}[$group_number];
+							$hash{$md}{$site_node}{$bin}[0] = $hash{$md}{$site_node}{$bin}[0]*$norms{$md}{$site_node}/$sums{$md}{$site_node};
+							$hash{$md}{$site_node}{$bin}[1] = $hash{$md}{$site_node}{$bin}[1]*$norms{$md}{$site_node}/$sums{$md}{$site_node};
 						}
 					}
 					
-					my $filehandle = $filehandles{$md}{$group_number};
-					print "going to print something\n";
+					my $filehandle = $filehandles{$md}{$site_node};
+					#print "going to print something\n";
 					foreach my $bin(1..$maxbin){
-						print $filehandle $hash{$md}[$group_number]{$bin}[0].",".$hash{$md}[$group_number]{$bin}[1].",";
+						print $filehandle $hash{$md}{$site_node}{$bin}[0].",".$hash{$md}{$site_node}{$bin}[1].",";
 					}
 					print $filehandle "\n";
 				
@@ -1611,18 +1570,17 @@ sub concat_and_divide_simult_single_sites {
 			
 			
 			$iteration_number++;
-			print $iteration_number."\n";
+			print "iteration number ".$iteration_number."\n";
 		}
 		
 		close GULP;
 		
 	}
 	
-	close NODECOUNT;
 	
 	foreach my $md(@maxdepths){
-		foreach my $group_number(0.. scalar @groups - 1){
-					my $filehandle = $filehandles{$md}{$group_number};
+		foreach my $site_node(keys %{$obs_hash}){
+					my $filehandle = $filehandles{$md}{$site_node};
 					close $filehandle;
 		}
 		
@@ -2215,7 +2173,8 @@ sub count_single_site_pvalues{
 	my $obs_hash = get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
 	my $subtree_info = $realdata->{"subtree_info"};
 
-	my $restriction = List::Util::min(@restriction_levels); # todo: print maxdepth instead of restriction level in filenames (or somewhere inside the output file), so that we analyse each site_node only once
+	#my $restriction = List::Util::min(@restriction_levels); # todo: print maxdepth instead of restriction level in filenames (or somewhere inside the output file), so that we analyse each site_node only once
+	for my $restriction(@restriction_levels){
 		print "level $restriction\n";
 		my %obs_hash_restricted;
 		my %norm_restricted;
@@ -2240,18 +2199,7 @@ sub count_single_site_pvalues{
 	
 		my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_single_sites");
 		open FILE, ">$file" or die "Cannot create $file";
-				
-		print FILE "site_node\tbin\tobs\texp\n";
-		#my @sorted_bins = sort { $a <=> $b } keys %histhash;
-		
-		foreach my $site_node(keys %{$obs_hash}){ #new
-		my @sorted_bins = sort { $a <=> $b } keys $obs_hash_restricted{$site_node};
-			foreach my $bin (@sorted_bins){
-				#print FILE $bin."\t".$histhash{$bin}[0]."\t".$histhash{$bin}[1]."\n";
-				print FILE $site_node."\t".$bin."\t".$obs_hash_restricted{$bin}[0]."\t".$obs_hash_restricted{$bin}[1]."\n";
-			}
-		} #new
-			
+
 
 		foreach my $site_node (keys %obs_hash_restricted){
 			my %flat_obs_hash;
@@ -2265,6 +2213,17 @@ sub count_single_site_pvalues{
 			my $obs_mean = hist_mean_for_hash(\%flat_obs_hash); # 18.03 - added the same statistics based on histogram mean (instead of median)
 			my $exp_mean = hist_mean_for_hash(\%flat_exp_hash);
 			
+
+			print FILE "site_node\tbin\tobs\texp\n";
+				my @sorted_bins = sort { $a <=> $b } keys $obs_hash_restricted{$site_node};
+				foreach my $bin (@sorted_bins){
+					if (defined $obs_hash_restricted{$site_node}{$bin}[0] && defined $obs_hash_restricted{$site_node}{$bin}[1]){
+						print FILE $site_node."\t".$bin."\t".$obs_hash_restricted{$site_node}{$bin}[0]."\t".$obs_hash_restricted{$site_node}{$bin}[1]."\n";
+					}
+				}
+
+			
+			
 			print FILE "\n site_node: $site_node\n";
 			print FILE "\n observed median: $obs_median\n";
 			print FILE "\n poisson expected median: $exp_median\n";
@@ -2277,7 +2236,6 @@ sub count_single_site_pvalues{
 			my $pval_env_for_mean;
 			
 		
-		## ---- todo change csvfile reader and writer (concat..)
 		if ($obs_mean ne "NaN"){
 		
 		my $csvfile = File::Spec->catfile($dir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$site_node.".csv");
@@ -2341,23 +2299,21 @@ sub count_single_site_pvalues{
 			print FILE "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
 		}
 	
-	
-	
 		close CSVFILE;
 		
-		print FILE "- pvalue_epistasis  pvalue_environment\n";
-		print FILE "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
-		print FILE "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
-	
-		close FILE;	
+		#print FILE "- pvalue_epistasis  pvalue_environment\n";
+		#print FILE "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
+		#print FILE "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
 		
+		print FILE "#\tsite_node\tpvalue_epistasis(median)\tpvalue_epistasis(mean)\tpvalue_environment(median)\tpvalue_environment(mean)\n";
+		print FILE ">\t".$site_node."\t".($pval_epi/$iteration)."\t".($pval_epi_for_mean/$iteration)."\t".($pval_env/$iteration)."\t".($pval_env_for_mean/$iteration)."\n";
 		}
 		else {
-			print FILE "hist sum is 0";
-			close FILE;
+			print FILE "hist sum is 0";	
 		}
 		}
-		
+	}	
+		close FILE;	
 	close COUNTER;
 }
 
@@ -2629,7 +2585,7 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 				#if ($total_length > 0 && $total_muts/$total_length < 0.005){
 				if ($total_length > 0 && $total_muts > 0){ # 21.10 added total_muts > 0
 				#print "total muts $total_muts \n";
-				print "site $ind node ".$node->get_name()." maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n";
+			#	print "site $ind node ".$node->get_name()." maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n"; # commented out 16.09
 					foreach my $bin (sort {$a <=> $b} (keys %{$self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}})){
 						#if ($total_length > 0 && $static_subtree_info{$node->get_name()}{$ind}{"hash"}{$bin}[1] > 0){ #there are some internal nodes with 0-length terminal daughter branches
 						 if ($total_length > 0){ 
@@ -2646,7 +2602,7 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 						if (!$hist{$site_node}{$bin}[1]){
 							$hist{$site_node}{$bin}[1] += 0;
 						}
-	 print "$bin,".$hist{$site_node}{$bin}[0].",".$hist{$site_node}{$bin}[1]."\n";
+	# print "$bin,".$hist{$site_node}{$bin}[0].",".$hist{$site_node}{$bin}[1]."\n";  # commented out 16.09
 				}
 				}
 			}
@@ -3287,21 +3243,24 @@ sub visitor_coat {
 
  	}
  	
- 		# track_tallest is needed for finding longest path in the subtree and subtracting its length
- 	# Added at 08.10 for testing whether this will improve correspondence between simulation_observed and simulation_expected.
- 	sub entrenchment_visitor {
+   # track_tallest is needed for finding longest path in the subtree and subtracting its length
+   # Added at 08.10 for testing whether this will improve correspondence between simulation_observed and simulation_expected.
+   # stopped using it at 15.09.2016    
+   # 15.09.2016 version: halves of branches with foreground mutations are trimmed 
+   	sub entrenchment_visitor {
  		my $self = shift;
  		my $node = $_[0];
  		my $step = $_[1]->[0];
  		my $subtract_tallest = $self->{static_subtract_tallest};
 		if (!$node->is_root){
-		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")};
+		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation for this node, key is a site number
 		
 		if (%closest_ancestors){
 			foreach my $site_index(keys %closest_ancestors){ 
 				my $anc_node = $closest_ancestors{$site_index};
 				my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()};
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
+			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				my $current_maxdepth = $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"};
 				if ($current_maxdepth < $depth){
 						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"} = $depth;
@@ -3326,6 +3285,9 @@ sub visitor_coat {
 			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
 			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[0] += 1;
+				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2; # 15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
+			#	print "mutation! anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
+				
 			}
 			$closest_ancestors{$site_index} = $node;
 		}
@@ -3334,6 +3296,7 @@ sub visitor_coat {
 		}
 #!
  	}
+   
    
    	sub lrt_visitor {
    		my $self = shift;

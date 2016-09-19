@@ -3,7 +3,7 @@
 use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); #adds working directory to @INC
-use MutMap (realdata_exists, check_realdata_restriction);
+use Mutmap (realdata_exists, check_realdata_restriction);
 use Getopt::Long;
 use Getopt::ArgvFile;
 use File::Path qw(make_path remove_tree);

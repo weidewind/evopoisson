@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); # adds working directory to @INC
-use MutMap;
+use Mutmap;
 use Getopt::Long;
 use Getopt::ArgvFile;
 
@@ -23,7 +23,7 @@ GetOptions (	'protein=s' => \$protein,
 # Procedure for printing _for_LRT files
 # Reads data/_distance_matrix.csv prepared by Distances.R from RCoevolution 
 
-my $mutmap = MutMap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
+my $mutmap = Mutmap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
 $mutmap->set_distance_matrix();
 $mutmap->print_data_for_LRT();
 	

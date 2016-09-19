@@ -3,7 +3,7 @@
 use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); # adds working directory to @INC
-use MutMap;
+use Mutmap;
 use Getopt::Long;
 use File::Path qw(make_path remove_tree);
 use Groups;
@@ -23,7 +23,7 @@ my $state = 'nsyn';
 my $input = '';
 my $output = '';	# option variable with default value
 my $subtract_tallest = '0';
-my $restriction = '50,100,150';
+my $restrictions = '50,100,150';
 my $simnumber = 10000;
 my $maxmem = 4000000;
 my $verbose;
@@ -40,7 +40,7 @@ GetOptions (	'protein=s' => \$protein,
 		'verbose'  => \$verbose,
 	);
 
-
+$| = 1;
 
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
@@ -50,18 +50,18 @@ my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state 
 my @restriction_levels = split(/,/, $restrictions);
 my $specified_restriction = List::Util::min(@restriction_levels);
 
-if  (! (MutMap::realdata_exists($args))) { 
+if  (! (Mutmap::realdata_exists($args))) { 
 	print "No realdata exists for specified parameters, going to prepare it.."; 
 	$args->{fromfile} = 0;
-	my $mutmap = MutMap->new($args);
+	my $mutmap = Mutmap->new($args);
 	$mutmap-> prepare_real_data ($specified_restriction);
 }
 else {
-	my $rr = MutMap::check_realdata_restriction($args);
+	my $rr = Mutmap::check_realdata_restriction($args);
 	if ($rr > $specified_restriction){
 		print "Existing realdata restriction is greater than minimal restriction you specified: ".$rr." > ".$specified_restriction."\nGoing to overwrite realdata..\n"; 
 		$args->{fromfile} = 0;
-		my $mutmap = MutMap->new($args);
+		my $mutmap = Mutmap->new($args);
 		$mutmap-> prepare_real_data ($specified_restriction);
 	}
 	else {
@@ -70,12 +70,9 @@ else {
 }
 
 $mu->record('just before mutmap creation');
-my $mutmap = MutMap->new($args); # from file
+my $mutmap = Mutmap->new($args); # from file
 $mu->record('mutmap created');
-my $ready = $mutmap-> count_iterations();
-print "Already have $ready iterations (know nothing about their restriction, mind you)\n";
-my $newtag = $mutmap-> iterations_maxtag() + 1;
-print "New iteration tags will start from $newtag\n";
+
 ##
 ## First iterations_gulp runs separately - to estimate memusage
 my $probe = 5; # first iterations-Gulp size, used for memusage esttimation, is not used afterwards
@@ -83,9 +80,13 @@ my $command = mycomm("probe", $probe, "memusage"); # prints memusage in file
 system( $command );
 my $locker = Memusage->get_locker($mutmap);
 my $memusage = $locker->get_memusage();
-print
+print "Memusage is ".$memusage."\n";
 ## 
 ## Computing gulp sizes and number of concurrent processes
+my $ready = $mutmap-> count_iterations();
+print "Already have $ready iterations (know nothing about their restriction, mind you)\n";
+my $newtag = $mutmap-> iterations_maxtag() + 1;
+print "New iteration tags will start from $newtag\n";
 my $sim = $simnumber-$ready;
 if ($sim > 0){
 	my $max_proc_num = int($maxmem/$memusage);
@@ -125,14 +126,14 @@ if ($sim > 0){
 	}
 	##
 	## Forkmanager setup
-	my $manager = new Parallel::ForkManager($maxprocs);
-	my $lockfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}, "lock");
+	my $manager = new Parallel::ForkManager(30);
+	#my $lockfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}, "lock");
 
 	$manager->run_on_start( 
 	      sub {
 	      	my $pid = shift;
 	      	print "Starting child processes under process id $pid\n";
-	      	$mu->record("Process (pid: $pid) started.\n");
+	        $mu->record("Process (pid: $pid) started.\n");
 	      }
 	    );
 	$manager->run_on_finish( 
@@ -151,15 +152,16 @@ if ($sim > 0){
 	      sub {
 	         print "Waiting for all children to terminate... \n";
 	      },
-	      5 # time interval between checks
+	      180 # time interval between checks
 	   ); 
 	##
 	## Launching a series of new iteration_gulps if needed 
+
 	foreach my $command (@commands) {
 	      $manager->start and next;
 	      system( $command );
 	      $manager->finish;
-	   };
+	   }
 	$manager->wait_all_children;
 	$mu->dump();
 	##
@@ -185,6 +187,6 @@ sub mycomm {
 
 sub mockcomm {
 	my $tag = shift;
-	sleep(10);
-	print "$tag is OK\n";
+	my $command = "sleep 10";
+	return $command;
 }

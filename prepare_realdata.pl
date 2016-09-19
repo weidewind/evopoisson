@@ -3,7 +3,7 @@
 use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); # adds working directory to @INC
-use MutMap;
+use Mutmap;
 use Getopt::Long;
 use Getopt::ArgvFile;
 use Groups;
@@ -30,14 +30,14 @@ GetOptions (	'protein=s' => \$protein,
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1, got $subtract_tallest \n";}
 my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest};
 
-if  (!($delete) && MutMap::realdata_exists($args)) {
+if  (!($delete) && Mutmap::realdata_exists($args)) {
 	print "Checking existing realdata restriction..\n";
-	print "Realdata with specified parameters and restriction ".MutMap::check_realdata_restriction($args)." already exists.\n";
+	print "Realdata with specified parameters and restriction ".Mutmap::check_realdata_restriction($args)." already exists.\n";
 	print "Won't overwrite without --delete flag.\n";
 }
 else {
 	## Procedure for printing real_data files
-	my $mutmap = MutMap->new($args);
+	my $mutmap = Mutmap->new($args);
 	$mutmap-> prepare_real_data ($restriction);
 	###
 }
