@@ -27,13 +27,7 @@ for (my $i = 0; $i < scalar @muts; $i++){
 	unless ($muts[$i] =~ /^[1-9]\d*$/) {die "Please, enter comma-separated sites and corresponding nodes. Example: 278,INTNODE4195,209,INTNODE4241,209,INTNODE4201";}
 	$i++; #need to check only odd elements
 }
-my %args = (bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest);
-if  (!($overwrite) && realdata_exists(\%args)) {
-	print "Realdata with specified parameters and restriction ".check_realdata_restriction(\%args)." already exists.\n";
-	print "Won't overwrite without --delete flag.\n";
-	die;
-}
-my $mutmap = MutMap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
+my $mutmap = Mutmap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
 
 $mutmap->print_subtree_with_mutations(\@muts);
 

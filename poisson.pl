@@ -24,6 +24,7 @@ my $input = '';
 my $output = '';	# option variable with default value
 my $subtract_tallest = '0';
 my $restrictions = '50,100,150';
+my $step = 0.5;
 my $simnumber = 10000;
 my $maxmem = 4000000;
 my $verbose;
@@ -37,6 +38,7 @@ GetOptions (	'protein=s' => \$protein,
 		'restrictions=s' => \$restrictions,
 		'simnumber=i' => \$simnumber,
 		'maxmem=i' => \$maxmem,
+		'step=s' => \$step,
 		'verbose'  => \$verbose,
 	);
 
@@ -54,7 +56,7 @@ if  (! (Mutmap::realdata_exists($args))) {
 	print "No realdata exists for specified parameters, going to prepare it.."; 
 	$args->{fromfile} = 0;
 	my $mutmap = Mutmap->new($args);
-	$mutmap-> prepare_real_data ($specified_restriction);
+	$mutmap-> prepare_real_data ($specified_restriction, $step);
 }
 else {
 	my $rr = Mutmap::check_realdata_restriction($args);
@@ -62,7 +64,7 @@ else {
 		print "Existing realdata restriction is greater than minimal restriction you specified: ".$rr." > ".$specified_restriction."\nGoing to overwrite realdata..\n"; 
 		$args->{fromfile} = 0;
 		my $mutmap = Mutmap->new($args);
-		$mutmap-> prepare_real_data ($specified_restriction);
+		$mutmap-> prepare_real_data ($specified_restriction, $step);
 	}
 	else {
 		print "Going to use existing realdata with restriction $rr\n";
@@ -70,25 +72,27 @@ else {
 }
 
 $mu->record('just before mutmap creation');
+$args->{fromfile} = 1;
 my $mutmap = Mutmap->new($args); # from file
 $mu->record('mutmap created');
 
 ##
-## First iterations_gulp runs separately - to estimate memusage
-my $probe = 5; # first iterations-Gulp size, used for memusage esttimation, is not used afterwards
-my $command = mycomm("probe", $probe, "memusage"); # prints memusage in file
-system( $command );
-my $locker = Memusage->get_locker($mutmap);
-my $memusage = $locker->get_memusage();
-print "Memusage is ".$memusage."\n";
 ## 
 ## Computing gulp sizes and number of concurrent processes
 my $ready = $mutmap-> count_iterations();
 print "Already have $ready iterations (know nothing about their restriction, mind you)\n";
 my $newtag = $mutmap-> iterations_maxtag() + 1;
-print "New iteration tags will start from $newtag\n";
 my $sim = $simnumber-$ready;
 if ($sim > 0){
+	print "New iteration tags will start from $newtag\n";
+	## First iterations_gulp runs separately - to estimate memusage
+	my $probe = 5; # first iterations-Gulp size, used for memusage esttimation, is not used afterwards
+	my $command = mycomm("probe", $probe, "memusage"); # prints memusage in file
+	system( $command );
+	my $locker = Memusage->get_locker($mutmap);
+	my $memusage = $locker->get_memusage();
+	print "Memusage is ".$memusage."\n";
+	##
 	my $max_proc_num = int($maxmem/$memusage);
 	print " Max proc num $max_proc_num\n";
 	unless ($max_proc_num > 0) {die "Error: Memory usage is $memusage - more than you specified with masmem parameter\n"};

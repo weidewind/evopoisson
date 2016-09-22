@@ -46,7 +46,7 @@ sub print_memusage {
 sub get_memusage {
 		my $self = shift;
 		my $lockfile = $self->{lockfile};
-	    open MEM, "<$lockfile" or die $!; 
+	    open MEM, "<$lockfile" or die $!." $lockfile"; 
       	my $memusage = <MEM>;
       	close MEM;
       	return $memusage;
