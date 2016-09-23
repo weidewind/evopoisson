@@ -38,6 +38,7 @@ use File::Path qw(make_path remove_tree);
 use autodie;
 use Groups;
 use Memusage;
+use Codeversion;
 
 $| = 1;
 
@@ -129,6 +130,7 @@ $| = 1;
 		if ($self->{realdata}){
 			print $outputStream "## realdata restriction ".get_realdata_restriction($self->{realdata})."\n";
 		}
+		print $outputStream "## code version hash ".Codeversion->get_version()."\n";
 	}
 	
 	sub pathFinder {
@@ -136,6 +138,15 @@ $| = 1;
 		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest})); 
 		return $output_base;
 
+	}
+	
+	sub createCodeversionFile {
+		my $self = shift;
+		my $script_name = shift;
+		my $version_file = File::Spec->catfile($self->{static_output_base}, $script_name."_codeversion");
+		open FILE, ">$version_file" or die "Cannot open $version_file: $!\n";
+		print FILE (Codeversion::get_version());
+		close FILE;
 	}
 	
 	sub realdata_exists {
@@ -2244,7 +2255,7 @@ sub count_single_site_pvalues{
 		print COUNTER "Total for $restriction all $count\n";
 	
 		my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_single_sites");
-		open FILE, ">$file" or die "Cannot create $file";
+		open my $outputfile, ">$file" or die "Cannot create $file";
 
 
 		foreach my $site_node (keys %obs_hash_restricted){
@@ -2260,21 +2271,21 @@ sub count_single_site_pvalues{
 			my $exp_mean = hist_mean_for_hash(\%flat_exp_hash, $step);
 			
 
-			print FILE "site_node\tbin\tobs\texp\n";
+			print $outputfile "site_node\tbin\tobs\texp\n";
 				my @sorted_bins = sort { $a <=> $b } keys $obs_hash_restricted{$site_node};
 				foreach my $bin (@sorted_bins){
 					if (defined $obs_hash_restricted{$site_node}{$bin}[0] && defined $obs_hash_restricted{$site_node}{$bin}[1]){
-						print FILE $site_node."\t".$bin."\t".$obs_hash_restricted{$site_node}{$bin}[0]."\t".$obs_hash_restricted{$site_node}{$bin}[1]."\n";
+						print $outputfile $site_node."\t".$bin."\t".$obs_hash_restricted{$site_node}{$bin}[0]."\t".$obs_hash_restricted{$site_node}{$bin}[1]."\n";
 					}
 				}
 
 			
 			
-			print FILE "\n site_node: $site_node\n";
-			print FILE "\n observed median: $obs_median\n";
-			print FILE "\n poisson expected median: $exp_median\n";
-			print FILE "\n observed mean: $obs_mean\n";
-			print FILE "\n poisson expected mean: $exp_mean\n";
+			print $outputfile "\n site_node: $site_node\n";
+			print $outputfile "\n observed median: $obs_median\n";
+			print $outputfile "\n poisson expected median: $exp_median\n";
+			print $outputfile "\n observed mean: $obs_mean\n";
+			print $outputfile "\n poisson expected mean: $exp_mean\n";
 			
 			my $pval_epi;
 			my $pval_env;
@@ -2323,8 +2334,8 @@ sub count_single_site_pvalues{
 			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
 			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
 			my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
-			print FILE "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
-			print FILE "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
+			print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
+			print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
 			if ($boot_obs_median - $boot_exp_median >= $obs_median - $exp_median){
 				$pval_env += 1;
 			}
@@ -2345,7 +2356,7 @@ sub count_single_site_pvalues{
 			my $mean_exp = $hist_exp[$j]/$iteration;
 			my $stat_obs = Statistics::Descriptive::Full->new();
 			$stat_obs->add_data(\@{$array_obs_minus_exp[$j]});
-			print FILE "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
+			print $outputfile "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
 		}
 	
 		close CSVFILE;
@@ -2356,16 +2367,18 @@ sub count_single_site_pvalues{
 		my ($psite, $pnode_name) = split(/_/, $site_node);
 		my $pmaxdepth = $subtree_info->{$pnode_name}->{$psite}->{"maxdepth"};
 		my $pmutcount = sum(values %flat_obs_hash);
-		print FILE "Number of iterations: $iteration\n";
-		print FILE "#\tsite_node\tmutations\tmaxlength\tpvalue_epistasis(median)\tpvalue_epistasis(mean)\tpvalue_environment(median)\tpvalue_environment(mean)\n";
-		print FILE ">\t".$site_node."\t".$pmutcount."\t".$pmaxdepth."\t".($pval_epi/$iteration)."\t".($pval_epi_for_mean/$iteration)."\t".($pval_env/$iteration)."\t".($pval_env_for_mean/$iteration)."\n";
+		print $outputfile "Number of iterations: $iteration\n";
+		print $outputfile "#\tsite_node\tmutations\tmaxlength\tpvalue_epistasis(median)\tpvalue_epistasis(mean)\tpvalue_environment(median)\tpvalue_environment(mean)\n";
+		print $outputfile ">\t".$site_node."\t".$pmutcount."\t".$pmaxdepth."\t".($pval_epi/$iteration)."\t".($pval_epi_for_mean/$iteration)."\t".($pval_env/$iteration)."\t".($pval_env_for_mean/$iteration)."\n";
 		}
 		else {
-			print FILE "hist sum is 0";	
+			print $outputfile "hist sum is 0";	
 		}
 		}
+			$self -> printFooter($outputfile);
+		close $outputfile;	
 	}	
-		close FILE;	
+
 	close COUNTER;
 }
 

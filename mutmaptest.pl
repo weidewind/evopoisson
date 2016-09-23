@@ -1,8 +1,5 @@
 #!/usr/bin/perl
-## This class provides a map of mutations (node_name -> array of sites that mutated on the branch),  
-## given a tree and sequences of all nodes (including internal ones)
 
-## 
 use Mutmap;
 
 medtest();
