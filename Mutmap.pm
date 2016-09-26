@@ -1973,7 +1973,7 @@ sub count_pvalues{
 			print  COUNTER " $restriction ".$group_names[$group_number]." complement $count\n"; 
 			
 			my $file = File::Spec->catfile($dir,$prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
-			open $outputfile, ">$file" or die "Cannot create $file";
+			open my $outputfile, ">$file" or die "Cannot create $file";
 			my %complement_flat_obs_hash;
 			my %complement_flat_exp_hash;
 			#print " going to flat hash\n";
