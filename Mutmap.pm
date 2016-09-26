@@ -1673,7 +1673,7 @@ sub count_pvalues{
 		## end of copypaste	
 			
 		my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
-		open FILE, ">$file" or die "Cannot create $file";
+		open $outputfile, ">$file" or die "Cannot create $file";
 				
 		my %histhash;
 		foreach my $site_node(keys %obs_hash_restricted){
@@ -1682,10 +1682,10 @@ sub count_pvalues{
 				$histhash{$bin}[1] += $obs_hash_restricted{$site_node}{$bin}[1];
 			}
 		}
-		print FILE "bin\tobs\texp\n";
+		print $outputfile "bin\tobs\texp\n";
 		my @sorted_bins = sort { $a <=> $b } keys %histhash;
 		foreach my $bin (@sorted_bins){
-			print FILE $bin."\t".$histhash{$bin}[0]."\t".$histhash{$bin}[1]."\n";
+			print $outputfile $bin."\t".$histhash{$bin}[0]."\t".$histhash{$bin}[1]."\n";
 		}
 			
 			
@@ -1704,10 +1704,10 @@ sub count_pvalues{
 		my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step); # 18.03 - added the same statistics based on histogram mean (instead of median)
 		my $exp_mean = hist_mean_for_hash(\%flat_exp_hash, $step);
 		
-		print FILE "\n observed median: $obs_median\n";
-		print FILE "\n poisson expected median: $exp_median\n";
-		print FILE "\n observed mean: $obs_mean\n";
-		print FILE "\n poisson expected mean: $exp_mean\n";
+		print $outputfile "\n observed median: $obs_median\n";
+		print $outputfile "\n poisson expected median: $exp_median\n";
+		print $outputfile "\n observed mean: $obs_mean\n";
+		print $outputfile "\n poisson expected mean: $exp_mean\n";
 		
 		my $pval_epi;
 		my $pval_env;
@@ -1758,8 +1758,8 @@ sub count_pvalues{
 			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash,$step);
 			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
 			my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
-			print FILE "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
-			print FILE "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
+			print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
+			print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
 			if ($boot_obs_median - $boot_exp_median >= $obs_median - $exp_median){
 				$pval_env += 1;
 			}
@@ -1780,23 +1780,23 @@ sub count_pvalues{
 			my $mean_exp = $hist_exp[$j]/$iteration;
 			my $stat_obs = Statistics::Descriptive::Full->new();
 			$stat_obs->add_data(\@{$array_obs_minus_exp[$j]});
-			print FILE "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
+			print $outputfile "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
 		}
 	
 	
 	
 		close CSVFILE;
-		print FILE "Number of iterations: $iteration\n";
-		print FILE "- pvalue_epistasis  pvalue_environment\n";
-		print FILE "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
-		print FILE "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
+		print $outputfile "Number of iterations: $iteration\n";
+		print $outputfile "- pvalue_epistasis  pvalue_environment\n";
+		print $outputfile "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
+		print $outputfile "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
 	
-		close FILE;	
+		close $outputfile;	
 		
 		}
 		else {
-			print FILE "hist sum is 0";
-			close FILE;
+			print $outputfile "hist sum is 0";
+			close $outputfile;
 		}
 		
 	
@@ -1834,7 +1834,7 @@ sub count_pvalues{
 			print  COUNTER "$restriction ".$group_names[$group_number]." group $count "; 
 				
 			my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
-			open FILE, ">$file";
+			open $outputfile, ">$file";
 			
 			
 			#copypaste from all
@@ -1845,10 +1845,10 @@ sub count_pvalues{
 					$histhash{$bin}[1] += $obs_hash_restricted{$site_node}{$bin}[1];
 				}
 			}
-			print FILE "bin\tobs\texp\n";
+			print $outputfile "bin\tobs\texp\n";
 			my @sorted_bins = sort { $a <=> $b } keys %histhash;
 			foreach my $bin (@sorted_bins){
-				print FILE $bin."\t".$histhash{$bin}[0]."\t".$histhash{$bin}[1]."\n";
+				print $outputfile $bin."\t".$histhash{$bin}[0]."\t".$histhash{$bin}[1]."\n";
 			}
 			## end of copypaste
 			
@@ -1868,10 +1868,10 @@ sub count_pvalues{
 			my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step);
 			my $exp_mean = hist_mean_for_hash(\%flat_exp_hash, $step);
 			
-			print FILE "\n observed median: $obs_median expected poisson median $exp_median observed mean: $obs_mean expected poisson mean $exp_mean\n";
+			print $outputfile "\n observed median: $obs_median expected poisson median $exp_median observed mean: $obs_mean expected poisson mean $exp_mean\n";
 			if($obs_mean eq "NaN" || $exp_mean eq "NaN") {
-				print FILE " hist sum is 0";
-				close FILE;
+				print $outputfile " hist sum is 0";
+				close $outputfile;
 				$group_number++; # to skip complement for this group
 				next;
 			}
@@ -1879,13 +1879,13 @@ sub count_pvalues{
 				
 			my $csvfile = File::Spec->catfile($dir,temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 			open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
-			my $iteration = 0;
+			my $iteration = 0; # counter for meaningful iterations
 			my @group_boot_medians;
 			my @group_boot_means;
 			my @hist_obs;
 			my @hist_exp;
 			my @array_gbo_minus_gbe;
-			my $itnumber = 0;
+			my $itnumber = 0; # tracks iteration number, so that group and its complement are taken from the same iteration
 			while(<CSVFILE>){
 				my %boot_obs_hash;
 				my %boot_exp_hash;
@@ -1935,7 +1935,7 @@ sub count_pvalues{
 				$group_boot_medians[$itnumber][1] = $boot_exp_median;
 				$group_boot_means[$itnumber][0] = $boot_obs_mean;
 				$group_boot_means[$itnumber][1] = $boot_exp_mean;			
-				print FILE "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";
+				print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";
 				$itnumber++;
 				$iteration++;
 			}
@@ -1973,7 +1973,7 @@ sub count_pvalues{
 			print  COUNTER " $restriction ".$group_names[$group_number]." complement $count\n"; 
 			
 			my $file = File::Spec->catfile($dir,$prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
-			open FILE, ">$file" or die "Cannot create $file";
+			open $outputfile, ">$file" or die "Cannot create $file";
 			my %complement_flat_obs_hash;
 			my %complement_flat_exp_hash;
 			#print " going to flat hash\n";
@@ -1989,10 +1989,10 @@ sub count_pvalues{
 			my $complement_obs_mean = hist_mean_for_hash(\%complement_flat_obs_hash, $step);
 			my $complement_exp_mean = hist_mean_for_hash(\%complement_flat_exp_hash, $step);
 			
-			print FILE "\n observed median: $complement_obs_median expected median: $complement_exp_median observed mean: $complement_obs_mean expected mean: $complement_exp_mean\n";
+			print $outputfile "\n observed median: $complement_obs_median expected median: $complement_exp_median observed mean: $complement_obs_mean expected mean: $complement_exp_mean\n";
 			if($complement_obs_mean eq "NaN" || $complement_exp_mean eq "NaN") {
-				print FILE " hist sum is 0";
-				close FILE;
+				print $outputfile " hist sum is 0";
+				close $outputfile;
 				next;
 			}
 			
@@ -2053,12 +2053,13 @@ sub count_pvalues{
 				$complement_boot_medians[$itnumber][1] = $boot_exp_median;
 				$complement_boot_means[$itnumber][0] = $boot_obs_mean;
 				$complement_boot_means[$itnumber][1] = $boot_exp_mean;
-				print FILE "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";
+				print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";
 				$itnumber++;
 				$iteration++;
 			}
 			close CSVFILE;
 			## 20.09.2016
+			# delete iteration data from group, if there were no nodes in complement in this iteration, and vice versa		
 			for (my $it = 0; $it < $itnumber; $it++){
 				if (! defined $complement_boot_medians[$it] || ! defined $group_boot_medians[$it]){
 					$complement_boot_medians[$it] = undef;
@@ -2073,6 +2074,7 @@ sub count_pvalues{
 					}
 				} 
 			}
+			# now group and complement contain undefs at the same indices
 			@complement_boot_medians = grep defined, @complement_boot_medians;
 			@complement_boot_means = grep defined, @complement_boot_means;
 			@group_boot_medians = grep defined, @group_boot_medians;
@@ -2085,6 +2087,7 @@ sub count_pvalues{
 			}
 			##
 			print "Number of meaningful iterations for group ".$group_names[$group_number]." is ".scalar @complement_boot_medians."\n";
+			
 			my @array_diffdiff;
 			if (scalar @array_gbo_minus_gbe  != scalar @array_cbo_minus_cbe){
 				print "bintest failed! number of bin in group array is ".scalar @array_gbo_minus_gbe.", in complement array  ".scalar @array_cbo_minus_cbe."\n";
@@ -2101,32 +2104,36 @@ sub count_pvalues{
 				}
 			}
 			
+			if (scalar @complement_boot_medians ! = scalar @group_boot_medians){
+				print "Error! complement_boot_medians size is not equal to group_boot_medians size: ".scalar @complement_boot_medians." != ".scalar @group_boot_medians."\n";
+			}
+			my $updated_iteration_number = scalar @complement_boot_medians;
 			
-			print FILE "bin mean_group_boot_obs mean_group_boot_exp ";
-			print FILE "mean_compl_boot_obs mean_compl_boot_exp ";
-			print FILE " diff_gbo-gbe-cbo+cbe_percentile_5 diff_gbo-gbe-cbo+cbe_percentile_95";
-			print FILE " diff_gbo-gbe_percentile_5 diff_gbo-gbe_percentile_95";
-			print FILE " diff_cbo-cbe_percentile_5 diff_cbo-cbe_percentile_95\n";
+			print $outputfile "bin mean_group_boot_obs mean_group_boot_exp ";
+			print $outputfile "mean_compl_boot_obs mean_compl_boot_exp ";
+			print $outputfile " diff_gbo-gbe-cbo+cbe_percentile_5 diff_gbo-gbe-cbo+cbe_percentile_95";
+			print $outputfile " diff_gbo-gbe_percentile_5 diff_gbo-gbe_percentile_95";
+			print $outputfile " diff_cbo-cbe_percentile_5 diff_cbo-cbe_percentile_95\n";
 			my $maxbin  = max(scalar @hist_obs, scalar @hist_compl_obs);
 			$maxbin = max ($maxbin, scalar @hist_exp);
 			$maxbin = max ($maxbin, scalar @hist_compl_exp);
 			
 			for (my $j = 0; $j < $maxbin; $j++){ #foreach bin
-				my $mean_group_obs = $hist_obs[$j]/$iteration;
-				my $mean_group_exp = $hist_exp[$j]/$iteration;
-				my $mean_compl_obs = $hist_compl_obs[$j]/$iteration;
-				my $mean_compl_exp = $hist_compl_exp[$j]/$iteration;
+				my $mean_group_obs = $hist_obs[$j]/$updated_iteration_number; # 26.09.2016 - $updated_iteration_number instead of $iteration
+				my $mean_group_exp = $hist_exp[$j]/$updated_iteration_number;
+				my $mean_compl_obs = $hist_compl_obs[$j]/$updated_iteration_number;
+				my $mean_compl_exp = $hist_compl_exp[$j]/$updated_iteration_number;
 				my $stat_gbo_minus_gbe = Statistics::Descriptive::Full->new();
 				$stat_gbo_minus_gbe->add_data(\@{$array_gbo_minus_gbe[$j]});
 				my $stat_cbo_minus_cbe = Statistics::Descriptive::Full->new();
 				$stat_cbo_minus_cbe->add_data(\@{$array_cbo_minus_cbe[$j]});	
 				my $stat_diffdiff = Statistics::Descriptive::Full->new();
 				$stat_diffdiff->add_data(\@{$array_diffdiff[$j]});			
-				print FILE "$j $mean_group_obs $mean_group_exp ";
-				print FILE "$mean_compl_obs $mean_compl_exp ";
-				print FILE $stat_diffdiff->percentile(5)." ".$stat_diffdiff->percentile(95);
-				print FILE $stat_gbo_minus_gbe->percentile(5)." ".$stat_gbo_minus_gbe->percentile(95);
-				print FILE $stat_cbo_minus_cbe->percentile(5)." ".$stat_cbo_minus_cbe->percentile(95)."\n";
+				print $outputfile "$j $mean_group_obs $mean_group_exp ";
+				print $outputfile "$mean_compl_obs $mean_compl_exp ";
+				print $outputfile $stat_diffdiff->percentile(5)." ".$stat_diffdiff->percentile(95);
+				print $outputfile $stat_gbo_minus_gbe->percentile(5)." ".$stat_gbo_minus_gbe->percentile(95);
+				print $outputfile $stat_cbo_minus_cbe->percentile(5)." ".$stat_cbo_minus_cbe->percentile(95)."\n";
 			}
 			
 			
@@ -2196,12 +2203,12 @@ sub count_pvalues{
 					$pval_epi_for_mean += 1;
 				}
 			}
-			print FILE "Number of iterations: $iteration\n";
-			print FILE "- pvalue_epistasis_enrichment pvalue_environment_enrichment pvalue_epistasis pvalue_environment\n";
-			print FILE "median_stat ".($pval_epi_enrichment/$iteration)." ".($pval_env_enrichment/$iteration)." ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
-			print FILE "mean_stat ".($pval_epi_enrichment_for_mean/$iteration)." ".($pval_env_enrichment_for_mean/$iteration)." ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
-		
-			close FILE;	
+			print $outputfile "Number of iterations: ".$updated_iteration_number."\n"; # and not $iteration. changed at 26.09.2016 
+			print $outputfile "- pvalue_epistasis_enrichment pvalue_environment_enrichment pvalue_epistasis pvalue_environment\n";
+			print $outputfile "median_stat ".($pval_epi_enrichment/$updated_iteration_number)." ".($pval_env_enrichment/$updated_iteration_number)." ".($pval_epi/$updated_iteration_number)." ".($pval_env/$updated_iteration_number)."\n";
+			print $outputfile "mean_stat ".($pval_epi_enrichment_for_mean/$updated_iteration_number)." ".($pval_env_enrichment_for_mean/$updated_iteration_number)." ".($pval_epi_for_mean/$updated_iteration_number)." ".($pval_env_for_mean/$updated_iteration_number)."\n";
+			printFooter($outputfile);
+			close $outputfile;	
 			
 			
 		}
