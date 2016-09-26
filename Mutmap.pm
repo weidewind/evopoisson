@@ -2105,7 +2105,7 @@ sub count_pvalues{
 				}
 			}
 			
-			if (scalar @complement_boot_medians ! = scalar @group_boot_medians){
+			if (scalar @complement_boot_medians != scalar @group_boot_medians){
 				print "Error! complement_boot_medians size is not equal to group_boot_medians size: ".scalar @complement_boot_medians." != ".scalar @group_boot_medians."\n";
 			}
 			my $updated_iteration_number = scalar @complement_boot_medians;
