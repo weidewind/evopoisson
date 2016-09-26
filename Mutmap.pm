@@ -1673,7 +1673,7 @@ sub count_pvalues{
 		## end of copypaste	
 			
 		my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
-		open $outputfile, ">$file" or die "Cannot create $file";
+		open my $outputfile, ">$file" or die "Cannot create $file";
 				
 		my %histhash;
 		foreach my $site_node(keys %obs_hash_restricted){
@@ -1790,7 +1790,7 @@ sub count_pvalues{
 		print $outputfile "- pvalue_epistasis  pvalue_environment\n";
 		print $outputfile "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
 		print $outputfile "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
-	
+		$self->printFooter($outputfile);
 		close $outputfile;	
 		
 		}
@@ -1834,7 +1834,7 @@ sub count_pvalues{
 			print  COUNTER "$restriction ".$group_names[$group_number]." group $count "; 
 				
 			my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
-			open $outputfile, ">$file";
+			open my $outputfile, ">$file";
 			
 			
 			#copypaste from all
@@ -1939,8 +1939,9 @@ sub count_pvalues{
 				$itnumber++;
 				$iteration++;
 			}
-			close CSVFILE;	
-				
+			close CSVFILE;
+			$self->printFooter($outputfile);	
+			close $outputfile;	
 			##complement 
 			
 			my %complement_hash;
@@ -2207,7 +2208,7 @@ sub count_pvalues{
 			print $outputfile "- pvalue_epistasis_enrichment pvalue_environment_enrichment pvalue_epistasis pvalue_environment\n";
 			print $outputfile "median_stat ".($pval_epi_enrichment/$updated_iteration_number)." ".($pval_env_enrichment/$updated_iteration_number)." ".($pval_epi/$updated_iteration_number)." ".($pval_env/$updated_iteration_number)."\n";
 			print $outputfile "mean_stat ".($pval_epi_enrichment_for_mean/$updated_iteration_number)." ".($pval_env_enrichment_for_mean/$updated_iteration_number)." ".($pval_epi_for_mean/$updated_iteration_number)." ".($pval_env_for_mean/$updated_iteration_number)."\n";
-			printFooter($outputfile);
+			$self->printFooter($outputfile);
 			close $outputfile;	
 			
 			
