@@ -35,8 +35,6 @@ print Codeversion::get_version()."\n";
 sleep (180);
 # hash changes
 print Codeversion::get_version()."\n";
-sleep (180);
-print Codeversion::get_version()."\n";
 #my $output_base = Mutmap::pathFinder ($args);
 #my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_". Mutmap::state_tag($args->{state})."_realdata");
 #my $realdata = lock_retrieve ($realdatapath) or die "Cannot retrieve ".$realdatapath;	

@@ -28,7 +28,8 @@ use Statistics::Descriptive;
 use Storable qw(store retrieve lock_retrieve);
 
 use Class::Struct;
-use DnaUtilities::observation_vector qw(make_observation_vector shuffle_obsv);
+#use DnaUtilities::observation_vector qw(make_observation_vector shuffle_obsv);
+use observation_vector qw(make_observation_vector shuffle_obsv);
 use IO::Handle;
 use Cwd qw(abs_path cwd getcwd);
 use File::Spec;
@@ -750,6 +751,7 @@ sub mean_ignore_nulls{
 sub get_hashes {
 	my $self = shift;
 	my %res_hash;
+my $counter = 0;	
 	foreach my $ind(keys $self->{static_nodes_with_sub}){
 		my %x_hash;
 		my %y_hash;
@@ -757,6 +759,7 @@ sub get_hashes {
 			$x_hash{$node->get_name()} = $node->get_branch_length;
 			if ($self->{static_subs_on_node}{$node->get_name()}{$ind}){
 				$y_hash{$node->get_name()} = 1;
+$counter++;				
 			}
 			else {
 				$y_hash{$node->get_name()} = 0;
@@ -765,6 +768,7 @@ sub get_hashes {
 		$res_hash{$ind}{"x"} = \%x_hash;
 		$res_hash{$ind}{"y"} = \%y_hash;
 	}
+print "Number of muts in hashes is $counter\n";	
 	return %res_hash;	
 }
 
@@ -788,10 +792,16 @@ sub get_observation_vectors {
 sub shuffle_observation_vectors {
 	my $obs_vectors = $_[0];
 	my %shuffled_obs_vectors;
+my $counter = 0;
 	foreach my $ind (keys %{$obs_vectors}){
 		my @arr = shuffle_obsv(\@{$obs_vectors->{$ind}});
 		$shuffled_obs_vectors{$ind} = \@arr;
+foreach my $set (@arr){
+			$counter += $set->[2];
+}
+
 	}
+print "Number of mutations after shuffling is $counter\n";	
 	#print Dumper (\%shuffled_obs_vectors);
 	return %shuffled_obs_vectors;
 }
@@ -852,7 +862,7 @@ sub myclone {
 
 sub shuffle_mutator {
 	my $self = shift;
-	my %obs_vectors = $self->get_observation_vectors();
+	my %obs_vectors = $self->get_observation_vectors(); # created only once, reused afterwards
 	my %shuffled_obs_vectors = shuffle_observation_vectors(\%obs_vectors);
 	$self->{obs_vectors} = \%shuffled_obs_vectors;
 	my @mock_mutmaps = $self->read_observation_vectors(\%shuffled_obs_vectors); 
