@@ -816,8 +816,7 @@ my $counter = 0;
 					$nodes_with_sub{$ind} = ();
 			}
 $counter++; 
-			push (@{$nodes_with_sub{$ind}}, \${$self->{static_hash_of_nodes}{$nodname}}); #вытащить из дерева по имени
-			#push (@{$nodes_with_sub{$ind}}, \${$static_hash_of_nodes{$nodname}}); #вытащить из дерева по имени
+			push (@{$nodes_with_sub{$ind}}, \${$self->{static_hash_of_nodes}{$nodname}});
 		#print "TEST1 ".${$static_hash_of_nodes{$nodname}}->get_name()."\n"; # часть имен исчезла, а часть - осталась ОО
 		#print "TEST2 ".$nodname."\n";
 		}
@@ -886,8 +885,8 @@ sub iterations_gulp {
 	my @simulated_hists;
 	
 	for (my $i = 1; $i <= $iterations; $i++){
-		if ($verbose){print "Creating clone..\n";}
-		my $mock_mutmap = $self->myclone(); # 27.09 debugging
+		#if ($verbose){print "Creating clone..\n";}
+		#my $mock_mutmap = $self->myclone(); # 27.09 debugging
 		if ($verbose){print "Shuffling clone..\n";}
 		$mock_mutmap->shuffle_mutator(); # this method shuffles observation vectors and sets new $static_nodes.. and static_subs..
 		my %hash;
@@ -3143,29 +3142,33 @@ sub visitor_coat {
 		}
 		elsif ($visitor_name eq "entrenchment_visitor" || $visitor_name eq "lrt_visitor"){
 			if (exists $self->{static_subtree_info}){
-					foreach my $node(keys $self->{static_subtree_info}){
-							foreach my $site(keys $self->{static_subtree_info}{$node}){
-								if ($visitor_name eq "entrenchment_visitor"){
-									if (exists $self->{static_subtree_info}{$node}{$site}{"hash"}){
-										if ($overwrite){
-											delete $self->{static_subtree_info}{$node}{$site}{"hash"};
-											delete $self->{static_subtree_info}{$node}{$site}{"maxdepth"};
-											delete $self->{static_subtree_info}{$node}{$site}{"maxdepth_node"};
-										}
-										else {return;}
-									}
-										
-								}
-								elsif ($visitor_name eq "lrt_visitor"){
-									if (exists $self->{static_subtree_info}{$node}{$site}{"lrt"}){
-										if ($overwrite){
-											delete $self->{static_subtree_info}{$node}{$site}{"lrt"};
-										}
-										else {return;}
-									}
-								}
-							}
-					}
+				if ($overwrite){
+					delete $self->{static_subtree_info};
+				}
+			# commented out at 27.09.2016	
+			#		foreach my $node(keys $self->{static_subtree_info}){
+			#				foreach my $site(keys $self->{static_subtree_info}{$node}){
+			#					if ($visitor_name eq "entrenchment_visitor"){
+			#						if (exists $self->{static_subtree_info}{$node}{$site}{"hash"}){
+			#							if ($overwrite){
+		#									delete $self->{static_subtree_info}{$node}{$site}{"hash"};
+	#										delete $self->{static_subtree_info}{$node}{$site}{"maxdepth"};
+	#										delete $self->{static_subtree_info}{$node}{$site}{"maxdepth_node"};
+	#									}
+	#									else {return;}
+	#								}
+	#									
+	#							}
+	#							elsif ($visitor_name eq "lrt_visitor"){
+	#								if (exists $self->{static_subtree_info}{$node}{$site}{"lrt"}){
+	#									if ($overwrite){
+	#										delete $self->{static_subtree_info}{$node}{$site}{"lrt"};
+	#									}
+	#									else {return;}
+	#								}
+	#							}
+	#						}
+	#				}
 			}
 		}
 		else {print "Warning: visitor_coat cannot perform any check for $visitor_name subroutine. Launching my_visit_depth_first without checking for previous launches\n";}
