@@ -885,8 +885,8 @@ sub iterations_gulp {
 	my @simulated_hists;
 	
 	for (my $i = 1; $i <= $iterations; $i++){
-		#if ($verbose){print "Creating clone..\n";}
-		#my $mock_mutmap = $self->myclone(); # 27.09 debugging
+		if ($verbose){print "Creating clone..\n";}
+		my $mock_mutmap = $self->myclone(); # 27.09 visitor_coat does not work, so we just create a new map for each iteration
 		if ($verbose){print "Shuffling clone..\n";}
 		$mock_mutmap->shuffle_mutator(); # this method shuffles observation vectors and sets new $static_nodes.. and static_subs..
 		my %hash;
@@ -3119,7 +3119,7 @@ sub egor_diff_rings_site_entrenchment {
 
 # decorator for my_visit_depth_first, checks for existance of corresponding hash and prevents unintentional changes in it (or deletes it and overwrites)
 # must not be used in loop context!
-
+## !!! does not work as expected, should not be used for preventing changes in pre-existing data. 
 sub visitor_coat {
 		my $self = shift;
 		my $node = $_[0];
