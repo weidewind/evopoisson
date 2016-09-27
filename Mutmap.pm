@@ -747,19 +747,39 @@ sub mean_ignore_nulls{
 }
 
 
+
+
+
+sub myclone {
+	my $self = shift;
+	my $clone = {
+			static_output_base => $self->{static_output_base},
+			static_protein => $self->{static_protein},
+			static_tree =>  $self->{static_tree},
+			static_fasta => $self->{static_fasta},
+			static_state  => $self->{static_state},
+			static_hash_of_nodes => $self->{static_hash_of_nodes},
+			static_distance_hash => $self->{realdata}{"distance_hash"},
+			static_background_subs_on_node => $self->{static_background_subs_on_node },
+			static_background_nodes_with_sub => $self->{static_background_nodes_with_sub},
+			obs_vectors => clone($self->{realdata}{"obs_vectors"})  #the only structure which can (and will) be changed
+	};
+	
+	bless $clone, ref $self; #ref $self returns class of object $self
+	return $clone;
+}
+
 # outputs hash of hashes used for construction of observed_vector
 sub get_hashes {
 	my $self = shift;
 	my %res_hash;
-my $counter = 0;	
 	foreach my $ind(keys $self->{static_nodes_with_sub}){
 		my %x_hash;
 		my %y_hash;
 		foreach my $node($self->{static_tree}->get_nodes){
 			$x_hash{$node->get_name()} = $node->get_branch_length;
 			if ($self->{static_subs_on_node}{$node->get_name()}{$ind}){
-				$y_hash{$node->get_name()} = 1;
-$counter++;				
+				$y_hash{$node->get_name()} = 1;			
 			}
 			else {
 				$y_hash{$node->get_name()} = 0;
@@ -768,7 +788,6 @@ $counter++;
 		$res_hash{$ind}{"x"} = \%x_hash;
 		$res_hash{$ind}{"y"} = \%y_hash;
 	}
-print "Number of muts in hashes is $counter\n";	
 	return %res_hash;	
 }
 
@@ -792,16 +811,11 @@ sub get_observation_vectors {
 sub shuffle_observation_vectors {
 	my $obs_vectors = $_[0];
 	my %shuffled_obs_vectors;
-my $counter = 0;
 	foreach my $ind (keys %{$obs_vectors}){
 		my @arr = shuffle_obsv(\@{$obs_vectors->{$ind}});
 		$shuffled_obs_vectors{$ind} = \@arr;
-foreach my $set (@arr){
-			$counter += $set->[2];
-}
 
 	}
-print "Number of mutations after shuffling is $counter\n";	
 	#print Dumper (\%shuffled_obs_vectors);
 	return %shuffled_obs_vectors;
 }
@@ -812,7 +826,6 @@ sub read_observation_vectors {
 	my $obs_vectors = shift;
 	my %subs_on_node;
 	my %nodes_with_sub;
-my $counter = 0;
 	foreach my $ind(keys %{$obs_vectors}){
 		foreach my $set(@{$obs_vectors->{$ind}}){
 		if ($set->[2] == 1){
@@ -825,37 +838,13 @@ my $counter = 0;
 			if (! exists $nodes_with_sub{$ind}){
 					$nodes_with_sub{$ind} = ();
 			}
-$counter++; 
 			push (@{$nodes_with_sub{$ind}}, \${$self->{static_hash_of_nodes}{$nodname}});
 		#print "TEST1 ".${$static_hash_of_nodes{$nodname}}->get_name()."\n"; # часть имен исчезла, а часть - осталась ОО
 		#print "TEST2 ".$nodname."\n";
 		}
 		}
 	}
-print "There are $counter mutations in this clone\n";
 	return (\%subs_on_node, \%nodes_with_sub);
-}
-
-
-
-
-sub myclone {
-	my $self = shift;
-	my $clone = {
-			static_output_base => $self->{static_output_base},
-			static_protein => $self->{static_protein},
-			static_tree =>  $self->{static_tree},
-			static_fasta => $self->{static_fasta},
-			static_state  => $self->{static_state},
-			static_hash_of_nodes => $self->{static_hash_of_nodes},
-			static_distance_hash => $self->{realdata}{"distance_hash"},
-			static_background_subs_on_node => $self->{static_background_subs_on_node },
-			static_background_nodes_with_sub => $self->{static_background_nodes_with_sub},
-			obs_vectors => clone($self->{realdata}{"obs_vectors"})  #the only structure which can (and will) be changed
-	};
-	
-	bless $clone, ref $self; #ref $self returns class of object $self
-	return $clone;
 }
 
 

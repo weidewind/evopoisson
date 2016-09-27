@@ -66,7 +66,6 @@ sub shuffle_obsv{
 		$new_obsv[$i]->[1]+=$new_obsv[$i-1]->[1]; # building "CDF" ("distribution") (sum not equal to one)
 	};
 	my %restrictor;
-print "Shuffler has found $N mutations..\t";
 	while($N){
 		#my $val=rand()*$new_obsv[-1]->[1];
 		my $val=$rng->rand()*$new_obsv[-1]->[1]; # random value from 0 to sum of all x values
@@ -81,15 +80,16 @@ print "Shuffler has found $N mutations..\t";
 		$restrictor{$i} = 1;											
 		$N--;
 	};
-my $newcounter = 0;	
-my $oldcounter = 0;
+
 	for(my $i=0;$i<@{$ra_obsv};$i++){
 		$new_obsv[$i]->[1]=$ra_obsv->[$i]->[1];
 $newcounter +=  $new_obsv[$i]->[2];	
 $oldcounter +=  $ra_obsv->[$i]->[2];	
 #print "\n$new_obsv[$i]->[0]\t$new_obsv[$i]->[1]\t$new_obsv[$i]->[2]\t$ra_obsv->[$i]->[2]";
 	};
-print "Newcounter is $newcounter, oldcounter was $oldcounter\n";	
+	if ($newcounter != $oldcounter) {
+		print "Error! shuffle_obsv: newcounter is $newcounter, oldcounter was $oldcounter, expected them to be equal\n";	
+	}
 	return @new_obsv;
 }
 
