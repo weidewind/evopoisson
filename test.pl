@@ -33,6 +33,7 @@ GetOptions (	'protein=s' => \$protein,
 my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1}; 
 print Codeversion::get_version()."\n";
 sleep (180);
+# hash changes
 print Codeversion::get_version()."\n";
 sleep (180);
 print Codeversion::get_version()."\n";
