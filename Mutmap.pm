@@ -802,7 +802,7 @@ sub read_observation_vectors {
 	my $obs_vectors = shift;
 	my %subs_on_node;
 	my %nodes_with_sub;
-
+my $counter = 0;
 	foreach my $ind(keys %{$obs_vectors}){
 		foreach my $set(@{$obs_vectors->{$ind}}){
 		if ($set->[2] == 1){
@@ -815,6 +815,7 @@ sub read_observation_vectors {
 			if (! exists $nodes_with_sub{$ind}){
 					$nodes_with_sub{$ind} = ();
 			}
+$counter++; 
 			push (@{$nodes_with_sub{$ind}}, \${$self->{static_hash_of_nodes}{$nodname}}); #вытащить из дерева по имени
 			#push (@{$nodes_with_sub{$ind}}, \${$static_hash_of_nodes{$nodname}}); #вытащить из дерева по имени
 		#print "TEST1 ".${$static_hash_of_nodes{$nodname}}->get_name()."\n"; # часть имен исчезла, а часть - осталась ОО
@@ -822,6 +823,7 @@ sub read_observation_vectors {
 		}
 		}
 	}
+print "There are $counter mutations in this clone\n";
 	return (\%subs_on_node, \%nodes_with_sub);
 }
 
