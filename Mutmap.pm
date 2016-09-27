@@ -826,6 +826,7 @@ sub read_observation_vectors {
 	my $obs_vectors = shift;
 	my %subs_on_node;
 	my %nodes_with_sub;
+#my $counter = 0;	
 	foreach my $ind(keys %{$obs_vectors}){
 		foreach my $set(@{$obs_vectors->{$ind}}){
 		if ($set->[2] == 1){
@@ -838,12 +839,14 @@ sub read_observation_vectors {
 			if (! exists $nodes_with_sub{$ind}){
 					$nodes_with_sub{$ind} = ();
 			}
+#$counter++;			
 			push (@{$nodes_with_sub{$ind}}, \${$self->{static_hash_of_nodes}{$nodname}});
 		#print "TEST1 ".${$static_hash_of_nodes{$nodname}}->get_name()."\n"; # часть имен исчезла, а часть - осталась ОО
 		#print "TEST2 ".$nodname."\n";
 		}
 		}
 	}
+#print "There are $counter mutations in this clone\n";	
 	return (\%subs_on_node, \%nodes_with_sub);
 }
 
@@ -884,8 +887,8 @@ sub iterations_gulp {
 	my @simulated_hists;
 	
 	for (my $i = 1; $i <= $iterations; $i++){
-		if ($verbose){print "Creating clone..\n";}
-		my $mock_mutmap = $self->myclone(); # 27.09 visitor_coat does not work, so we just create a new map for each iteration
+		#if ($verbose){print "Creating clone..\n";}
+		#my $mock_mutmap = $self->myclone(); 
 		if ($verbose){print "Shuffling clone..\n";}
 		$mock_mutmap->shuffle_mutator(); # this method shuffles observation vectors and sets new $static_nodes.. and static_subs..
 		my %hash;
