@@ -10,7 +10,7 @@ use Groups;
 use Getopt::ArgvFile;
 use List::Util;
 use Storable qw(store retrieve lock_retrieve);
-
+use Codeversion;
 
 
 my $protein = 'h1';
@@ -31,10 +31,15 @@ GetOptions (	'protein=s' => \$protein,
 	);
 	
 my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1}; 
-my $output_base = Mutmap::pathFinder ($args);
-my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_". Mutmap::state_tag($args->{state})."_realdata");
-my $realdata = lock_retrieve ($realdatapath) or die "Cannot retrieve ".$realdatapath;	
-print " step ".$realdata->{step};
+print Codeversion::get_version()."\n";
+sleep (180);
+print Codeversion::get_version()."\n";
+sleep (180);
+print Codeversion::get_version()."\n";
+#my $output_base = Mutmap::pathFinder ($args);
+#my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_". Mutmap::state_tag($args->{state})."_realdata");
+#my $realdata = lock_retrieve ($realdatapath) or die "Cannot retrieve ".$realdatapath;	
+#print " step ".$realdata->{step};
 #my $mutmap = Mutmap->new($args);
 
 #my @groups_and_names = $mutmap-> predefined_groups_and_names();

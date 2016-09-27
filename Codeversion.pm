@@ -4,9 +4,13 @@ use Git::Repository;
 
 package Codeversion;
 
+my $version = undef;
+
 sub get_version{
- 	my $r = Git::Repository->new();
- 	my $output = $r->run( "rev-parse", "HEAD" );
- 	return $output;
+	if (! defined $version){
+ 		my $r = Git::Repository->new();
+ 		$version = $r->run( "rev-parse", "HEAD" );
+	}
+	return $version;
 }
  1;
