@@ -884,12 +884,13 @@ sub iterations_gulp {
 	my @simulated_hists;
 	
 	for (my $i = 1; $i <= $iterations; $i++){
+		if ($verbose){print "Creating clone..\n";}
+		my $mock_mutmap = $self->myclone(); # 27.09 debugging
 		if ($verbose){print "Shuffling clone..\n";}
 		$mock_mutmap->shuffle_mutator(); # this method shuffles observation vectors and sets new $static_nodes.. and static_subs..
 		my %hash;
-		
 		# >new iteration string and all the corresponding data  are printed inside this sub:
-		my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths($step,0,$ancestor_nodes, "overwrite", $tag, $verbose); #step (bin size), restriction (NOT USED), ancestor_nodes, should I overwrite static hash?
+		my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths($step,50,$ancestor_nodes, "overwrite", $tag, $verbose); #step (bin size), restriction (NOT USED, always 50), ancestor_nodes, should I overwrite static hash?
 
 		foreach my $bin(1..$maxbin){
 				foreach my $site_node(keys %prehash){
