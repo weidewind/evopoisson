@@ -1535,12 +1535,15 @@ sub concat_and_divide_simult_single_sites {
 				foreach my $md(@maxdepths){
 					if ($max_depth > $md){
 						foreach my $site_node(keys %{$obs_hash}){
-							if ($norms{$md}{$site_node}){
-							#print "group number $group_number md $md node name $node_name\n";
-								$sums{$md}{$site_node} += $str_array[1];
-								$hash{$md}{$site_node}{$str_array[0]}[1] += $str_array[2];
-								$hash{$md}{$site_node}{$str_array[0]}[0] += $str_array[1];
-								#print $hash{$md}{$site_node}{$str_array[0]}[0]." obs integral\n";
+							my ($mysite, $mynode) = split(/_/, $site_node);
+							if ($mynode eq $node_name){ # 28.09.2016 
+								if ($norms{$md}{$site_node}){ 
+								#print "group number $group_number md $md node name $node_name\n";
+									$sums{$md}{$site_node} += $str_array[1];
+									$hash{$md}{$site_node}{$str_array[0]}[1] += $str_array[2];
+									$hash{$md}{$site_node}{$str_array[0]}[0] += $str_array[1];
+									#print $hash{$md}{$site_node}{$str_array[0]}[0]." obs integral\n";
+								}
 							}
 						}
 					}
