@@ -23,12 +23,13 @@ my @n1_epitopes = qw(380 381 382 383 384 385 386 388 389 390 393 397 398 199 200
 
 # Whiley 
 my @h3_epitopes = qw( 138 140 142 147 148 146 149 151 153 154 156 158 159 160 161 162 166 168 184 144 145 171 172 173 174 175 176 179 180 181 202 203 204 205 206 208 209 210 212 213 214 60 61 62 63 64 66 67 69 70 289 291 292 294 295 296 310 313 315 316 320 321 323 324 325 326 327 328 112 118 119 133 137 183 186 187 188 189 190 191 192 193 195 198 217 219 223 224 225 228 229 230 231 232 233 234 235 242 243 244 245 246 254 256 258 260 262 263 264 73 75 78 79 83 91 94 96 97 98 99 102 103 104 107 108 110 125 276 277 278 281 );
-
+# Neher Prediction,  dynamics  and visualization of antigenic phenotypes of seasonal influenza viruses, Table S2 (all sites) Group size = 33
+my @h3_antigenic_neher = (78, 160, 172, 174, 212, 292, 137, 140, 149, 158, 98, 99, 147, 315, 41, 91, 171, 205, 278, 151, 161, 156, 209, 202, 241, 173, 206, 242, 276, 175, 228, 258, 128);
 # Shih 2007
 my @h3_shih_epitopes = qw(66 69 70 137 138 140 142 147 149 151 153 158 159 160 161 162 171 172 173 174 175 176 179 180 188 189 190 202 204 205 206 208 209 212 213 217 223 229 233 242 243 258 260 264 291 292 294 315 323 );
 my @n2_epitopes = qw(383 384 385 386 387 389 390 391 392 393 394 396 399 400 401 403 197 198 199 200 221 222 328 329 330 331 332 334 336 338 339 341 342 343 344 346 347 357 358 359  366 367 368 369 370);
 my @n1_wan_epitopes = qw(248, 249, 250, 273, 309, 338, 339, 341, 343, 396, 397, 456);
-#h1 Huang (antigenic), as is in file Tables_main (Huang + 17, from msa)
+#h1 Huang (antigenic), as is in file Tables_main (Huang + 17, from msa) ( 41 H1N1 HA epitope residues (called natural epitope residues) with statistically significant scores)
 my @h1_antigenic = qw( 138 144 145 147 150 158 163 142 170 177 200 203 206 207 208 210 211 52 53 60 288 290 291 294 312 327 111 180 222 226 233 239 241 64 71 86 88 90 97 99 284 );
 
 
@@ -105,8 +106,8 @@ sub get_predefined_groups_and_names_for_protein {
 		@names = ("increased_binding", "antigenic", "pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr", "antigenic_ren");
 	}
 	elsif ($prot eq "h3"){
-		@groups = (\@h3_shih_epitopes, \@h3_antigenic, \@h3_antigenic_koel, \@h3_pocket_closest, \@h3_surface, \@h3_internal, \@h3_host_shift_001, \@h3_leading_kr, \@h3_trailing_kr);
-		@names = ("shih_epitopes", "antigenic", "antigenic_koel", "pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr");
+		@groups = (\@h3_shih_epitopes, \@h3_antigenic, \@h3_antigenic_koel, \@h3_antigenic_neher, \@h3_pocket_closest, \@h3_surface, \@h3_internal, \@h3_host_shift_001, \@h3_leading_kr, \@h3_trailing_kr);
+		@names = ("shih_epitopes", "antigenic", "antigenic_koel", "antigenic_neher", ""pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr");
 	}
 	elsif ($prot eq "n1"){
 		@groups = (\@n1_epitopes, \@n1_wan_epitopes, \@n1_pocket_closest, \@n1_surface, \@n1_internal, \@n1_host_shift_001, \@n1_leading_kr, \@n1_trailing_kr);

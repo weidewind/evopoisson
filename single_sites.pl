@@ -44,6 +44,7 @@ if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restric
 
 ## 25.01 Procedure for obtaining p-values for every ancestor node (site_node)
 my $mutmap = Mutmap->new($args);
+$mutmap-> createCodeversionFile("single_sites");
 $mutmap-> concat_and_divide_simult_single_sites (\@restriction_levels);
 $mutmap-> count_single_site_pvalues(\@restriction_levels); #$self;  @restriction_levels; my @groups; my @group_names;
 
