@@ -2870,7 +2870,16 @@ sub hist_median{
 	}
 	
 	if ($head == $summ/2){
-		$median += 0.5*$step;
+	#	$median += 0.5*$step;
+		my $leftmedian = $median;
+		my $rightmedian;
+		my $newhead = $head;
+		while ($newhead == $head){
+			$newhead += $hist[$interval];
+			$rightmedian = $interval*$step; 
+			$interval++;
+		}
+		$median = ($leftmedian+$rightmedian)/2;
 	}
 #print_hist(\@hist);
 	return $median;

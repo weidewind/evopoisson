@@ -107,7 +107,7 @@ sub get_predefined_groups_and_names_for_protein {
 	}
 	elsif ($prot eq "h3"){
 		@groups = (\@h3_shih_epitopes, \@h3_antigenic, \@h3_antigenic_koel, \@h3_antigenic_neher, \@h3_pocket_closest, \@h3_surface, \@h3_internal, \@h3_host_shift_001, \@h3_leading_kr, \@h3_trailing_kr);
-		@names = ("shih_epitopes", "antigenic", "antigenic_koel", "antigenic_neher", "pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr");
+		@names = ("shih_epitopes", "antigenic", "antigenic_koel", "antigenic_neher", "pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr");	
 	}
 	elsif ($prot eq "n1"){
 		@groups = (\@n1_epitopes, \@n1_wan_epitopes, \@n1_pocket_closest, \@n1_surface, \@n1_internal, \@n1_host_shift_001, \@n1_leading_kr, \@n1_trailing_kr);
