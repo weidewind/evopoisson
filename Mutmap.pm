@@ -623,7 +623,7 @@ sub print_subtree_with_mutations {
 	my @args = ($root);
 	$self->visitor_coat ($root, \@array,\&lrt_visitor,\&no_check,\@args,0);
 	for (my $i = 0; $i < scalar @muts; $i++){
-		my ($ind, $ancnodename) = split(/_/, $muts);
+		my ($ind, $ancnodename) = split(/_/, $muts[$i]);
 		#my $ind = $muts[$i];
 		#$i++;
 		#my $ancnodename = $muts[$i];
