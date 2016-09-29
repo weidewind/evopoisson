@@ -16,7 +16,7 @@ use Memory::Usage;
 my $mu = Memory::Usage->new();
 $mu->record('starting work');
 
-
+#
 
 my $protein;
 my $state = 'nsyn';
