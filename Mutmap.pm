@@ -623,9 +623,10 @@ sub print_subtree_with_mutations {
 	my @args = ($root);
 	$self->visitor_coat ($root, \@array,\&lrt_visitor,\&no_check,\@args,0);
 	for (my $i = 0; $i < scalar @muts; $i++){
-		my $ind = $muts[$i];
-		$i++;
-		my $ancnodename = $muts[$i];
+		my ($ind, $ancnodename) = split(/_/, $muts);
+		#my $ind = $muts[$i];
+		#$i++;
+		#my $ancnodename = $muts[$i];
 		if (!exists $self->{static_subtree_info}{$ancnodename}{$ind}){
 				warn "there is no mutation at $ind , $ancnodename";
 		}

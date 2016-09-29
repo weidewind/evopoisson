@@ -75,7 +75,7 @@ $mu->record('just before mutmap creation');
 $args->{fromfile} = 1;
 my $mutmap = Mutmap->new($args); # from file
 $mu->record('mutmap created');
-
+$mutmap-> createCodeversionFile("poisson");
 ##
 ## 
 ## Computing gulp sizes and number of concurrent processes
@@ -174,7 +174,7 @@ if ($sim > 0){
 my @groups_and_names = $mutmap-> predefined_groups_and_names();
 $mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 $mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;
-$mutmap-> createCodeversionFile("poisson");
+
 
 sub mycomm {
 	my $tag = shift;

@@ -14,7 +14,7 @@ my $protein = "h3";
 my $state = 'nsyn';
 my $input = '';
 my $output = '';	# option variable with default value
-my $muts = "278,INTNODE4195,209,INTNODE4241,209,INTNODE4201";
+my $muts = "278_INTNODE4195,209_INTNODE4241,209_INTNODE4201";
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
 		'input=s' => \$input,
@@ -23,10 +23,10 @@ GetOptions (	'protein=s' => \$protein,
 	);
 
 my @muts = split(/,/, $muts);
-for (my $i = 0; $i < scalar @muts; $i++){
-	unless ($muts[$i] =~ /^[1-9]\d*$/) {die "Please, enter comma-separated sites and corresponding nodes. Example: 278,INTNODE4195,209,INTNODE4241,209,INTNODE4201";}
-	$i++; #need to check only odd elements
-}
+#for (my $i = 0; $i < scalar @muts; $i++){
+#	unless ($muts[$i] =~ /^[1-9]\d*$/) {die "Please, enter comma-separated sites and corresponding nodes. Example: 278,INTNODE4195,209,INTNODE4241,209,INTNODE4201";}
+#	$i++; #need to check only odd elements
+#}
 my $mutmap = Mutmap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
 
 $mutmap->print_subtree_with_mutations(\@muts);
