@@ -971,8 +971,9 @@ sub get_obshash {
 # not to be confused with check_realdata_restriction, which gets constructor arguments as an argument
 sub get_realdata_restriction {
 	my $realdata = shift;
-	my @obshash_restriction = map { /^obs_hash(.*)/ ? $1 : () } (keys %{$realdata});
-	return $obshash_restriction[0];
+	#my @obshash_restriction = map { /^obs_hash(.*)/ ? $1 : () } (keys %{$realdata});
+	#return $obshash_restriction[0];
+	return $realdata->{restriction};
 }
 
 # 28.12 compute norm for given restriction and/or group
