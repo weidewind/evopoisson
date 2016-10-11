@@ -405,11 +405,8 @@ sub synmutmap {
 	return (\%subs_on_node, \%nodes_with_sub);
 }
 
-
-# sets static_sorted_nodnames and static_sorted_sites, retruns incidence_hash
-sub incidence_matrix {
+sub mylength {
 	my $self = shift;	
-	my %matrix;
 	my $length;
 	if ($self->{static_state} eq "nsyn"){
 		$length = $self->{static_alignment_length}/3;
@@ -417,7 +414,13 @@ sub incidence_matrix {
 	elsif ($self->{static_state} eq "syn") {
 		$length = $self->{static_alignment_length};
 	}
-	
+	return $length;
+}
+# sets static_sorted_nodnames and static_sorted_sites, retruns incidence_hash
+sub incidence_matrix {
+	my $self = shift;	
+	my %matrix;
+	my $length = $self->mylength();
 	my @sorted_sites;
 	my @sorted_nodnames;
 	
@@ -985,7 +988,7 @@ sub compute_norm {
 		@group = @{$_[1]};
 	}
 	else {
-		@group = (1..$self->{static_alignment_length});
+		@group = (1..$self->mylength());
 	}
 	my %group_hash;
 	foreach my $ind(@group){
@@ -2450,7 +2453,7 @@ sub print_data_for_LRT {
 	open my $file, ">$filename" or die "Cannot create $filename";
 	my $root = $self->{static_tree}-> get_root;
 	my @array;
-	my @group = (1..$self->{static_alignment_length});
+	my @group = (1..$self->mylength());
 	
 	my %closest_ancestors;
 	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
@@ -2504,7 +2507,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 		@group = @{$gr};
 	}
 	else {
-		@group = (1..$self->{static_alignment_length});
+		@group = (1..$self->mylength());
 	}
 	
 	foreach my $key (keys %{$ancestral_nodes}){
@@ -2651,7 +2654,7 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 		@group = @{$_[3]};
 	}
 	else {
-		@group = (1..$self->{static_alignment_length});
+		@group = (1..$self->mylength());
 	}
 	
 
@@ -2749,7 +2752,7 @@ sub nodeselector {
 		@group = @{$_[3]};
 	}
 	else {
-		@group = (1..$self->{static_alignment_length});
+		@group = (1..$self->mylength());
 	}
 	 my $name = $_[4];
 
@@ -3059,7 +3062,7 @@ sub egor_smart_site_entrenchment {
 		$hash_ready = 1;
 	}
 
-	for (my $ind = 1; $ind < $self->{static_alignment_length}; $ind++){
+	for (my $ind = 1; $ind < $self->mylength(); $ind++){
 		if ($verbose) {print "$ind\n"};
 		foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
 			my $node = ${$nod};
@@ -3125,7 +3128,7 @@ sub egor_diff_rings_site_entrenchment {
 		warn "Static_ring_hash is ready, egor_diff_rings_site_entrenchment won't change it\n";
 	}
 
-	for (my $ind = 1; $ind < $self->{static_alignment_length}; $ind++){
+	for (my $ind = 1; $ind < $self->mylength(); $ind++){
 		#print "$ind\n";
 		foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
 			my $node = ${$nod};
@@ -3489,13 +3492,13 @@ sub visitor_coat {
    sub predefined_groups_and_names {
  		my $self = shift;
  		my $prot = $self->{static_protein};
- 		return Groups::get_predefined_groups_and_names_for_protein($prot, $self->{static_alignment_length});
+ 		return Groups::get_predefined_groups_and_names_for_protein($prot, $self->mylength());
    }
 
 	sub protein_no_group {
  		my $self = shift;
  		my $prot = $self->{static_protein};
- 		return Groups::get_no_groups_for_protein($prot, $self->{static_alignment_length});
+ 		return Groups::get_no_groups_for_protein($prot, $self->mylength());
    }
    
  # changed at 21.09.2016  

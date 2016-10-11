@@ -135,12 +135,11 @@ sub get_no_groups_for_protein {
 	my $prot = shift;
 	my $length = shift;
 	my @all_sites = (1..$length);
-	print ("Number of sites is ".scalar @all_sites."\n");
 	my @groups;
 	my @group_names;
 	push @groups, \@all_sites;
 	push @group_names, "all";
-	
+		print ("Number of groups is ".scalar @groups."\n");
 	return (\@groups, \@group_names);
 }
 
