@@ -27,6 +27,7 @@ my $restrictions = '50,100,150';
 my $step = 0.5;
 my $simnumber = 10000;
 my $maxmem = 4000000;
+my $no_groups;
 my $verbose;
 
 
@@ -39,6 +40,7 @@ GetOptions (	'protein=s' => \$protein,
 		'simnumber=i' => \$simnumber,
 		'maxmem=i' => \$maxmem,
 		'step=s' => \$step,
+		'no_groups'  => \$no_groups,
 		'verbose'  => \$verbose,
 	);
 
@@ -171,7 +173,12 @@ if ($sim > 0){
 	##
 }
 ## 25.01 Procedure for obtaining p-values
-my @groups_and_names = $mutmap-> predefined_groups_and_names();
+if ($no_groups){
+	my @groups_and_names = $mutmap-> protein_no_group();
+}
+else {
+	my @groups_and_names = $mutmap-> predefined_groups_and_names();
+}
 $mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 $mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;
 
