@@ -1,4 +1,4 @@
-package DnaUtilities::compare;
+package compare;
 
 use strict;
 use vars qw(@ISA @EXPORT $VERSION);

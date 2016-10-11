@@ -1,7 +1,9 @@
+package FigTree;
 #This package provides utilities for Bio::Phylo::Forest::Tree object conversion into FigTree nexus format
 #The functions in the package assume that a tree object has names for internal nodes
 use strict;
 use Bio::Phylo::IO;
+
 
 #This function prints a tree with node tags in FigTree nexus format
 #Usage:
