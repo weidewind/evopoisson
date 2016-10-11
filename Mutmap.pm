@@ -211,6 +211,7 @@ $| = 1;
 				static_background_nodes_with_sub => $realdata->{"bkg_nodes_with_sub"},
 				realdata => $realdata,
 			};
+			print "debugging new static_alignment_length is ".$self->{static_alignment_length}."\n";
 		}
 		else {
 			my @arr = parse_fasta(File::Spec->catfile($input_base, $args->{protein}.".all.fa"));
@@ -251,7 +252,7 @@ $| = 1;
 				static_background_subs_on_node => $bkg_mutmaps[0],
 				static_background_nodes_with_sub => $bkg_mutmaps[1],
 			};
-			
+			print "debugging new static_alignment_length is ".$self->{static_alignment_length}."\n";
 			foreach my $node(@nodes){
 				#if ($node->is_root()) {next;}
 				my $name = $node ->get_name();
@@ -409,11 +410,14 @@ sub mylength {
 	my $self = shift;	
 	my $length;
 	if ($self->{static_state} eq "nsyn"){
-		$length = $self->{static_alignment_length}/3;
+		$length = ($self->{static_alignment_length})/3;
+		print "debugging mylength is $length\n";
 	}
 	elsif ($self->{static_state} eq "syn") {
 		$length = $self->{static_alignment_length};
+		print "debugging mylength is $length\n";
 	}
+	print "debugging returning mylength $length\n";
 	return $length;
 }
 # sets static_sorted_nodnames and static_sorted_sites, retruns incidence_hash
@@ -785,6 +789,7 @@ sub myclone {
 			static_tree =>  $self->{static_tree},
 			static_fasta => $self->{static_fasta},
 			static_state  => $self->{static_state},
+			static_alignment_length  => $self->{static_alignment_length},
 			static_hash_of_nodes => $self->{static_hash_of_nodes},
 			static_distance_hash => $self->{realdata}{"distance_hash"},
 			static_background_subs_on_node => $self->{static_background_subs_on_node },
@@ -2507,7 +2512,9 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 		@group = @{$gr};
 	}
 	else {
-		@group = (1..$self->mylength());
+		my $length = $self->mylength();
+		print " debugging itgulp my length is $length\n";
+		@group = (1..$length);
 		print "debugging My group size is ".scalar @group."\n";
 	}
 	
