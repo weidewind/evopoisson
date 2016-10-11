@@ -139,7 +139,6 @@ sub get_no_groups_for_protein {
 	my @group_names;
 	push @groups, \@all_sites;
 	push @group_names, "all";
-		print ("Number of groups is ".scalar @groups."\n");
 	return (\@groups, \@group_names);
 }
 

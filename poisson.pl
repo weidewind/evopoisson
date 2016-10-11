@@ -173,12 +173,14 @@ if ($sim > 0){
 	##
 }
 ## 25.01 Procedure for obtaining p-values
+my @groups_and_names;
 if ($no_groups){
-	my @groups_and_names = $mutmap-> protein_no_group();
+	@groups_and_names = $mutmap-> protein_no_group();
 }
 else {
-	my @groups_and_names = $mutmap-> predefined_groups_and_names();
+	@groups_and_names = $mutmap-> predefined_groups_and_names();
 }
+
 $mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 $mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;
 
