@@ -1,0 +1,95 @@
+shih_epitopes pocket_closest 
+shih_epitopes antigenic 
+shih_epitopes antigenic antigenic_neher pocket_closest surface trailing_kr 
+shih_epitopes antigenic 
+shih_epitopes antigenic surface leading_kr 
+shih_epitopes antigenic leading_kr trailing_kr 
+antigenic antigenic_neher trailing_kr 
+shih_epitopes antigenic antigenic_neher pocket_closest 
+shih_epitopes surface 
+shih_epitopes antigenic antigenic_neher pocket_closest surface 
+shih_epitopes antigenic antigenic_koel antigenic_neher pocket_closest surface host_shift_001 
+antigenic 
+shih_epitopes antigenic pocket_closest surface leading_kr 
+shih_epitopes 
+surface leading_kr 
+
+
+shih_epitopes antigenic surface leading_kr 
+surface 
+shih_epitopes antigenic antigenic_neher surface trailing_kr 
+shih_epitopes antigenic pocket_closest 
+shih_epitopes antigenic_neher 
+
+antigenic antigenic_neher pocket_closest surface 
+shih_epitopes antigenic surface 
+antigenic antigenic_neher surface 
+shih_epitopes surface 
+shih_epitopes antigenic_koel antigenic_neher pocket_closest surface leading_kr 
+shih_epitopes antigenic antigenic_koel antigenic_neher pocket_closest surface 
+shih_epitopes antigenic antigenic_neher surface 
+shih_epitopes antigenic_neher 
+shih_epitopes antigenic_neher surface 
+
+surface 
+internal 
+host_shift_001 
+shih_epitopes antigenic antigenic_koel antigenic_neher pocket_closest surface trailing_kr 
+shih_epitopes antigenic antigenic_koel antigenic_neher pocket_closest leading_kr trailing_kr 
+
+shih_epitopes antigenic antigenic_neher surface trailing_kr 
+shih_epitopes antigenic surface leading_kr 
+shih_epitopes antigenic antigenic_neher surface 
+shih_epitopes antigenic antigenic_neher surface 
+antigenic antigenic_neher surface 
+shih_epitopes antigenic antigenic_koel antigenic_neher pocket_closest leading_kr trailing_kr 
+shih_epitopes antigenic antigenic_neher surface 
+shih_epitopes antigenic surface leading_kr 
+surface host_shift_001 
+shih_epitopes antigenic antigenic_koel antigenic_neher surface trailing_kr 
+surface 
+antigenic antigenic_neher surface 
+shih_epitopes internal 
+shih_epitopes antigenic_neher leading_kr trailing_kr 
+antigenic antigenic_neher pocket_closest surface trailing_kr 
+antigenic trailing_kr 
+
+shih_epitopes antigenic antigenic_neher internal 
+shih_epitopes antigenic antigenic_koel antigenic_neher pocket_closest 
+shih_epitopes antigenic surface leading_kr 
+shih_epitopes antigenic surface leading_kr 
+surface 
+shih_epitopes antigenic surface 
+shih_epitopes antigenic pocket_closest surface leading_kr trailing_kr 
+shih_epitopes antigenic trailing_kr 
+shih_epitopes antigenic 
+shih_epitopes antigenic antigenic_koel antigenic_neher pocket_closest surface trailing_kr 
+antigenic antigenic_neher surface 
+shih_epitopes antigenic antigenic_neher surface trailing_kr 
+shih_epitopes pocket_closest surface 
+shih_epitopes antigenic 
+antigenic antigenic_neher surface 
+surface 
+antigenic antigenic_neher 
+shih_epitopes antigenic antigenic_neher pocket_closest surface 
+surface host_shift_001 trailing_kr 
+shih_epitopes antigenic antigenic_neher surface trailing_kr 
+
+shih_epitopes antigenic antigenic_koel antigenic_neher pocket_closest 
+shih_epitopes antigenic_koel antigenic_neher pocket_closest surface leading_kr 
+shih_epitopes antigenic antigenic_neher pocket_closest 
+shih_epitopes antigenic antigenic_koel antigenic_neher pocket_closest surface host_shift_001 
+shih_epitopes antigenic antigenic_koel antigenic_neher pocket_closest surface 
+shih_epitopes internal 
+antigenic antigenic_neher 
+shih_epitopes antigenic surface 
+shih_epitopes antigenic antigenic_koel antigenic_neher surface trailing_kr 
+antigenic internal leading_kr 
+antigenic antigenic_neher 
+shih_epitopes antigenic internal host_shift_001 leading_kr 
+shih_epitopes antigenic antigenic_koel antigenic_neher pocket_closest surface trailing_kr 
+shih_epitopes antigenic pocket_closest surface leading_kr 
+surface 
+shih_epitopes antigenic antigenic_neher pocket_closest surface 
+shih_epitopes antigenic_neher surface 
+shih_epitopes surface trailing_kr 

@@ -8,8 +8,7 @@ package Mutmap;
 
 use strict;
 use Bio::Phylo::IO;
-use DnaUtilities::compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing);
-use TreeUtils::Phylo::PhyloUtils qw(remove_zero_branches);
+
 
 use Bio::Tools::CodonTable;
 use TreeUtils::Phylo::FigTree;
@@ -19,17 +18,14 @@ use Bit::Vector;
 use Try::Tiny;
 use List::Util qw(sum min);
 use Const::Fast;
-	use Switch;
-
+use Switch;
 use List::Util qw/shuffle/; 
 use Statistics::Basic qw(:all);
 use Statistics::TTest;
 use Statistics::Descriptive;
 use Storable qw(store retrieve lock_retrieve);
-
+use IPC::System::Simple qw(capture);
 use Class::Struct;
-#use DnaUtilities::observation_vector qw(make_observation_vector shuffle_obsv);
-use observation_vector qw(make_observation_vector shuffle_obsv);
 use IO::Handle;
 use Cwd qw(abs_path cwd getcwd);
 use File::Spec;
@@ -37,6 +33,13 @@ use Clone 'clone';
 use Sub::Identify ':all';
 use File::Path qw(make_path remove_tree);
 use autodie;
+
+#use DnaUtilities::observation_vector qw(make_observation_vector shuffle_obsv);
+use observation_vector qw(make_observation_vector shuffle_obsv);
+#use DnaUtilities::compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing);
+use compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing);
+#use TreeUtils::Phylo::PhyloUtils qw(remove_zero_branches);
+use PhyloUtils qw(remove_zero_branches);
 use Groups;
 use Memusage;
 use Codeversion;
@@ -169,11 +172,18 @@ $| = 1;
 		return get_realdata_restriction($realdata);
 	}
 	
+	sub dataFinder {
+		my $args = shift;	
+		my $input_base = File::Spec->catdir(getcwd(), "data", $args->{bigdatatag});
+		return $input_base;
+	}
+
+	
 	sub new {
 		my ($class, $args) = @_;	
 		#my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest})); 
 		my $output_base = pathFinder ($args);
-		my $input_base = File::Spec->catdir(getcwd(), "data", $args->{bigdatatag},);
+		my $input_base = dataFinder ($args);
 		my $treefile = File::Spec->catfile($input_base, $args->{protein}.".l.r.newick");
 		my $static_tree = parse_tree($treefile)  or die "No tree at $treefile";
 		my $self;
@@ -190,7 +200,9 @@ $| = 1;
 				static_protein => $args->{protein},
 				static_subtract_tallest => $args->{subtract_tallest},
 				static_tree => $static_tree,
+				static_treefile => $treefile,
 				static_state => $args->{state},
+				static_alignment_length => $realdata->{"alignment_length"}, 
 				static_hash_of_nodes => $realdata->{"hash_of_nodes"}, 
 				static_distance_hash => $realdata->{"distance_hash"},
 				static_subs_on_node => $realdata->{"subs_on_node"}, # we never use these two when we produce new mutmappers from file (they are taken from observaton_vectors)
@@ -230,6 +242,7 @@ $| = 1;
 				static_alignment_length => $alignment_length, 
 				static_subtract_tallest => $args->{subtract_tallest},
 				static_tree => $static_tree,
+				static_treefile => $treefile,
 				static_fasta => { %static_fasta },
 				static_state  => $args->{state},
 				static_hash_of_nodes => { %static_hash_of_nodes },
@@ -614,6 +627,7 @@ sub get_mrcn {
 sub print_subtree_with_mutations {
 	my $self = shift;
 	my @muts = @{@_[0]};
+	my $tag = $_[1];
 	my $root = $self->{static_tree}-> get_root;
 	my @array;
 	my $myCodonTable   = Bio::Tools::CodonTable->new();
@@ -622,6 +636,7 @@ sub print_subtree_with_mutations {
 	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
 	my @args = ($root);
 	$self->visitor_coat ($root, \@array,\&lrt_visitor,\&no_check,\@args,0);
+	my @output_files;
 	for (my $i = 0; $i < scalar @muts; $i++){
 		my ($ind, $ancnodename) = split(/_/, $muts[$i]);
 		#my $ind = $muts[$i];
@@ -660,7 +675,7 @@ sub print_subtree_with_mutations {
 			}
 		}
 		my $file = $self -> {static_protein}."_sites_".$ind."_".$ancnodename.".tre";
-		my $dir = File::Spec -> catdir($self -> {static_output_base}, "trees");
+		my $dir = File::Spec -> catdir($self -> {static_output_base}, "trees", $tag);
 		make_path($dir);
 		my $filepath = File::Spec -> catfile($dir, $file);
 		open TREE, ">$filepath";
@@ -668,9 +683,17 @@ sub print_subtree_with_mutations {
 		print TREE "\ttree $ind = [&R] ";
 		my $tree_name=tree2str($self -> {static_tree},sites => \%sites, color=>\%color);
 		print TREE $tree_name;
-		print TREE "\nend;";
+		print TREE "\nend;\n";
+		my $figblock = File::Spec -> catfile(getcwd(), "figtree_block");
+		open BLOCK, "<$figblock" or die "Cannot open figtree_block: $!\n";
+		while (<BLOCK>){
+			print TREE $_;
+		}
+		close BLOCK;
 		close TREE;
+		push @output_files, $filepath;
 	}
+	return @output_files;
 }
 
 
@@ -872,6 +895,7 @@ sub iterations_gulp {
 	my $tag = shift;
 	my $verbose = shift;
 	my $memusage = shift;
+	my $restriction = shift;
 		
 	#my $ancestor_nodes = $_[4];
 	#my $obs_vector = $_[5];
@@ -894,7 +918,7 @@ sub iterations_gulp {
 		$mock_mutmap->shuffle_mutator(); # this method shuffles observation vectors and sets new $static_nodes.. and static_subs..
 		my %hash;
 		# >new iteration string and all the corresponding data  are printed inside this sub:
-		my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths($step,50,$ancestor_nodes, "overwrite", $tag, $verbose); #step (bin size), restriction (NOT USED, always 50), ancestor_nodes, should I overwrite static hash?
+		my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths($step,$restriction,$ancestor_nodes, "overwrite", $tag, $verbose); #step (bin size), restriction, ancestor_nodes, should I overwrite static hash?
 
 		foreach my $bin(1..$maxbin){
 				foreach my $site_node(keys %prehash){
@@ -960,7 +984,7 @@ sub compute_norm {
 		@group = @{$_[1]};
 	}
 	else {
-		@group = (1..565);
+		@group = (1..$self->{static_alignment_length});
 	}
 	my %group_hash;
 	foreach my $ind(@group){
@@ -1089,6 +1113,7 @@ sub prepare_real_data {
 		distance_hash => $self -> {static_distance_hash},
 		hash_of_nodes => $self -> {static_hash_of_nodes},
 		subtree_info => $self -> {static_subtree_info},
+		alignment_length => $self -> {static_alignment_length},
 		"obs_hash".$restriction => \%restricted_obs_hash,
 	);
 	
@@ -1840,7 +1865,10 @@ sub count_pvalues{
 			## end f copypaste	
 			my $count = scalar keys %obs_hash_restricted;
 			print  COUNTER "$restriction ".$group_names[$group_number]." group $count "; 
-				
+			if ($count == 0){
+				$group_number++;
+				next;
+			}
 			my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
 			open my $outputfile, ">$file";
 			
@@ -1949,7 +1977,13 @@ sub count_pvalues{
 			}
 			close CSVFILE;
 			$self->printFooter($outputfile);	
-			close $outputfile;	
+			close $outputfile;
+			
+				print "Number of meaningful iterations for group ".$group_names[$group_number]." is $iteration (haven't looked at the complement yet)\n";	
+				if ($iteration == 0) {
+					$group_number++;
+					next;
+				}
 			##complement 
 			
 			my %complement_hash;
@@ -2067,6 +2101,7 @@ sub count_pvalues{
 				$iteration++;
 			}
 			close CSVFILE;
+		
 			## 20.09.2016
 			# delete iteration data from group, if there were no nodes in complement in this iteration, and vice versa		
 			for (my $it = 0; $it < $itnumber; $it++){
@@ -2095,7 +2130,7 @@ sub count_pvalues{
 					@{$array_gbo_minus_gbe[$bin10]} = grep defined, @{$array_gbo_minus_gbe[$bin10]};
 			}
 			##
-			print "Number of meaningful iterations for group ".$group_names[$group_number]." is ".scalar @complement_boot_medians."\n";
+			print "Number of meaningful iterations (used for pvalue estimation) for group ".$group_names[$group_number]." is ".scalar @complement_boot_medians."\n";
 			
 			my @array_diffdiff;
 			if (scalar @array_gbo_minus_gbe  != scalar @array_cbo_minus_cbe){
@@ -2414,7 +2449,7 @@ sub print_data_for_LRT {
 	open my $file, ">$filename" or die "Cannot create $filename";
 	my $root = $self->{static_tree}-> get_root;
 	my @array;
-	my @group = (1..565);
+	my @group = (1..$self->{static_alignment_length});
 	
 	my %closest_ancestors;
 	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
@@ -2446,7 +2481,8 @@ sub print_data_for_LRT {
 ## Since 5.02
 sub depth_groups_entrenchment_optimized_selection_alldepths {
 	my $self = shift;
-	my $step = $_[0]; #restriction $_[1] is never used
+	my $step = $_[0];
+	my $restriction = $_[1]; # 10.10 restriction returns
 	my $ancestral_nodes = $_[2];
 	my $overwrite = $_[3];
 	my $tag = $_[4];
@@ -2467,7 +2503,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 		@group = @{$gr};
 	}
 	else {
-		@group = (1..565);
+		@group = (1..$self->{static_alignment_length});
 	}
 	
 	foreach my $key (keys %{$ancestral_nodes}){
@@ -2506,7 +2542,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 			my $total_length;
 	#print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
 	#print "maxdepth ".$static_subtree_info{$node->get_name()}{$ind}{"maxdepth"}."\n";
-			if ($self->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"} > 50){
+			if ($self->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"} > $restriction){ #10.10 restriction returns
 				
 				my %subtract_hash;
 				
@@ -2614,7 +2650,7 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 		@group = @{$_[3]};
 	}
 	else {
-		@group = (1..565);
+		@group = (1..$self->{static_alignment_length});
 	}
 	
 
@@ -2712,7 +2748,7 @@ sub nodeselector {
 		@group = @{$_[3]};
 	}
 	else {
-		@group = (1..565);
+		@group = (1..$self->{static_alignment_length});
 	}
 	 my $name = $_[4];
 
@@ -3005,6 +3041,7 @@ sub median_difference{
 # one hist for one ancestor aa in one site
 # the chosen one (used by r scripts for drawing plots)
 # circles, not rings! ()
+# mutations at the ends of branches !
 
 sub egor_smart_site_entrenchment {
 	my $self = shift;
@@ -3021,7 +3058,7 @@ sub egor_smart_site_entrenchment {
 		$hash_ready = 1;
 	}
 
-	for (my $ind = 1; $ind < 566; $ind++){
+	for (my $ind = 1; $ind < $self->{static_alignment_length}; $ind++){
 		if ($verbose) {print "$ind\n"};
 		foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
 			my $node = ${$nod};
@@ -3069,6 +3106,7 @@ sub egor_smart_site_entrenchment {
 
 # last egor plots sub. NOT the chosen one (egor_h1.csv are printed by some other method (discovered by comparison))
 # honest rings, can be used for mann-kendall analysis
+# ! mutations at the ends of branches !
 
 sub egor_diff_rings_site_entrenchment {
 	my $self = shift;
@@ -3086,7 +3124,7 @@ sub egor_diff_rings_site_entrenchment {
 		warn "Static_ring_hash is ready, egor_diff_rings_site_entrenchment won't change it\n";
 	}
 
-	for (my $ind = 1; $ind < 566; $ind++){
+	for (my $ind = 1; $ind < $self->{static_alignment_length}; $ind++){
 		#print "$ind\n";
 		foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
 			my $node = ${$nod};
@@ -3331,20 +3369,25 @@ sub visitor_coat {
  		my $self = shift;
  		my $prot = $self->{static_protein};
  		my $file = File::Spec->catfile($self->{static_input_base}, $prot."_distance_matrix.csv");
- 		
- 		open CSV, "<$file" or die "Cannot open file $file\n";
- 		my $header = <CSV>;
- 		$header =~ s/[\s\n\r\t]+$//s;
- 		my @nodelables = split(',', $header);
- 		while(<CSV>){
-			$_ =~ s/[\s\n\r\t]+$//s;
- 			my @dists = split(',', $_);
- 			my $node = $dists[0];
- 			for (my $i = 1; $i < scalar @dists; $i++){
- 				$self->{static_distance_hash}{$node}{$nodelables[$i]} = $dists[$i];
- 			}
+ 		if (! (-e $file)){
+ 				print "Preparing distance matrix..\n";
+ 				my $logs = capture ('Rscript Distances.R --treefile '. $self->{static_treefile}.' --output '.$file);
+ 				print $logs."\n";
  		}
- 		close CSV;
+	 	open CSV, "<$file" or die "Cannot open file $file\n";
+	 	my $header = <CSV>;
+	 	$header =~ s/[\s\n\r\t]+$//s;
+	 	my @nodelables = split(',', $header);
+	 	while(<CSV>){
+				$_ =~ s/[\s\n\r\t]+$//s;
+	 			my @dists = split(',', $_);
+	 			my $node = $dists[0];
+	 			for (my $i = 1; $i < scalar @dists; $i++){
+	 				$self->{static_distance_hash}{$node}{$nodelables[$i]} = $dists[$i];
+	 			}
+	 	}
+	 	close CSV;
+ 		
 
  	}
  	
@@ -3445,9 +3488,14 @@ sub visitor_coat {
    sub predefined_groups_and_names {
  	my $self = shift;
  	my $prot = $self->{static_protein};
- 	Groups::get_predefined_groups_and_names_for_protein($prot);
+ 	Groups::get_predefined_groups_and_names_for_protein($prot, $self->{static_alignment_length});
    }
 
+	sub protein_no_group {
+ 		my $self = shift;
+ 		my $prot = $self->{static_protein};
+ 		Groups::get_no_groups_for_protein($prot, $self->{static_alignment_length});
+   }
    
  # changed at 21.09.2016  
    sub bin {

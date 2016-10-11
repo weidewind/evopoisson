@@ -1,0 +1,72 @@
+surface 
+surface 
+epitopes leading_kr 
+surface leading_kr 
+leading_kr 
+
+epitopes surface host_shift_001 leading_kr 
+epitopes surface 
+epitopes leading_kr 
+internal 
+
+leading_kr 
+surface 
+
+surface host_shift_001 leading_kr 
+surface trailing_kr 
+
+trailing_kr 
+surface trailing_kr 
+surface leading_kr trailing_kr 
+surface leading_kr 
+leading_kr 
+epitopes 
+epitopes surface leading_kr 
+surface trailing_kr 
+surface leading_kr 
+surface host_shift_001 
+
+surface 
+epitopes surface 
+epitopes surface host_shift_001 
+surface leading_kr 
+surface 
+epitopes surface trailing_kr 
+trailing_kr 
+internal leading_kr trailing_kr 
+
+surface leading_kr 
+surface leading_kr trailing_kr 
+trailing_kr 
+internal trailing_kr 
+surface 
+epitopes surface host_shift_001 leading_kr trailing_kr 
+epitopes surface trailing_kr 
+epitopes surface leading_kr trailing_kr 
+
+epitopes surface leading_kr 
+epitopes surface leading_kr 
+internal leading_kr trailing_kr 
+epitopes surface leading_kr 
+surface leading_kr 
+epitopes surface leading_kr 
+epitopes surface host_shift_001 leading_kr 
+internal leading_kr 
+epitopes surface leading_kr 
+
+epitopes surface trailing_kr 
+surface leading_kr 
+epitopes surface trailing_kr 
+
+epitopes surface leading_kr 
+surface 
+surface leading_kr 
+trailing_kr 
+surface host_shift_001 trailing_kr 
+epitopes surface leading_kr 
+epitopes surface leading_kr 
+epitopes leading_kr 
+surface 
+epitopes surface leading_kr 
+surface 
+epitopes leading_kr 

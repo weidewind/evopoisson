@@ -1,0 +1,62 @@
+thick_surface leading_kr trailing_kr 
+internal leading_kr 
+thick_surface host_shift_001 trailing_kr 
+surface thick_surface trailing_kr 
+thick_surface leading_kr 
+surface thick_surface 
+thick_surface host_shift_001 leading_kr 
+internal leading_kr trailing_kr 
+internal leading_kr 
+internal 
+thick_surface host_shift_001 trailing_kr 
+epitopes surface thick_surface leading_kr 
+thick_surface leading_kr trailing_kr 
+thick_surface leading_kr 
+surface internal leading_kr 
+epitopes surface thick_surface 
+internal 
+epitopes surface thick_surface leading_kr trailing_kr 
+epitopes surface thick_surface 
+thick_surface 
+internal 
+thick_surface host_shift_001 leading_kr trailing_kr 
+surface thick_surface leading_kr 
+epitopes thick_surface leading_kr 
+internal leading_kr 
+epitopes surface thick_surface 
+internal leading_kr trailing_kr 
+thick_surface host_shift_001 leading_kr 
+surface thick_surface leading_kr 
+internal leading_kr 
+thick_surface leading_kr trailing_kr 
+internal 
+surface thick_surface host_shift_001 
+internal trailing_kr 
+thick_surface trailing_kr 
+thick_surface leading_kr trailing_kr 
+epitopes surface thick_surface trailing_kr 
+surface thick_surface leading_kr 
+thick_surface leading_kr 
+thick_surface leading_kr 
+surface thick_surface leading_kr trailing_kr 
+surface thick_surface leading_kr 
+epitopes thick_surface leading_kr trailing_kr 
+thick_surface host_shift_001 leading_kr 
+thick_surface 
+thick_surface 
+thick_surface 
+epitopes surface thick_surface host_shift_001 leading_kr 
+surface thick_surface 
+surface thick_surface leading_kr trailing_kr 
+epitopes surface thick_surface host_shift_001 leading_kr 
+epitopes surface thick_surface leading_kr trailing_kr 
+epitopes surface thick_surface leading_kr 
+thick_surface trailing_kr 
+thick_surface host_shift_001 
+surface thick_surface leading_kr 
+thick_surface leading_kr 
+epitopes surface thick_surface 
+surface thick_surface 
+epitopes surface thick_surface leading_kr 
+thick_surface 
+thick_surface host_shift_001 leading_kr 
