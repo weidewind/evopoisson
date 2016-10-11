@@ -2508,6 +2508,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 	}
 	else {
 		@group = (1..$self->mylength());
+		print "debugging My group size is ".scalar @group."\n";
 	}
 	
 	foreach my $key (keys %{$ancestral_nodes}){
