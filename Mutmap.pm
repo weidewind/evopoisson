@@ -365,7 +365,7 @@ sub codonmutmap {
 	foreach my $node(@nodes){
 		if ($node->is_root()) {next;}
 		my $name = $node ->get_name();
-		my %nsyn = nsyn_substitutions_codons($nodeseqs{$node->get_ancestors()->[0]->get_name()},
+		my %nsyn = compare::nsyn_substitutions_codons($nodeseqs{$node->get_ancestors()->[0]->get_name()},
 									  $nodeseqs{$name});					  
 		$subs_on_node{$name}=\%nsyn;
 		for	my $site_index(keys %nsyn){
@@ -391,7 +391,7 @@ sub synmutmap {
 	foreach my $node(@nodes){
 		if ($node->is_root()) {next;}
 		my $name = $node ->get_name();
-		my %nsyn = syn_substitutions($nodeseqs{$node->get_ancestors()->[0]->get_name()},
+		my %nsyn = compare::syn_substitutions($nodeseqs{$node->get_ancestors()->[0]->get_name()},
 									  $nodeseqs{$name});					  
 		$subs_on_node{$name}=\%nsyn;
 		for	my $site_index(keys %nsyn){
@@ -3293,7 +3293,7 @@ sub visitor_coat {
  		}
  		
  		if ($self->{static_state} eq "nsyn"){
- 			if (is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
+ 			if (compare::is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
  				return 0;
  			}
  			else {
@@ -3316,7 +3316,7 @@ sub visitor_coat {
  		my $node = $_[1];
  		my $site_index = $_[2];
  		if ($self->{static_state} eq "nsyn"){
- 			if (is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
+ 			if (compare::is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
  				return 0;
  			}
  			else {
