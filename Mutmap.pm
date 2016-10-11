@@ -3487,15 +3487,15 @@ sub visitor_coat {
  	}
    
    sub predefined_groups_and_names {
- 	my $self = shift;
- 	my $prot = $self->{static_protein};
- 	Groups::get_predefined_groups_and_names_for_protein($prot, $self->{static_alignment_length});
+ 		my $self = shift;
+ 		my $prot = $self->{static_protein};
+ 		return Groups::get_predefined_groups_and_names_for_protein($prot, $self->{static_alignment_length});
    }
 
 	sub protein_no_group {
  		my $self = shift;
  		my $prot = $self->{static_protein};
- 		Groups::get_no_groups_for_protein($prot, $self->{static_alignment_length});
+ 		return Groups::get_no_groups_for_protein($prot, $self->{static_alignment_length});
    }
    
  # changed at 21.09.2016  
