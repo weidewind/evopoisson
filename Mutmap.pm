@@ -409,15 +409,15 @@ sub synmutmap {
 sub mylength {
 	my $self = shift;	
 	my $length;
-	if ($self->{static_state} eq "nsyn"){
+	#if ($self->{static_state} eq "nsyn"){ # 12.10 syn positions also correspond to codons
 		$length = ($self->{static_alignment_length})/3;
-		print "debugging mylength is $length\n";
-	}
-	elsif ($self->{static_state} eq "syn") {
-		$length = $self->{static_alignment_length};
-		print "debugging mylength is $length\n";
-	}
-	print "debugging returning mylength $length\n";
+	#	print "debugging mylength is $length\n";
+	#}
+	#elsif ($self->{static_state} eq "syn") {
+	#	$length = $self->{static_alignment_length};
+	#	print "debugging mylength is $length\n";
+	#}
+	#print "debugging returning mylength $length\n";
 	return $length;
 }
 # sets static_sorted_nodnames and static_sorted_sites, retruns incidence_hash
