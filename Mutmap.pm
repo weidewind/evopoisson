@@ -3556,7 +3556,7 @@ sub visitor_coat {
 				my $fulldepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()}; #19.09.2016 
 			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
 			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
-				if (!$no_neighbour_changing || ($no_neighbour_changing && ! compare::is_neighbour_changing($self->$static_subs_on_node{$node->get_name()}{$ind}, 1))){
+				if (!$no_neighbour_changing || ($no_neighbour_changing && ! compare::is_neighbour_changing($self->{static_subs_on_node}{$node->get_name()}{$site_index}, 1))){
 						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[0] += 1; #19.09.2016 
 				}
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += ($node->get_branch_length)/2; # #19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
