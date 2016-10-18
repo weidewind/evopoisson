@@ -15,6 +15,7 @@ my $output = '';	# option variable with default value
 my $subtract_tallest = 0;
 my $restriction = 50;
 my $delete;
+my $no_neighbour_changing;
 
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
@@ -23,12 +24,13 @@ GetOptions (	'protein=s' => \$protein,
 		'output=s' => \$output,
 		'subtract_tallest=i' => \$subtract_tallest,
 		'delete'  => \$delete,
+		'no_neighbour_changing' => \$$no_neighbour_changing,
 	);
 
 
 
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1, got $subtract_tallest \n";}
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest};
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing};
 
 if  (!($delete) && Mutmap::realdata_exists($args)) {
 	print "Checking existing realdata restriction..\n";

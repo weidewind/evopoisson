@@ -185,7 +185,7 @@ sub prepare_groups_and_names {
 	#}
 	
 	my @all_sites = (1..$length);
-	
+	print ("debugging prep_groups length is $length\n");
 	push @groups, \@all_sites;
 	push @group_names, "all";
 	

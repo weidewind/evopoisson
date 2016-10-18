@@ -123,6 +123,23 @@ $| = 1;
 	sub temp_tag {
 			return "unreadable";
 	}
+	
+	sub neighbour_tag {
+		my $no_neighbour_changing = shift;
+		my $tag;
+		if (defined $no_neighbour_changing){
+			if ($no_neighbour_changing eq "y" || $no_neighbour_changing eq "yes" || $no_neighbour_changing == 1 ){
+				$tag = "no_neighbour_changing";
+			}
+			elsif ($no_neighbour_changing eq "n" || $no_neighbour_changing eq "no" || $no_neighbour_changing == 0 ) {
+				$tag = "with_neighbour_changing";
+			}
+			else {die "Invalid subtract_maxpath: $subtract_maxpath";}
+		}
+		else {$tag = '';}
+		
+		return $tag;
+	}
 
 	sub printFooter {
 		my $self = shift;
@@ -130,6 +147,7 @@ $| = 1;
 		print $outputStream "## protein ".$self->{static_protein}."\n";
 		print $outputStream "## subtract_tallest ".$self->{static_subtract_tallest}."\n";
 		print $outputStream "## state ".$self->{static_state}."\n";
+		print $outputStream "## omit neighbour-changing mutations (only for 'reversals', ancestor n-ch muts are not skipped. Only valid for syn state). ".$self->{static_no_neighbour_changing}."\n";
 		print $outputStream "## output_base ".$self->{static_output_base}."\n";
 		if ($self->{realdata}){
 			print $outputStream "## realdata restriction ".get_realdata_restriction($self->{realdata})."\n";
@@ -139,7 +157,7 @@ $| = 1;
 	
 	sub pathFinder {
 		my $args = shift;	
-		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest})); 
+		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest}), neighbour_tag($args->{no_neighbour_changing})); 
 		return $output_base;
 
 	}
@@ -202,6 +220,7 @@ $| = 1;
 				static_tree => $static_tree,
 				static_treefile => $treefile,
 				static_state => $args->{state},
+				static_no_neighbour_changing =>$realdata->{"no_neighbour_changing"}, 
 				static_alignment_length => $realdata->{"alignment_length"}, 
 				static_hash_of_nodes => $realdata->{"hash_of_nodes"}, 
 				static_distance_hash => $realdata->{"distance_hash"},
@@ -211,7 +230,6 @@ $| = 1;
 				static_background_nodes_with_sub => $realdata->{"bkg_nodes_with_sub"},
 				realdata => $realdata,
 			};
-			print "debugging new static_alignment_length is ".$self->{static_alignment_length}."\n";
 		}
 		else {
 			my @arr = parse_fasta(File::Spec->catfile($input_base, $args->{protein}.".all.fa"));
@@ -242,6 +260,7 @@ $| = 1;
 				static_protein => $args->{protein},
 				static_alignment_length => $alignment_length, 
 				static_subtract_tallest => $args->{subtract_tallest},
+				static_no_neighbour_changing =>  $args->{no_neighbour_changing},
 				static_tree => $static_tree,
 				static_treefile => $treefile,
 				static_fasta => { %static_fasta },
@@ -252,7 +271,6 @@ $| = 1;
 				static_background_subs_on_node => $bkg_mutmaps[0],
 				static_background_nodes_with_sub => $bkg_mutmaps[1],
 			};
-			print "debugging new static_alignment_length is ".$self->{static_alignment_length}."\n";
 			foreach my $node(@nodes){
 				#if ($node->is_root()) {next;}
 				my $name = $node ->get_name();
@@ -1123,6 +1141,7 @@ sub prepare_real_data {
 		hash_of_nodes => $self -> {static_hash_of_nodes},
 		subtree_info => $self -> {static_subtree_info},
 		alignment_length => $self -> {static_alignment_length},
+		no_neighbour_changing => $self -> {static_no_neighbour_changing},
 		"obs_hash".$restriction => \%restricted_obs_hash,
 	);
 	
@@ -1647,7 +1666,106 @@ sub concat_and_divide_simult_single_sites {
 
 }	
 	
+
+# counter from count_pvalues
+sub group_counter {
+	my $self = $_[0];
+	my $prot = $self -> {static_protein};
+	#my $prot = $_[0];
+	my @restriction_levels = @{$_[1]};
+	my @groups = @{$_[2]};
+	my @group_names = @{$_[3]};
+	my $dir = $self -> {static_output_base};
 	
+		my $countfile = File::Spec->catfile($dir, $prot."_count");
+	open COUNTER, ">$countfile" or die "Cannot create $countfile";
+	COUNTER->autoflush(1);
+	
+	my $realdata =  $self -> {realdata};
+	#my $realdata = get_real_data();
+	
+	my $maxbin = $realdata->{"maxbin"}; 
+	my $step =  $realdata->{"step"};
+	unless (defined $step) {die "Oh no, realdata bin size is not defined. Won't proceed with pvalues\n";}
+	#print "before cycle\n";
+	
+	
+	my $obs_hash = get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
+	my $subtree_info = $realdata->{"subtree_info"};
+	for my $restriction(@restriction_levels){
+		print "level $restriction\n";
+		
+		# only for @all@
+		my $group_number = scalar @groups - 1;
+		print " groups ".scalar @groups - 1;
+		my %group_hash;
+		print " size ".scalar @{$groups[$group_number]}."\n";
+		foreach my $site(@{$groups[$group_number]}){
+			#print "test-1 $site\n";
+			$group_hash{$site} = 1;
+		}
+		my %obs_hash_restricted;
+		my $norm_restricted;
+		## copypaste from prepare: create restricted hash	
+		# Beware! obs_hash50 from real_data really contains restricted data (maxdepth>50)
+		my $mutcounter;
+		foreach my $site_node(keys %{$obs_hash}){
+			my ($site, $node_name) = split(/_/, $site_node);
+			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
+			if ($maxdepth > $restriction && $group_hash{$site}){ #15.02 moved here
+			foreach my $bin(keys %{$obs_hash->{$site_node}}){
+				$maxbin = max($bin, $maxbin);
+					$norm_restricted += $obs_hash->{$site_node}->{$bin}->[0];
+					$obs_hash_restricted{$site_node}{$bin}[0] = $obs_hash->{$site_node}->{$bin}->[0];
+					$obs_hash_restricted{$site_node}{$bin}[1] = $obs_hash->{$site_node}->{$bin}->[1];
+				}
+		
+			}
+		#	print "MAXBIN $maxbin\n";
+		}
+		my $count = scalar keys %obs_hash_restricted;
+		print COUNTER "$restriction all group $count muts $norm_restricted\n";
+		print COUNTER "$restriction all group $count muts $norm_restricted\n";
+			for (my $group_number = 0; $group_number < scalar @groups - 1; $group_number++){ 
+	
+			## group
+			my %group_hash;
+			
+			foreach my $site(@{$groups[$group_number]}){
+				$group_hash{$site} = 1;
+			}
+			my %obs_hash_restricted;
+			my $norm_restricted;
+			## copyaste from prepare: create restricted hash	
+			# Beware! obs_hash50 from real_data really contains restricted data (maxdepth>50)
+			foreach my $site_node(keys %{$obs_hash}){
+				my ($site, $node_name) = split(/_/, $site_node);
+				my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
+				foreach my $bin(keys %{$obs_hash->{$site_node}}){
+					$maxbin = max($bin, $maxbin);
+					if ($maxdepth > $restriction && $group_hash{$site}){
+						$norm_restricted += $obs_hash->{$site_node}->{$bin}->[0];
+						$obs_hash_restricted{$site_node}{$bin}[0] = $obs_hash->{$site_node}->{$bin}->[0];
+						$obs_hash_restricted{$site_node}{$bin}[1] = $obs_hash->{$site_node}->{$bin}->[1];
+					}
+				}
+			#	print "MAXBIN $maxbin\n";
+			}
+			
+			## end f copypaste	
+			my $count = scalar keys %obs_hash_restricted;
+			print  COUNTER "$restriction ".$group_names[$group_number]." group $count muts $norm_restricted\n";
+			print  COUNTER "$restriction ".$group_names[$group_number]." group $count muts $norm_restricted\n";
+			print COUNTER   "$restriction ".$group_names[$group_number]."\n";
+			foreach my $sn(keys %obs_hash_restricted){
+				print  COUNTER $sn."\n";
+			}
+			$group_number++;
+			}
+		
+	}
+	close COUNTER;
+}	
 	
 	
 # 19.12 after concat_and_divide	
@@ -1696,6 +1814,7 @@ sub count_pvalues{
 		foreach my $site_node(keys %{$obs_hash}){
 			my ($site, $node_name) = split(/_/, $site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
+		#	if (compare::is_neighbour_changing($self->$static_subs_on_node{$node_name}{$site}, 1) == 1) # fisk
 			if ($maxdepth > $restriction && $group_hash{$site}){ #15.02 moved here
 			foreach my $bin(keys %{$obs_hash->{$site_node}}){
 				$maxbin = max($bin, $maxbin);
@@ -2277,10 +2396,6 @@ sub count_single_site_pvalues{
 	my @restriction_levels = @{$_[1]};
 	my $dir = $self -> {static_output_base};
 	
-	my $countfile = File::Spec->catfile($dir, $prot."_count");
-	open COUNTER, ">$countfile" or die "Cannot create $countfile";
-	COUNTER->autoflush(1);
-	
 	my $realdata =  $self -> {realdata};
 	my $maxbin = $realdata->{"maxbin"}; 
 	my $step = $realdata->{"step"}; #bin size
@@ -2312,7 +2427,6 @@ sub count_single_site_pvalues{
 		}
 		##
 		my $count = scalar keys %obs_hash_restricted;
-		print COUNTER "Total for $restriction all $count\n";
 	
 		my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_single_sites");
 		open my $outputfile, ">$file" or die "Cannot create $file";
@@ -2388,8 +2502,6 @@ sub count_single_site_pvalues{
 				push @{$array_obs_minus_exp[$bin10]}, $diff_10bin_array[$bin10];
 			}
 			
-			
-			
 			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
 			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
 			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
@@ -2439,7 +2551,6 @@ sub count_single_site_pvalues{
 		close $outputfile;	
 	}	
 
-	close COUNTER;
 }
 
 
@@ -2513,9 +2624,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 	}
 	else {
 		my $length = $self->mylength();
-		print " debugging itgulp my length is $length\n";
 		@group = (1..$length);
-		print "debugging My group size is ".scalar @group."\n";
 	}
 	
 	foreach my $key (keys %{$ancestral_nodes}){
@@ -3413,6 +3522,7 @@ sub visitor_coat {
  		my $node = $_[0];
  		my $step = $_[1]->[0];
  		my $subtract_tallest = $self->{static_subtract_tallest};
+ 		my $no_neighbour_changing = $self->{static_no_neighbour_changing};
 		if (!$node->is_root){
 		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation node for this node, key is a site number
 		
@@ -3446,7 +3556,9 @@ sub visitor_coat {
 				my $fulldepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()}; #19.09.2016 
 			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
 			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
-				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[0] += 1; #19.09.2016 
+				if (!$no_neighbour_changing || ($no_neighbour_changing && ! compare::is_neighbour_changing($self->$static_subs_on_node{$node->get_name()}{$ind}, 1))){
+						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[0] += 1; #19.09.2016 
+				}
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += ($node->get_branch_length)/2; # #19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] -= $node->get_branch_length; #19.09.2016 we added this length before, but shouldn't have done it
 			#	print "mutation! anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
