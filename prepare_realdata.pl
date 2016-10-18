@@ -24,7 +24,7 @@ GetOptions (	'protein=s' => \$protein,
 		'output=s' => \$output,
 		'subtract_tallest=i' => \$subtract_tallest,
 		'delete'  => \$delete,
-		'no_neighbour_changing' => \$$no_neighbour_changing,
+		'no_neighbour_changing' => \$no_neighbour_changing,
 	);
 
 
