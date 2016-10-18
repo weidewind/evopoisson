@@ -134,7 +134,7 @@ $| = 1;
 			elsif ($no_neighbour_changing eq "n" || $no_neighbour_changing eq "no" || $no_neighbour_changing == 0 ) {
 				$tag = "with_neighbour_changing";
 			}
-			else {die "Invalid subtract_maxpath: $subtract_maxpath";}
+			else {die "Invalid no_neighbour_changing: $no_neighbour_changing";}
 		}
 		else {$tag = '';}
 		
