@@ -140,6 +140,23 @@ $| = 1;
 		
 		return $tag;
 	}
+	
+	sub leaves_tag {
+		my $no_leaves = shift;
+		my $tag;
+		if (defined $no_leaves){
+			if ($no_leaves eq "y" || $no_leaves eq "yes" || $no_leaves == 1 ){
+				$tag = "$no_leaves";
+			}
+			elsif ($no_leaves eq "n" || $no_leaves eq "no" || $no_leaves == 0 ) {
+				$tag = "with_leaves";
+			}
+			else {die "Invalid no_leaves: $no_leaves";}
+		}
+		else {$tag = '';}
+		
+		return $tag;
+	}
 
 	sub printFooter {
 		my $self = shift;
@@ -148,6 +165,7 @@ $| = 1;
 		print $outputStream "## subtract_tallest ".$self->{static_subtract_tallest}."\n";
 		print $outputStream "## state ".$self->{static_state}."\n";
 		print $outputStream "## omit neighbour-changing mutations (only for 'reversals', ancestor n-ch muts are not skipped. Only valid for syn state). ".$self->{static_no_neighbour_changing}."\n";
+		print $outputStream "## omit mutations on terminal branches ".$self->{static_no_leaves}."\n";
 		print $outputStream "## output_base ".$self->{static_output_base}."\n";
 		if ($self->{realdata}){
 			print $outputStream "## realdata restriction ".get_realdata_restriction($self->{realdata})."\n";
@@ -157,7 +175,7 @@ $| = 1;
 	
 	sub pathFinder {
 		my $args = shift;	
-		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest}), neighbour_tag($args->{no_neighbour_changing})); 
+		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest}), neighbour_tag($args->{no_neighbour_changing}), leaves_tag($args->{no_leaves})); 
 		return $output_base;
 
 	}
@@ -221,6 +239,7 @@ $| = 1;
 				static_treefile => $treefile,
 				static_state => $args->{state},
 				static_no_neighbour_changing =>$realdata->{"no_neighbour_changing"}, 
+				static_no_leaves =>$realdata->{"no_leaves"},
 				static_alignment_length => $realdata->{"alignment_length"}, 
 				static_hash_of_nodes => $realdata->{"hash_of_nodes"}, 
 				static_distance_hash => $realdata->{"distance_hash"},
@@ -261,6 +280,7 @@ $| = 1;
 				static_alignment_length => $alignment_length, 
 				static_subtract_tallest => $args->{subtract_tallest},
 				static_no_neighbour_changing =>  $args->{no_neighbour_changing},
+				static_no_leaves =>$args->{no_leaves},
 				static_tree => $static_tree,
 				static_treefile => $treefile,
 				static_fasta => { %static_fasta },
@@ -1142,6 +1162,7 @@ sub prepare_real_data {
 		subtree_info => $self -> {static_subtree_info},
 		alignment_length => $self -> {static_alignment_length},
 		no_neighbour_changing => $self -> {static_no_neighbour_changing},
+		no_leaves => $self -> {static_no_leaves},
 		"obs_hash".$restriction => \%restricted_obs_hash,
 	);
 	
@@ -1259,7 +1280,7 @@ sub concat_and_divide_simult {
 	my $subtract_maxpath = $self->{static_subtract_tallest};
 	my $dir = $self->{static_output_base};
 	my $nodecount_file = File::Spec->catfile($dir, $prot."_nodecount");
-	open NODECOUNT, ">$nodecount_file" or die "Cannot create $nodecount_file";
+#	open NODECOUNT, ">$nodecount_file" or die "Cannot create $nodecount_file";
 	
 	my $realdata = $self->{realdata};
 	my %hash;
@@ -1367,7 +1388,7 @@ sub concat_and_divide_simult {
 						if ($max_depth > $md){
 							foreach my $group_number(0..scalar @groups-1){
 								if ($group_hashes{$md}[$group_number]{$node_name}){
-									print NODECOUNT "maxdepth $md group ".$group_names[$group_number]." node $node_name\n";
+						#			print NODECOUNT "maxdepth $md group ".$group_names[$group_number]." node $node_name\n";
 								}
 							}
 						}	
@@ -1452,7 +1473,7 @@ sub concat_and_divide_simult {
 		
 	}
 	
-	close NODECOUNT;
+#	close NODECOUNT;
 	
 	foreach my $md(@maxdepths){
 		foreach my $group_number(0.. scalar @groups - 1){
@@ -3523,6 +3544,7 @@ sub visitor_coat {
  		my $step = $_[1]->[0];
  		my $subtract_tallest = $self->{static_subtract_tallest};
  		my $no_neighbour_changing = $self->{static_no_neighbour_changing};
+ 		my $no_leaves = $self->{static_no_leaves};
 		if (!$node->is_root){
 		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation node for this node, key is a site number
 		

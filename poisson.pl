@@ -29,6 +29,8 @@ my $simnumber = 10000;
 my $maxmem = 4000000;
 my $no_groups;
 my $verbose;
+my $no_neighbour_changing;
+my $no_leaves;
 
 
 GetOptions (	'protein=s' => \$protein,
@@ -42,13 +44,15 @@ GetOptions (	'protein=s' => \$protein,
 		'step=s' => \$step,
 		'no_groups'  => \$no_groups,
 		'verbose'  => \$verbose,
+		'no_neighbour_changing' => \$no_neighbour_changing,
+		'$no_leaves' => \$no_leaves,
 	);
 
 $| = 1;
 
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1}; 
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest,  no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, fromfile => 1}; 
 
 ## Checking if appropriate realdata exists, initializing
 my @restriction_levels = split(/,/, $restrictions);
