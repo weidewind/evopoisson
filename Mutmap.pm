@@ -3550,6 +3550,7 @@ sub visitor_coat {
 		}
 		
 		foreach my $site_index(keys %{$self->{static_subs_on_node}{$node->get_name()}}){
+			
 			if ($closest_ancestors{$site_index}){
 				my $anc_node = $closest_ancestors{$site_index};
 				my $halfdepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()} - ($node->get_branch_length)/2; #19.09.2016 
@@ -3557,7 +3558,9 @@ sub visitor_coat {
 			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
 			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
 				if (!$no_neighbour_changing || ($no_neighbour_changing && ! compare::is_neighbour_changing($self->{static_subs_on_node}{$node->get_name()}{$site_index}, 1))){
+					if (!$no_leaves || ($no_leaves && !($node->is_terminal()))){
 						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[0] += 1; #19.09.2016 
+					}
 				}
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += ($node->get_branch_length)/2; # #19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] -= $node->get_branch_length; #19.09.2016 we added this length before, but shouldn't have done it
@@ -3565,6 +3568,7 @@ sub visitor_coat {
 				
 			}
 			$closest_ancestors{$site_index} = $node;
+			
 		}
 		
 		$node->set_generic("-closest_ancestors" => \%closest_ancestors);
