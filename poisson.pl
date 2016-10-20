@@ -193,11 +193,13 @@ sub mycomm {
 	my $tag = shift;
 	my $its = shift;
 	my $memusage = shift;
-	my $command = "perl iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag ";
+	my $command = "perl iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag";
 	if($output){$command = $command."--output $output ";}
 	if($input){$command = $command."--input $input ";}
 	if ($verbose){ $command = $command." --verbose ";}
 	if ($memusage){ $command = $command." --memusage ";}
+	if ($no_leaves){ $command = $command." --no_leaves ";}
+	if ($no_neighbour_changing){ $command = $command." --no_neighbour_changing ";}
 	return $command;
 	
 }
