@@ -45,7 +45,7 @@ GetOptions (	'protein=s' => \$protein,
 		'no_groups'  => \$no_groups,
 		'verbose'  => \$verbose,
 		'no_neighbour_changing' => \$no_neighbour_changing,
-		'$no_leaves' => \$no_leaves,
+		'no_leaves' => \$no_leaves,
 	);
 
 $| = 1;

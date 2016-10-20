@@ -146,7 +146,7 @@ $| = 1;
 		my $tag;
 		if (defined $no_leaves){
 			if ($no_leaves eq "y" || $no_leaves eq "yes" || $no_leaves == 1 ){
-				$tag = "$no_leaves";
+				$tag = "no_leaves";
 			}
 			elsif ($no_leaves eq "n" || $no_leaves eq "no" || $no_leaves == 0 ) {
 				$tag = "with_leaves";
