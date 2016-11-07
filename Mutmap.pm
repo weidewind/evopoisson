@@ -2142,7 +2142,7 @@ sub count_pvalues{
 				$group_boot_medians[$itnumber][1] = $boot_exp_median;
 				$group_boot_means[$itnumber][0] = $boot_obs_mean;
 				$group_boot_means[$itnumber][1] = $boot_exp_mean;			
-				print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";
+				unless ($fake) {print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";}
 				$itnumber++;
 				$iteration++;
 			}
@@ -2273,7 +2273,7 @@ sub count_pvalues{
 				$complement_boot_medians[$itnumber][1] = $boot_exp_median;
 				$complement_boot_means[$itnumber][0] = $boot_obs_mean;
 				$complement_boot_means[$itnumber][1] = $boot_exp_mean;
-				print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";
+				unless ($fake) {print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";}
 				$itnumber++;
 				$iteration++;
 			}
@@ -2330,6 +2330,7 @@ sub count_pvalues{
 			}
 			my $updated_iteration_number = scalar @complement_boot_medians;
 			
+			unless($fake){
 			print $outputfile "bin mean_group_boot_obs mean_group_boot_exp ";
 			print $outputfile "mean_compl_boot_obs mean_compl_boot_exp ";
 			print $outputfile " diff_gbo-gbe-cbo+cbe_percentile_5 diff_gbo-gbe-cbo+cbe_percentile_95";
@@ -2338,6 +2339,7 @@ sub count_pvalues{
 			my $maxbin  = max(scalar @hist_obs, scalar @hist_compl_obs);
 			$maxbin = max ($maxbin, scalar @hist_exp);
 			$maxbin = max ($maxbin, scalar @hist_compl_exp);
+			
 			
 			for (my $j = 0; $j < $maxbin; $j++){ #foreach bin
 				my $mean_group_obs = $hist_obs[$j]/$updated_iteration_number; # 26.09.2016 - $updated_iteration_number instead of $iteration
@@ -2355,6 +2357,7 @@ sub count_pvalues{
 				print $outputfile $stat_diffdiff->percentile(5)." ".$stat_diffdiff->percentile(95);
 				print $outputfile $stat_gbo_minus_gbe->percentile(5)." ".$stat_gbo_minus_gbe->percentile(95);
 				print $outputfile $stat_cbo_minus_cbe->percentile(5)." ".$stat_cbo_minus_cbe->percentile(95)."\n";
+			}
 			}
 			
 			
