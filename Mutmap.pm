@@ -1865,11 +1865,12 @@ sub count_pvalues{
 		## end of copypaste	
 			
 		my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
+		my $outputfile;
 		if ($fake){
-			open my $outputfile, ">>$file" or die "Cannot create $file";
+			open $outputfile, ">>$file" or die "Cannot create $file";
 		}
 		else {
-			open my $outputfile, ">$file" or die "Cannot create $file";
+			open $outputfile, ">$file" or die "Cannot create $file";
 		}
 				
 		my %histhash;
