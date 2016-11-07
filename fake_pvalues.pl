@@ -47,5 +47,6 @@ if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restric
 ## 25.01 Procedure for obtaining p-values
 my $mutmap = Mutmap->new($args);
 my @groups_and_names = $mutmap-> fake_predefined_groups_and_names();
+$mutmap ->set_tag($tag);
 $mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 $mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;

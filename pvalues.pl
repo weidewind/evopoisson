@@ -19,6 +19,7 @@ my $output = '';	# option variable with default value
 my $subtract_tallest = '0';
 my $restrictions = '50,100,150';
 my $verbose;
+my $tag = '';
 
 
 GetOptions (	'protein=s' => \$protein,
@@ -28,6 +29,7 @@ GetOptions (	'protein=s' => \$protein,
 		'subtract_tallest=i' => \$subtract_tallest,
 		'restrictions=s' => \$restrictions,
 		'verbose'  => \$verbose,
+		'tag=s' => \$tag,
 	);
 
 
@@ -44,6 +46,7 @@ if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restric
 
 ## 25.01 Procedure for obtaining p-values
 my $mutmap = Mutmap->new($args);
+$mutmap -> set_tag($tag);
 my @groups_and_names = $mutmap-> predefined_groups_and_names();
 $mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 $mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;

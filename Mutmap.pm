@@ -214,6 +214,12 @@ $| = 1;
 		return $input_base;
 	}
 
+	sub set_tag {
+		my $self = shift;
+		my $tag = shift;
+		my $output_subfolder = File::Spec->catdir($self->{static_output_base}, $tag);
+		$self->{static_output_subfolder} = $output_subfolder;
+	}
 	
 	sub new {
 		my ($class, $args) = @_;	
@@ -233,7 +239,7 @@ $| = 1;
 			
 			$self = { 
 				static_output_base => $output_base,
-				static_output_subfolder =>$output_subfolder,
+
 				static_input_base => $input_base,
 				static_protein => $args->{protein},
 				static_subtract_tallest => $args->{subtract_tallest},
