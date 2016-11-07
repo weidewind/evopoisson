@@ -133,7 +133,7 @@ sub get_fake_predefined_groups_and_names_for_protein {
   		foreach my $s (@group){
   			print $s."\t";
   		}
-  		print "\n";
+  		print "\n new group ";
   		push @groups, \@group;
 	}
 	my @groups_and_names = prepare_groups_and_names(\@groups, $real_groups_and_names[1], $length);
