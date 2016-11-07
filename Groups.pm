@@ -130,6 +130,10 @@ sub get_fake_predefined_groups_and_names_for_protein {
   		for ( 1..$group_size ){
   			push @group, splice @sites, rand @sites, 1;
   		}
+  		foreach my $s (@group){
+  			print $s."\t";
+  		}
+  		print "\n";
   		push @groups, \@group;
 	}
 	my @groups_and_names = prepare_groups_and_names(\@groups, $real_groups_and_names[1], $length);

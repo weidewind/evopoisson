@@ -1805,6 +1805,7 @@ sub count_pvalues{
 	my @restriction_levels = @{$_[1]};
 	my @groups = @{$_[2]};
 	my @group_names = @{$_[3]};
+	my $fake = $_[4];
 	my $dir = $self -> {static_output_base};
 	my $outdir = $self -> {static_output_subfolder};
 	#my $dir = $_[5];
@@ -1864,7 +1865,12 @@ sub count_pvalues{
 		## end of copypaste	
 			
 		my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
-		open my $outputfile, ">$file" or die "Cannot create $file";
+		if ($fake){
+			open my $outputfile, ">>$file" or die "Cannot create $file";
+		}
+		else {
+			open my $outputfile, ">$file" or die "Cannot create $file";
+		}
 				
 		my %histhash;
 		foreach my $site_node(keys %obs_hash_restricted){
