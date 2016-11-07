@@ -19,6 +19,7 @@ my $output = '';	# option variable with default value
 my $subtract_tallest = '0';
 my $restrictions = '50';
 my $tag = '';
+my $bootnum = 1000;
 my $verbose;
 
 
@@ -46,7 +47,9 @@ if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restric
 
 ## 25.01 Procedure for obtaining p-values
 my $mutmap = Mutmap->new($args);
-my @groups_and_names = $mutmap-> fake_predefined_groups_and_names();
 $mutmap ->set_tag($tag);
-$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
-$mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}, "fake"); #$self;  @restriction_levels; my @groups; my @group_names;
+for (my $i = 0; $i < $bootnum; $i++){
+	my @groups_and_names = $mutmap-> fake_predefined_groups_and_names();
+	$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+	$mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}, "fake"); #$self;  @restriction_levels; my @groups; my @group_names;
+}
