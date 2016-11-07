@@ -219,13 +219,13 @@ $| = 1;
 		my $tag = shift;
 		my $output_subfolder = File::Spec->catdir($self->{static_output_base}, $tag);
 		$self->{static_output_subfolder} = $output_subfolder;
+		make_path($output_subfolder);
 	}
 	
 	sub new {
 		my ($class, $args) = @_;	
 		#my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest})); 
 		my $output_base = pathFinder ($args);
-		my $output_subfolder = File::Spec->catdir($output_base, $args->{smalltag});
 		my $input_base = dataFinder ($args);
 		my $treefile = File::Spec->catfile($input_base, $args->{protein}.".l.r.newick");
 		my $static_tree = parse_tree($treefile)  or die "No tree at $treefile";
@@ -306,8 +306,8 @@ $| = 1;
 				$self ->{static_hash_of_nodes}{$name} = \$node;
 			}
 		}	
-
 		bless $self, $class;
+		$self->set_tag{$args->{smalltag}};
 		return $self;
 	}
 	
