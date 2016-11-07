@@ -1811,7 +1811,12 @@ sub count_pvalues{
 	#my $dir = $_[5];
 	
 	my $countfile = File::Spec->catfile($outdir, $prot."_count");
-	open COUNTER, ">$countfile" or die "Cannot create $countfile";
+	if ($fake) {
+		open COUNTER, ">>$countfile" or die "Cannot create $countfile";
+	}
+	else {
+		open COUNTER, ">$countfile" or die "Cannot create $countfile";
+	}
 	COUNTER->autoflush(1);
 	
 	my $realdata =  $self -> {realdata};
