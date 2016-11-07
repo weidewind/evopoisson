@@ -30,7 +30,7 @@ GetOptions (	'protein=s' => \$protein,
 		'tag=s' => \$tag,
 		'subtract_tallest=i' => \$subtract_tallest,
 		'restrictions=s' => \$restrictions,
-		'bootnum=i' => \$bootnum;
+		'bootnum=i' => \$bootnum,
 		'verbose'  => \$verbose,
 	);
 
