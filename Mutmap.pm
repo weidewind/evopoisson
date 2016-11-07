@@ -37,7 +37,7 @@ use autodie;
 #use DnaUtilities::observation_vector qw(make_observation_vector shuffle_obsv);
 use observation_vector qw(make_observation_vector shuffle_obsv);
 #use DnaUtilities::compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing);
-use compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing);
+use compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing get_synmuts);
 #use TreeUtils::Phylo::PhyloUtils qw(remove_zero_branches);
 use PhyloUtils qw(remove_zero_branches);
 use Groups;
@@ -164,8 +164,8 @@ $| = 1;
 		print $outputStream "## protein ".$self->{static_protein}."\n";
 		print $outputStream "## subtract_tallest ".$self->{static_subtract_tallest}."\n";
 		print $outputStream "## state ".$self->{static_state}."\n";
-		print $outputStream "## omit neighbour-changing mutations (only for 'reversals', ancestor n-ch muts are not skipped. Only valid for syn state). ".$self->{static_no_neighbour_changing}."\n";
-		print $outputStream "## omit mutations on terminal branches ".$self->{static_no_leaves}."\n";
+		print $outputStream "## omit neighbour-changing mutations (only for 'reversals', ancestor n-ch muts are not skipped. Only valid for syn state)? 1 if true ".$self->{static_no_neighbour_changing}."\n";
+		print $outputStream "## omit mutations on terminal branches? 1 if true ".$self->{static_no_leaves}."\n";
 		print $outputStream "## output_base ".$self->{static_output_base}."\n";
 		if ($self->{realdata}){
 			print $outputStream "## realdata restriction ".get_realdata_restriction($self->{realdata})."\n";
@@ -219,6 +219,7 @@ $| = 1;
 		my ($class, $args) = @_;	
 		#my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest})); 
 		my $output_base = pathFinder ($args);
+		my $output_subfolder = File::Spec->catdir($output_base, $args->{smalltag});
 		my $input_base = dataFinder ($args);
 		my $treefile = File::Spec->catfile($input_base, $args->{protein}.".l.r.newick");
 		my $static_tree = parse_tree($treefile)  or die "No tree at $treefile";
@@ -232,6 +233,7 @@ $| = 1;
 			
 			$self = { 
 				static_output_base => $output_base,
+				static_output_subfolder =>$output_subfolder,
 				static_input_base => $input_base,
 				static_protein => $args->{protein},
 				static_subtract_tallest => $args->{subtract_tallest},
@@ -275,6 +277,7 @@ $| = 1;
 
 			$self = {
 				static_output_base => $output_base,
+				static_output_subfolder =>$output_subfolder,
 				static_input_base => $input_base,
 				static_protein => $args->{protein},
 				static_alignment_length => $alignment_length, 
@@ -1798,9 +1801,10 @@ sub count_pvalues{
 	my @groups = @{$_[2]};
 	my @group_names = @{$_[3]};
 	my $dir = $self -> {static_output_base};
+	my $outdir = $self -> {static_output_subfolder};
 	#my $dir = $_[5];
 	
-	my $countfile = File::Spec->catfile($dir, $prot."_count");
+	my $countfile = File::Spec->catfile($outdir, $prot."_count");
 	open COUNTER, ">$countfile" or die "Cannot create $countfile";
 	COUNTER->autoflush(1);
 	
@@ -1854,7 +1858,7 @@ sub count_pvalues{
 			
 		## end of copypaste	
 			
-		my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
+		my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
 		open my $outputfile, ">$file" or die "Cannot create $file";
 				
 		my %histhash;
@@ -2018,7 +2022,7 @@ sub count_pvalues{
 				$group_number++;
 				next;
 			}
-			my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
+			my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
 			open my $outputfile, ">$file";
 			
 			
@@ -2164,7 +2168,7 @@ sub count_pvalues{
 			my $count = scalar keys %complement_obs_hash_restricted;
 			print  COUNTER " $restriction ".$group_names[$group_number]." complement $count\n"; 
 			
-			my $file = File::Spec->catfile($dir,$prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
+			my $file = File::Spec->catfile($outdir,$prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
 			open my $outputfile, ">$file" or die "Cannot create $file";
 			my %complement_flat_obs_hash;
 			my %complement_flat_exp_hash;
@@ -2416,6 +2420,7 @@ sub count_single_site_pvalues{
 	my $prot = $self -> {static_protein};
 	my @restriction_levels = @{$_[1]};
 	my $dir = $self -> {static_output_base};
+	my $outdir = $self -> {static_output_subfolder};
 	
 	my $realdata =  $self -> {realdata};
 	my $maxbin = $realdata->{"maxbin"}; 
@@ -2449,7 +2454,7 @@ sub count_single_site_pvalues{
 		##
 		my $count = scalar keys %obs_hash_restricted;
 	
-		my $file = File::Spec->catfile($dir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_single_sites");
+		my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_single_sites");
 		open my $outputfile, ">$file" or die "Cannot create $file";
 
 
@@ -2875,6 +2880,113 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 	return %hist;	
 }
 
+
+# syn research method; detecting ancestor syn mutations which can undergo several different syn muts
+# and checking how many muts of each type really happened ({tv}GAG->GAT - 1, GAG->GAA = 0; {ts}GAG->GAA - 4)
+sub reversals_list {
+	my $self = shift;
+	#my @group = @{$_[0]};
+	my $root = $self->{static_tree}-> get_root;
+	my @array;
+	#unless (@group) {
+	my @group = (1..$self->mylength());
+	#}
+		my %closest_ancestors;
+	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
+	my @args = ( 0.5, $root);
+	$self->visitor_coat ($root, \@array,\&synresearch_visitor,\&no_check,\@args,0);
+	my $filepath = File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_reversals_list");
+	open my $file, ">$filepath" or die "Cannot open $filepath\n";
+	print $file "ancestor,list,number";
+	foreach my $ind (@group){
+			foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
+			my $node = ${$nod};
+			if (!$node->is_terminal){
+
+				if ($self->{static_subtree_info}{$node->get_name()}{$ind}{"list"}) {
+						my $str =  $ind."_".$node->get_name();
+						my $counter;
+						my $list;
+						foreach my $nodename (@{$self->{static_subtree_info}{$node->get_name()}{$ind}{"list"}}){
+							$counter++;
+							$list = $list.";".$nodename;
+						}
+						$list = substr($list,1);
+						$str = $str.",".$list.",".$counter."\n";
+						print $file $str;
+				}
+
+			}
+			
+		}
+	}
+	$self->printFooter($file);
+	close $file;
+	
+}
+
+
+
+
+
+# syn research method; detecting ancestor syn mutations which can undergo several different syn muts
+# and checking how many muts of each type really happened ({tv}GAG->GAT - 1, GAG->GAA = 0; {ts}GAG->GAA - 4)
+sub synmut_types {
+	my $self = shift;
+	#my @group = @{$_[0]};
+	my $root = $self->{static_tree}-> get_root;
+	my @array;
+	my %results;
+	#unless (@group) {
+	my @group = (1..$self->mylength());
+	#}
+		my %closest_ancestors;
+	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
+	my @args = ( 0.5, $root);
+	$self->visitor_coat ($root, \@array,\&synresearch_visitor,\&no_check,\@args,0);
+	foreach my $ind (@group){
+			foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
+			my $node = ${$nod};
+			if (!$node->is_terminal){
+				my $anc = $self->{static_subs_on_node}{$node->get_name()}{$ind}->{"Substitution::derived_allele"};
+			#	print "anc $anc\n";
+				my $synmuts = compare::get_synmuts($anc);
+				my $numtypes = (scalar keys %{$synmuts->{"ts"}}) + (scalar keys %{$synmuts->{"tv"}});
+				# todo create all possible syn types
+				if ($numtypes > 1){
+					if ($self->{static_subtree_info}{$node->get_name()}{$ind}{"synresearch"} && scalar @{$self->{static_subtree_info}{$node->get_name()}{$ind}{"synresearch"}} > 1) {
+						my $str =  $ind."_".$node->get_name()." anc $anc\t";
+						my $counter;
+						foreach my $subst (@{$self->{static_subtree_info}{$node->get_name()}{$ind}{"synresearch"}}){
+							if (defined $synmuts->{"ts"}{$subst->{"Substitution::derived_allele"}}){
+								if ($synmuts->{"ts"}{$subst->{"Substitution::derived_allele"}} == 0 ) {$counter++;}
+								$synmuts->{"ts"}{$subst->{"Substitution::derived_allele"}} +=1;
+								$str = $str."ts sub ".$subst->{"Substitution::derived_allele"}."\t";
+							}
+							elsif (defined $synmuts->{"tv"}{$subst->{"Substitution::derived_allele"}}) {
+								if ($synmuts->{"tv"}{$subst->{"Substitution::derived_allele"}} == 0 ) {$counter++;}
+								$synmuts->{"tv"}{$subst->{"Substitution::derived_allele"}} +=1;
+								$str = $str."tv sub ".$subst->{"Substitution::derived_allele"}."\t";
+							}
+						}
+						$str = $counter."\t".$str."\n";
+						print $str;
+					}
+				}
+				$results{$ind}{$node->get_name()}{"anc"} = $anc;
+				$results{$ind}{$node->get_name()}{"muts"} = $synmuts;
+			}
+			
+		}
+	}
+	return %results;
+	
+}
+
+
+
+
+
 #26.02 almost depth_groups_entrenchment_optimized_selector_alldepths_2, but prints only total nodecounts for each site_node
 sub nodeselector {
 	my $self = shift;
@@ -3228,7 +3340,6 @@ sub egor_smart_site_entrenchment {
 				else {
 					$hist{$bin} = 0;
 				}
-				#if ($muts_in_bin > 0 || $bin == $sorted_keys[0] || $bin == $sorted_keys[-1]){	
 					if ($muts_in_bin > 0){	
 					print $plotcsv "$bin,$ind,".$node->get_name().",".$hist{$bin}.",".$cumulative_muts.",".$cumulative_length."\n";
 				}
@@ -3533,6 +3644,9 @@ sub visitor_coat {
 
  	}
  	
+ 	
+ 	
+ 	
    # track_tallest is needed for finding longest path in the subtree and subtracting its length
    # Added at 08.10 for testing whether this will improve correspondence between simulation_observed and simulation_expected.
    # stopped using it at 15.09.2016    
@@ -3597,7 +3711,68 @@ sub visitor_coat {
 		}
 #!
  	}
-   
+  
+  # entrenchment_visitorversion for for synmut_types: collect substitutions for each ancestor mutation (not just count them; do not track distance)
+    	sub synresearch_visitor {
+ 		my $self = shift;
+ 		my $node = $_[0];
+ 		my $step = $_[1]->[0];
+ 		my $subtract_tallest = $self->{static_subtract_tallest};
+ 		my $no_neighbour_changing = $self->{static_no_neighbour_changing};
+ 		my $no_leaves = $self->{static_no_leaves};
+		if (!$node->is_root){
+		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation node for this node, key is a site number
+		
+		if (%closest_ancestors){
+			foreach my $site_index(keys %closest_ancestors){ 
+				my $anc_node = $closest_ancestors{$site_index};
+				my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()};
+				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
+			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
+				my $current_maxdepth = $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"};
+				if ($current_maxdepth < $depth){
+						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"} = $depth;
+						if ($subtract_tallest){
+							$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth_node"} = $node->get_name();
+						}
+				}					
+			}
+			
+			my @ancestors = keys %closest_ancestors;	
+			foreach my $site_index(@ancestors){
+				if (!($self->has_no_background_mutation($node, $site_index))){
+					delete $closest_ancestors{$site_index};
+				}
+			}	
+		}
+		
+		foreach my $site_index(keys %{$self->{static_subs_on_node}{$node->get_name()}}){
+			
+			if ($closest_ancestors{$site_index}){
+				my $anc_node = $closest_ancestors{$site_index};
+				#my $halfdepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()} - ($node->get_branch_length)/2; #19.09.2016 
+				#my $fulldepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()}; #19.09.2016 
+			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
+			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
+				if (!$no_neighbour_changing || ($no_neighbour_changing && ! compare::is_neighbour_changing($self->{static_subs_on_node}{$node->get_name()}{$site_index}, 1))){
+					if (!$no_leaves || ($no_leaves && !($node->is_terminal()))){
+						push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"synresearch"}}, $self->{static_subs_on_node}{$node->get_name()}{ $site_index}; 
+						push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"list"}}, $node->get_name();
+					}
+				}
+			#	$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += ($node->get_branch_length)/2; # #19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
+			#	$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] -= $node->get_branch_length; #19.09.2016 we added this length before, but shouldn't have done it
+			#	print "mutation! anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
+				
+			}
+			$closest_ancestors{$site_index} = $node;
+			
+		}
+		
+		$node->set_generic("-closest_ancestors" => \%closest_ancestors);
+		}
+#!
+ 	} 
    
    	sub lrt_visitor {
    		my $self = shift;
@@ -3639,6 +3814,12 @@ sub visitor_coat {
  		my $self = shift;
  		my $prot = $self->{static_protein};
  		return Groups::get_predefined_groups_and_names_for_protein($prot, $self->mylength());
+   }
+   
+   sub fake_predefined_groups_and_names {
+   	 	my $self = shift;
+ 		my $prot = $self->{static_protein};
+ 		return Groups::get_fake_predefined_groups_and_names_for_protein($prot, $self->mylength());
    }
 
 	sub protein_no_group {

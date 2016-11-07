@@ -5,7 +5,7 @@ use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
 $VERSION = 1.00; # Or higher
 @ISA = qw(Exporter);
-@EXPORT = qw(count_substitutions nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing); # Symbols to autoexport (:DEFAULT tag)
+@EXPORT = qw(get_synmuts count_substitutions nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing); # Symbols to autoexport (:DEFAULT tag)
 
 use Bio::Tools::CodonTable;
 use Class::Struct;
@@ -275,6 +275,7 @@ sub test_is_neighbour_changing{
 			print is_neighbour_changing($p, 1);
 }
 
+# returns a hash: key - amino acid, which can be reached in one step, value - number of paths leading to that amino acid
 sub get_neighbours {
 	my $codon = $_[0];
 	my %neighbours;
@@ -289,6 +290,48 @@ sub get_neighbours {
 	}
 	return %neighbours;
 }
+
+sub get_synmuts {
+	my $codon = $_[0];
+	my $synmuts;
+	my $codonTable = get_codon_table();
+	my $possible_subs = get_possible_subs();
+	for (my $i = 0; $i < 3; $i++){
+		my $str = $codon;
+		foreach my $letter (@{$possible_subs{substr($codon, $i, 1)}}){
+			substr($str, $i, 1) = $letter;
+			if ($codonTable->translate($str) eq $codonTable->translate($codon)){
+				my $type = muttype($letter, substr($codon, $i, 1));
+			#	print "codon $codon str $str type $type\n";
+				$synmuts->{$type}{$str} = 0;
+			}
+		}
+	}
+	return $synmuts;
+}
+
+sub muttype {
+	my $anc = shift;
+	my $der = shift;
+#	print "anc $anc der $der\n";
+	if ($anc eq 'A' || $anc eq 'G'){
+		if ($der eq 'G' || $der eq 'A') {return "ts";}
+		else {return "tv";}
+	}
+	elsif ($anc eq 'T' || $anc eq 'C'){
+		if ($der eq 'C' || $der eq 'T') {return "ts";}
+		else {return "tv";}
+	}
+	else { die "Undefined letters: $anc $der\n";}
+}
+
+
+sub test_get_synmuts {
+	use Data::Dumper;
+	my $synmuts = get_synmuts("CGA");
+	print Dumper $synmuts;
+}
+#test_get_synmuts();
 
 sub test_get_neighbours {
 	my %neigh = get_neighbours("ATG");

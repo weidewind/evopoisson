@@ -111,6 +111,37 @@ sub get_predefined_groups_and_names_for_protein {
 	my $length = shift;
 	my @groups;
 	my @names;
+	my @real_groups_and_names = only_groups($prot);
+	my @groups_and_names = prepare_groups_and_names($real_groups_and_names[0], $real_groups_and_names[1], $length);
+	return @groups_and_names;
+}
+
+
+
+sub get_fake_predefined_groups_and_names_for_protein {
+	my $prot = shift;
+	my $length = shift;
+	my @groups;
+	my @real_groups_and_names = only_groups($prot);
+	foreach my $g(@{$real_groups_and_names[0]}){
+		my $group_size = scalar @{$g};
+		my @group;
+		my @sites = (1..$length);
+  		for ( 1..$group_size ){
+  			push @group, splice @sites, rand @sites, 1;
+  		}
+  		push @groups, \@group;
+	}
+	my @groups_and_names = prepare_groups_and_names(\@groups, $real_groups_and_names[1], $length);
+	return @groups_and_names;
+	
+}
+
+# without complement
+sub only_groups {
+	my $prot = shift;
+	my @groups;
+	my @names;
 	if ($prot eq "h1"){
 		@groups = (\@h1_increased_binding, \@h1_antigenic, \@h1_pocket_closest, \@h1_surface, \@h1_internal, \@h1_host_shift_001, \@h1_leading_kr, \@h1_trailing_kr, \@h1_antigenic_ren);
 		@names = ("increased_binding", "antigenic", "pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr", "antigenic_ren");
@@ -127,8 +158,7 @@ sub get_predefined_groups_and_names_for_protein {
 		@groups = (\@n2_epitopes, \@n2_pocket_closest, \@n2_surface, \@n2_internal, \@n2_host_shift_001, \@n2_leading_kr, \@n2_trailing_kr, \@n2_decreasing, \@n2_increasing);
 		@names = ("epitopes", "pocket_closest", "surface", "internal", "host_shift_001", "leading_kr", "trailing_kr", "decreasing", "increasing");
 	}
-	my @groups_and_names = prepare_groups_and_names(\@groups, \@names, $length);
-	return @groups_and_names;
+	return (\@groups, \@names)
 }
 
 sub get_no_groups_for_protein {
@@ -185,7 +215,7 @@ sub prepare_groups_and_names {
 	#}
 	
 	my @all_sites = (1..$length);
-	print ("debugging prep_groups length is $length\n");
+#	print ("debugging prep_groups length is $length\n");
 	push @groups, \@all_sites;
 	push @group_names, "all";
 	

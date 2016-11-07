@@ -17,7 +17,8 @@ my $state = 'nsyn';
 my $input = '';
 my $output = '';	# option variable with default value
 my $subtract_tallest = '0';
-my $restrictions = '50,100,150';
+my $restrictions = '50';
+my $tag = '';
 my $verbose;
 
 
@@ -25,6 +26,7 @@ GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
 		'input=s' => \$input,
 		'output=s' => \$output,
+		'tag=s' => \$tag,
 		'subtract_tallest=i' => \$subtract_tallest,
 		'restrictions=s' => \$restrictions,
 		'verbose'  => \$verbose,
@@ -34,7 +36,7 @@ GetOptions (	'protein=s' => \$protein,
 
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1}; 
+my $args = {bigdatatag => $input, bigtag => $output, tag => $tag, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1}; 
 unless  (Mutmap::realdata_exists($args)) { die "No such realdata!"; }
 my @restriction_levels = split(/,/, $restrictions);
 my $rr = Mutmap::check_realdata_restriction($args);
@@ -42,7 +44,8 @@ my $sr = List::Util::min(@restriction_levels);
 print "realdata restriction is $rr\n";
 if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restriction you specified: ".$rr." > ".$sr."\n"; }
 
-## 25.01 Procedure for obtaining counts
+## 25.01 Procedure for obtaining p-values
 my $mutmap = Mutmap->new($args);
-my @groups_and_names = $mutmap-> predefined_groups_and_names();
-$mutmap-> group_counter(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+my @groups_and_names = $mutmap-> fake_predefined_groups_and_names();
+$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+$mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;

@@ -31,6 +31,7 @@ my $no_groups;
 my $verbose;
 my $no_neighbour_changing;
 my $no_leaves;
+my $switch;
 
 
 GetOptions (	'protein=s' => \$protein,
@@ -46,6 +47,7 @@ GetOptions (	'protein=s' => \$protein,
 		'verbose'  => \$verbose,
 		'no_neighbour_changing' => \$no_neighbour_changing,
 		'no_leaves' => \$no_leaves,
+		'switch' =>\$switch,
 	);
 
 $| = 1;
@@ -193,7 +195,13 @@ sub mycomm {
 	my $tag = shift;
 	my $its = shift;
 	my $memusage = shift;
-	my $command = "perl iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag";
+	my $perlocation = "perl";
+	my $exports = "";
+	if ($switch) {
+		$perlocation = "~/perl5/perlbrew/perls/perl-5.22.1/bin/perl";
+	 	$exports = "export PERL5LIB=/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/.perl/lib/perl5/5.22.1/x86_64-linux:/export/home/popova/.perl/lib/perl5/5.22.1:/export/home/popova/.perl/lib/perl5/x86_64-linux:/export/home/popova/.perl/lib/perl5:/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/workspace/evopoisson:$PERL5LIB; ";
+	}
+	my $command = $exports.$perlocation." iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag ";
 	if($output){$command = $command."--output $output ";}
 	if($input){$command = $command."--input $input ";}
 	if ($verbose){ $command = $command." --verbose ";}
