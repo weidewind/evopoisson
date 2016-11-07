@@ -283,7 +283,6 @@ $| = 1;
 
 			$self = {
 				static_output_base => $output_base,
-				static_output_subfolder =>$output_subfolder,
 				static_input_base => $input_base,
 				static_protein => $args->{protein},
 				static_alignment_length => $alignment_length, 
@@ -307,7 +306,7 @@ $| = 1;
 			}
 		}	
 		bless $self, $class;
-		$self->set_tag{$args->{smalltag}};
+		$self->set_tag($args->{smalltag});
 		return $self;
 	}
 	
