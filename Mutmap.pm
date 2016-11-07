@@ -2035,7 +2035,13 @@ sub count_pvalues{
 				next;
 			}
 			my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
-			open my $outputfile, ">$file";
+			my $outputfile;
+			if ($fake){
+				open $outputfile, ">>$file" or die "Cannot create $file";
+			}
+			else {
+				open $outputfile, ">$file" or die "Cannot create $file";
+			}
 			
 			
 			#copypaste from all
