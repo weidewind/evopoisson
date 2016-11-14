@@ -305,7 +305,6 @@ $| = 1;
 			}
 		}	
 		bless $self, $class;
-		$self->set_tag($args->{smalltag});
 		return $self;
 	}
 	
@@ -2315,6 +2314,7 @@ sub count_pvalues{
 					@{$array_gbo_minus_gbe[$bin10]} = grep defined, @{$array_gbo_minus_gbe[$bin10]};
 			}
 			##
+			print "Number of meaningful iterations (used for pvalue estimation) for group ".$group_names[$group_number]." is ".scalar @complement_boot_medians." or ".scalar @group_boot_means." first one is used for division\n";
 			
 			my @array_diffdiff;
 			if (scalar @array_gbo_minus_gbe  != scalar @array_cbo_minus_cbe){
@@ -2336,7 +2336,6 @@ sub count_pvalues{
 				print "Error! complement_boot_medians size is not equal to group_boot_medians size: ".scalar @complement_boot_medians." != ".scalar @group_boot_medians."\n";
 			}
 			my $updated_iteration_number = scalar @complement_boot_medians;
-			print "Number of meaningful iterations (used for pvalue estimation) for group ".$group_names[$group_number]." is ".scalar @complement_boot_medians." or".scalar @complement_boot_means." or ".$updated_iteration_number." last one is used for division\n";
 			
 			unless($fake){
 			print $outputfile "bin mean_group_boot_obs mean_group_boot_exp ";
