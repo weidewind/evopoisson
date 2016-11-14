@@ -121,7 +121,7 @@ $| = 1;
 	}
 
 	sub temp_tag {
-			return "unreadable";
+			return "temp_unreadable";
 	}
 	
 	sub neighbour_tag {
@@ -2314,7 +2314,7 @@ sub count_pvalues{
 					@{$array_gbo_minus_gbe[$bin10]} = grep defined, @{$array_gbo_minus_gbe[$bin10]};
 			}
 			##
-			print "Number of meaningful iterations (used for pvalue estimation) for group ".$group_names[$group_number]." is ".scalar @complement_boot_medians." or ".scalar @group_boot_means." first one is used for division\n";
+			print "Number of meaningful iterations (used for pvalue estimation) for group ".$group_names[$group_number]." is ".scalar @complement_boot_medians." or ".scalar @group_boot_means." first one is used for division, second - for iterating through simulations\n";
 			
 			my @array_diffdiff;
 			if (scalar @array_gbo_minus_gbe  != scalar @array_cbo_minus_cbe){
