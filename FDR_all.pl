@@ -30,7 +30,7 @@ GetOptions (	'protein=s' => \$protein,
 		'subtract_tallest=i' => \$subtract_tallest,
 		'restrictions=s' => \$restrictions,
 		'verbose'  => \$verbose,
-		'number_of_fakes' => \$number_of_fakes,
+		'number_of_fakes=i' => \$number_of_fakes,
 		'tag=s' => \$tag,
 	);
 
