@@ -1166,9 +1166,10 @@ sub print_nodes_in_analysis {
 #1.08 hash is not necessarily pruned - you can set restriction to 0 to get complete data
 sub prepare_real_data {
 	my $self = shift;
-	my $restriction = shift;
-	my $step = shift;
-	my $fake = shift;
+	my $args = shift;
+	my $restriction = $args->{restriction};
+	my $step = $args->{step};
+	my $fake = $args->{fake};
 	unless(defined $step) { $step = 0.5; }
 	unless(defined $restriction) { $restriction = 50; }
 	my $prot = $self->{static_protein};

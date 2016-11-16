@@ -42,6 +42,6 @@ if  (!($delete) && Mutmap::realdata_exists($args)) {
 else {
 	## Procedure for printing real_data files
 	my $mutmap = Mutmap->new($args);
-	$mutmap-> prepare_real_data ($restriction);
+	$mutmap-> prepare_real_data ({restriction => $restriction});
 	###
 }

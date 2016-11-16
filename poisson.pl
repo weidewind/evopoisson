@@ -64,7 +64,7 @@ if  (! (Mutmap::realdata_exists($args))) {
 	print "No realdata exists for specified parameters, going to prepare it.."; 
 	$args->{fromfile} = 0;
 	my $mutmap = Mutmap->new($args);
-	$mutmap-> prepare_real_data ($specified_restriction, $step);
+	$mutmap-> prepare_real_data ({restriction => $specified_restriction,step => $step});
 }
 else {
 	my $rr = Mutmap::check_realdata_restriction($args);
@@ -72,7 +72,7 @@ else {
 		print "Existing realdata restriction is greater than the minimal restriction you specified: ".$rr." > ".$specified_restriction."\nGoing to overwrite realdata..\n"; 
 		$args->{fromfile} = 0;
 		my $mutmap = Mutmap->new($args);
-		$mutmap-> prepare_real_data ($specified_restriction, $step);
+		$mutmap-> prepare_real_data ({restriction => $specified_restriction,step => $step});
 	}
 	else {
 		print "Going to use existing realdata with restriction $rr\n";
