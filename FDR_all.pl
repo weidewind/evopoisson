@@ -35,7 +35,7 @@ GetOptions (	'protein=s' => \$protein,
 	);
 
 
-print "Will produce "$number_of_fakes." fakes\n";
+print "Will produce ".$number_of_fakes." fakes\n";
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
 my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1}; 
