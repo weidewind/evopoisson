@@ -50,10 +50,9 @@ if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restric
 my $mutmap = Mutmap->new($args);
 my @groups_and_names;
 @groups_and_names = $mutmap-> protein_no_group();
-my $mock_mutmap = $mutmap->mydeepclone();
 for (my $i = 1; $i <= $number_of_fakes; $i++){
 	print "Fake no $i\n";
-
+	my $mock_mutmap = $mutmap->mydeepclone();
 	$mock_mutmap -> set_tag($tag."_fake_".$i); #fake realdata must be written in the subfolder
 	$mock_mutmap = $mock_mutmap-> shuffle_mutator();
 	$mock_mutmap-> prepare_real_data ({restriction => $restriction, fake => 1});
