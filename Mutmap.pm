@@ -221,7 +221,7 @@ $| = 1;
 		my $output_subfolder = File::Spec->catdir($self->{static_output_base}, $tag);
 		$self->{static_output_subfolder} = $output_subfolder;
 		make_path($output_subfolder);
-		make_path(File::Spec->catdir($output_subfolder, temp_tag());
+		make_path(File::Spec->catdir($output_subfolder, temp_tag()));
 	}
 	
 	sub new {
