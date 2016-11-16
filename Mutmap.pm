@@ -864,7 +864,7 @@ sub mydeepclone {
 			static_treefile => $self->{static_treefile},
 			static_fasta => $self->{static_fasta},
 			static_state  => $self->{static_state},
-			realdata => $self->{realdata},
+			realdata => clone($self->{realdata}),
 			static_alignment_length  => $self->{static_alignment_length},
 			static_hash_of_nodes => $self->{static_hash_of_nodes},
 			static_background_subs_on_node => $self->{static_background_subs_on_node },
@@ -1226,6 +1226,12 @@ sub prepare_real_data {
 		no_leaves => $self -> {static_no_leaves},
 		"obs_hash".$restriction => \%restricted_obs_hash,
 	);
+	
+	#if ($fake){
+	#	$realdata->{static_subs_on_node} = $self -> {static_subs_on_node};
+	#	$realdata->{static_nodes_with_sub} = $self -> {static_nodes_with_sub};
+	#}
+	
 	
 	my $realdatapath;
 	if ($fake){
