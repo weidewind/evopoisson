@@ -121,8 +121,9 @@ $| = 1;
 	}
 
 	sub temp_tag {
-			return "temp_unreadable";
+			return "unreadable";
 	}
+	
 	
 	sub neighbour_tag {
 		my $no_neighbour_changing = shift;
@@ -939,8 +940,19 @@ sub shuffle_mutator {
 	return $self; 
 }
 
-# 5.11 for entrenchment_bootstrap_full_selection_vector
+sub FDR_all {
+	my $self = shift;
+	my $number_of_fakes = shift;
+	my $mock_mutmap = $self->myclone();
+	for (my $i = 1; $i <= $number_of_fakes; $i++){
+		$mock_mutmap->shuffle_mutator();
+	}
+}
 
+
+
+
+# 5.11 for entrenchment_bootstrap_full_selection_vector
 sub iterations_gulp {
 	my $self = shift;
 	my $iterations = shift;
@@ -959,6 +971,13 @@ sub iterations_gulp {
 	unless (defined $step) {die "Oh no, bin size in realdata is not defined. Won't proceed with simulations.\n";}
 	my $ancestor_nodes = $realdata->{"ancestor_nodes"};
 	#my $obs_vectors = $realdata->{"obs_vectors"};
+	my $outdir;
+	if ($self->{static_output_subfolder}){
+		$outdir = $self->{static_output_subfolder};
+	}
+	else {
+		$outdir = $self->{static_output_base};
+	}
 	if ($verbose){print "Cloning mutmap..\n";}
 	my $mock_mutmap = $self->myclone(); # 25.07 create a new object for shuffling
 	my @simulated_hists;
@@ -990,7 +1009,7 @@ sub iterations_gulp {
 	# store \@simulated_hists, File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored_".$tag); # was used because I was afraid of loosing a large amount of time because of some mistake
 	# my $arref = retrieve(File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored_".$tag));
 	my $arref = \@simulated_hists;
-	my $csvfile = File::Spec->catfile($self->{static_output_base}, temp_tag(), $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
+	my $csvfile = File::Spec->catfile($outdir, temp_tag(), $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
 	open CSV, ">$csvfile";
 	foreach my $bin(1..$maxbin){
 			print CSV $bin."_obs,".$bin."_exp,";
@@ -1285,7 +1304,11 @@ sub concat_and_divide_simult {
 	my @group_names = @{$_[2]};
 	my $subtract_maxpath = $self->{static_subtract_tallest};
 	my $dir = $self->{static_output_base};
-	my $nodecount_file = File::Spec->catfile($dir, $prot."_nodecount");
+	my $subdir = $self->{static_output_subfolder};
+	if (! defined $subdir){
+		$subdir = $dir;
+	}
+	my $nodecount_file = File::Spec->catfile($subdir, $prot."_nodecount");
 #	open NODECOUNT, ">$nodecount_file" or die "Cannot create $nodecount_file";
 	
 	my $realdata = $self->{realdata};
@@ -1329,7 +1352,7 @@ sub concat_and_divide_simult {
 	foreach my $md(@maxdepths){
 		foreach my $group_number(0.. scalar @groups - 1){
 			local *FILE;
-			my $csvfile =  File::Spec->catfile($dir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$group_names[$group_number].".csv");
+			my $csvfile =  File::Spec->catfile($subdir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$group_names[$group_number].".csv");
 			open FILE, ">$csvfile" or die "Cannot create $csvfile";
 			
 			FILE->autoflush(1);
@@ -1525,7 +1548,10 @@ sub concat_and_divide_simult_single_sites {
 	#my @group_names = @{$_[2]};
 	my $subtract_maxpath = $self->{static_subtract_tallest};
 	my $dir = $self->{static_output_base};
-	
+	my $subdir = $self->{static_output_subfolder};
+	if (! defined $subdir){
+		$subdir = $dir;
+	}
 	my $realdata = $self->{realdata};
 	my $obs_hash = get_obshash($realdata, List::Util::min(@maxdepths));
 	my $subtree_info = $realdata->{"subtree_info"};
@@ -1559,7 +1585,7 @@ sub concat_and_divide_simult_single_sites {
 	foreach my $md(@maxdepths){
 		foreach my $site_node(keys %{$obs_hash}){
 			local *FILE;
-			my $csvfile =  File::Spec->catfile($dir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$site_node.".csv");
+			my $csvfile =  File::Spec->catfile($subdir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$site_node.".csv");
 			open FILE, ">$csvfile" or die "Cannot create $csvfile";
 			FILE->autoflush(1);
 			$filehandles{$md}{$site_node} = *FILE;
@@ -1924,7 +1950,7 @@ sub count_pvalues{
 		
 		if ($obs_mean ne "NaN"){
 		
-		my $csvfile = File::Spec->catfile($dir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
+		my $csvfile = File::Spec->catfile($outdir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 		open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 		my $iteration = 0;
 		my @hist_obs;
@@ -2091,7 +2117,7 @@ sub count_pvalues{
 			}
 			#print going to read input file\n";		
 				
-			my $csvfile = File::Spec->catfile($dir,temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
+			my $csvfile = File::Spec->catfile($outdir,temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 			open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 			my $iteration = 0; # counter for meaningful iterations
 			my @group_boot_medians;
@@ -2223,7 +2249,7 @@ sub count_pvalues{
 				next;
 			}
 			
-			my $csvfile = File::Spec->catfile($dir,temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
+			my $csvfile = File::Spec->catfile($outdir,temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 			open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 			my $iteration = 0;
 			my @complement_boot_medians;
@@ -2529,7 +2555,7 @@ sub count_single_site_pvalues{
 		
 		if ($obs_mean ne "NaN"){
 		
-		my $csvfile = File::Spec->catfile($dir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$site_node.".csv");
+		my $csvfile = File::Spec->catfile($outdir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$site_node.".csv");
 		open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 		my $iteration = 0;
 		my @hist_obs;
