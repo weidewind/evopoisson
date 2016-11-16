@@ -55,7 +55,8 @@ my @groups_and_names;
 @groups_and_names = $mutmap-> protein_no_group();
 my $mock_mutmap = $mutmap->myclone();
 for (my $i = 1; $i <= $number_of_fakes; $i++){
-	$mock_mutmap->shuffle_mutator();
+	$mock_mutmap -> set_tag($tag."_fake_".$i);
+	$mock_mutmap-> shuffle_mutator();
 	$mock_mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 	$mock_mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;	
 }
