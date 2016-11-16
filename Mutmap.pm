@@ -858,6 +858,7 @@ sub mydeepclone {
 	my $self = shift;
 	my $clone = {
 			static_output_base => $self->{static_output_base},
+			static_input_base => $self->{static_input_base},
 			static_protein => $self->{static_protein},
 			static_tree =>  $self->{static_tree},
 			static_treefile => $self->{static_treefile},
