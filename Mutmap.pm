@@ -860,6 +860,7 @@ sub mydeepclone {
 			static_output_base => $self->{static_output_base},
 			static_protein => $self->{static_protein},
 			static_tree =>  $self->{static_tree},
+			static_treefile => $treefile,
 			static_fasta => $self->{static_fasta},
 			static_state  => $self->{static_state},
 			realdata => $self->{realdata},

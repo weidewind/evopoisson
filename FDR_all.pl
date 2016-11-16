@@ -48,9 +48,6 @@ if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restric
 
 ## 25.01 Procedure for obtaining p-values
 my $mutmap = Mutmap->new($args);
-$mutmap -> set_tag($tag);
-
-
 my @groups_and_names;
 @groups_and_names = $mutmap-> protein_no_group();
 my $mock_mutmap = $mutmap->mydeepclone();
