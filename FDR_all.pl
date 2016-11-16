@@ -56,8 +56,13 @@ my @groups_and_names;
 my $mock_mutmap = $mutmap->mydeepclone();
 for (my $i = 1; $i <= $number_of_fakes; $i++){
 	print "Fake no $i\n";
-	$mock_mutmap -> set_tag($tag."_fake_".$i);
+
+	$mock_mutmap -> set_tag($tag."_fake_".$i); #fake realdata must be written in the subfolder
 	$mock_mutmap-> shuffle_mutator();
+	$mock_mutmap-> prepare_real_data ($restriction, "fake");
+	$args->{fake} = 1;
+	$args->{tag} = $tag."_fake_".$i;
+	$mock_mutmap = Mutmap->new($args); #fake realdata is taken from subfolder
 	$mock_mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 	$mock_mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;	
 }

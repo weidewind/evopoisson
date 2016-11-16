@@ -236,7 +236,12 @@ $| = 1;
 		make_path(File::Spec->catdir($output_base, temp_tag()));
 		
 		if ($args->{fromfile}){
-			my $realdatapath = File::Spec->catfile($output_base, $args->{protein}."_".state_tag($args->{state})."_realdata");
+			my $realdatapath;
+			my $realdataname = $args->{protein}."_".state_tag($args->{state})."_realdata";
+			if ($args->{fake}){
+				 $realdatapath = File::Spec->catfile($output_base, $args->{tag}, $realdataname);
+			}
+			else { $realdatapath = File::Spec->catfile($output_base, $realdataname); }
 			my $realdata = lock_retrieve ($realdatapath) or die "Cannot retrieve ".$realdatapath;
 			
 			$self = { 
@@ -306,7 +311,9 @@ $| = 1;
 				$self ->{static_hash_of_nodes}{$name} = \$node;
 			}
 		}	
+		
 		bless $self, $class;
+		$self->set_tag($args->{tag});
 		return $self;
 	}
 	
@@ -1161,6 +1168,7 @@ sub prepare_real_data {
 	my $self = shift;
 	my $restriction = shift;
 	my $step = shift;
+	my $fake = shift;
 	unless(defined $step) { $step = 0.5; }
 	unless(defined $restriction) { $restriction = 50; }
 	my $prot = $self->{static_protein};
@@ -1216,7 +1224,13 @@ sub prepare_real_data {
 		"obs_hash".$restriction => \%restricted_obs_hash,
 	);
 	
-	my $realdatapath = $self->{static_output_base};
+	my $realdatapath;
+	if ($fake){
+		$realdatapath = $self->{static_output_subfolder};
+	} 
+	else {
+		$realdatapath = $self->{static_output_base};
+	}
 	$realdatapath = File::Spec->catfile($realdatapath, $prot."_".state_tag($self->{static_state})."_realdata");
 	print "Saving real_data to $realdatapath\n";
 
