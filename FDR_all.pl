@@ -35,7 +35,7 @@ GetOptions (	'protein=s' => \$protein,
 	);
 
 
-
+print "Will produce "$number_of_fakes." fakes\n";
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
 my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1}; 
@@ -55,6 +55,7 @@ my @groups_and_names;
 @groups_and_names = $mutmap-> protein_no_group();
 my $mock_mutmap = $mutmap->mydeepclone();
 for (my $i = 1; $i <= $number_of_fakes; $i++){
+	print "Fake no $i\n";
 	$mock_mutmap -> set_tag($tag."_fake_".$i);
 	$mock_mutmap-> shuffle_mutator();
 	$mock_mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
