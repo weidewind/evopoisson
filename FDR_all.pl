@@ -53,7 +53,7 @@ $mutmap -> set_tag($tag);
 
 my @groups_and_names;
 @groups_and_names = $mutmap-> protein_no_group();
-my $mock_mutmap = $mutmap->myclone();
+my $mock_mutmap = $mutmap->mydeepclone();
 for (my $i = 1; $i <= $number_of_fakes; $i++){
 	$mock_mutmap -> set_tag($tag."_fake_".$i);
 	$mock_mutmap-> shuffle_mutator();

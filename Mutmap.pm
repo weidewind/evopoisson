@@ -846,6 +846,30 @@ sub myclone {
 	return $clone;
 }
 
+sub mydeepclone {
+	my $self = shift;
+	my $clone = {
+			static_output_base => $self->{static_output_base},
+			static_protein => $self->{static_protein},
+			static_tree =>  $self->{static_tree},
+			static_fasta => $self->{static_fasta},
+			static_state  => $self->{static_state},
+			realdata => $self->{realdata},
+			static_alignment_length  => $self->{static_alignment_length},
+			static_hash_of_nodes => $self->{static_hash_of_nodes},
+			static_background_subs_on_node => $self->{static_background_subs_on_node },
+			static_background_nodes_with_sub => $self->{static_background_nodes_with_sub},
+			static_subtract_tallest => $self->{static_subtract_tallest},
+			static_no_neighbour_changing =>$self->{static_no_neighbour_changing}, 
+			static_no_leaves =>$self->{static_no_neighbour_changing},
+			static_distance_hash => $self->{realdata}{"distance_hash"},
+			obs_vectors => clone($self->{realdata}{"obs_vectors"})  #the only structure which can (and will) be changed
+	};
+	
+	bless $clone, ref $self; #ref $self returns class of object $self
+	return $clone;
+}
+
 # outputs hash of hashes used for construction of observed_vector
 sub get_hashes {
 	my $self = shift;
