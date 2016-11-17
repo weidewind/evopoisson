@@ -498,11 +498,11 @@ sub incidence_matrix {
 	# select sites with at least 3 mutations of the corresponding type
 	# upd - not sure if such sites should be excluded, changed minimum to 1
 	foreach my $ind(1..$length){
-		if($self->{nodes_with_sub}{$ind} && scalar @{$self->{nodes_with_sub}{$ind}} > 0){# possibility to have at least 2 mutations after an ancestral one
+		if($self->{static_nodes_with_sub}{$ind} && scalar @{$self->{static_nodes_with_sub}{$ind}} > 0){# possibility to have at least 2 mutations after an ancestral one
 			my %site_incidence = %empty_nodes_hash;
 			push @sorted_sites, $ind;
 			#print " added $ind to sorted sites\n";
-			foreach my $node(@{$self->{nodes_with_sub}{$ind}}){
+			foreach my $node(@{$self->{static_nodes_with_sub}{$ind}}){
 				$site_incidence{$$node->get_name()} = 1;
 			}
 			$incidence_hash{$ind} = \%site_incidence;
@@ -1230,10 +1230,10 @@ sub prepare_real_data {
 		"obs_hash".$restriction => \%restricted_obs_hash,
 	);
 	
-	#if ($fake){
-	#	$realdata->{static_subs_on_node} = $self -> {static_subs_on_node};
-	#	$realdata->{static_nodes_with_sub} = $self -> {static_nodes_with_sub};
-	#}
+	## added at 17.11.2016 for fake mutmaps (mutmap, produced from realdata, now can be used for printing it (these hashes are necessary for depth_.._2))
+		$realdata->{static_subs_on_node} = $self -> {static_subs_on_node}; # if it used for fake, it will 
+		$realdata->{static_nodes_with_sub} = $self -> {static_nodes_with_sub};
+	##
 	
 	
 	my $realdatapath;
