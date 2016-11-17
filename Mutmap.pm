@@ -1274,7 +1274,7 @@ sub select_ancestor_nodes {
 	#		die "realdata restriction is bigger than select_ancestor_nodes restriction: ".$obshash_restriction[0]." > $restriction \n";
 	#}
 	#my $obs_hash = $realdata->{"obs_hash".$obshash_restriction[0]};
-	my $obs_hash = $self->get_obshash($realdata, $restriction);
+	my $obs_hash = get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	my %group_nodes;
 	my $debugnum = scalar keys %{$obs_hash};
