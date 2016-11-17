@@ -884,6 +884,7 @@ sub mydeepclone {
 sub get_hashes {
 	my $self = shift;
 	my %res_hash;
+	print ("what must be a hashref is a ".ref($self->{static_nodes_with_sub})."\n");
 	foreach my $ind(keys $self->{static_nodes_with_sub}){
 		my %x_hash;
 		my %y_hash;
