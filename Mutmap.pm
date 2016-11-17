@@ -1276,16 +1276,17 @@ sub select_ancestor_nodes {
 	my $obs_hash = $realdata->{"obs_hash".$obshash_restriction[0]};
 	my $subtree_info = $realdata->{"subtree_info"};
 	my %group_nodes;
+	print "there are ".scalar keys %{$obs_hash}." keys in obshash\n";
 	foreach my $site_node(keys %{$obs_hash}){
 			my ($site, $node_name) = split(/_/, $site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 				if ($maxdepth > $restriction && $group_hash{$site}){
 					$group_nodes{$node_name} = 1;
-					#print "group_node ".$node_name."\n";
+					print "group_node ".$node_name."\n";
 				}
 		}
 		my $count = scalar keys %group_nodes;
-	#print "Total $count\n";
+	print "Total $count\n";
 	return %group_nodes;
 }	
 	
