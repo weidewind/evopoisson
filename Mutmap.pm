@@ -1231,8 +1231,8 @@ sub prepare_real_data {
 	);
 	
 	## added at 17.11.2016 for fake mutmaps (mutmap, produced from realdata, now can be used for printing it (these hashes are necessary for depth_.._2))
-		$realdata->{static_subs_on_node} = $self -> {static_subs_on_node}; # if it used for fake, it will 
-		$realdata->{static_nodes_with_sub} = $self -> {static_nodes_with_sub};
+		$realdata{static_subs_on_node} = $self -> {static_subs_on_node}; # if it used for fake, it will 
+		$realdata{static_nodes_with_sub} = $self -> {static_nodes_with_sub};
 	##
 	
 	
