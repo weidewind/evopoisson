@@ -242,6 +242,7 @@ $| = 1;
 				 $realdatapath = File::Spec->catfile($output_base, $args->{tag}, $realdataname);
 			}
 			else { $realdatapath = File::Spec->catfile($output_base, $realdataname); }
+			print "Creating mutmap from realdata $realdatapath\n";
 			my $realdata = lock_retrieve ($realdatapath) or die "Cannot retrieve ".$realdatapath;
 			
 			$self = { 
