@@ -1269,14 +1269,16 @@ sub select_ancestor_nodes {
 	my $realdata = $self->{realdata};
 	my $maxbin = $realdata->{"maxbin"};
 	my $ancestor_nodes = $realdata->{"ancestor_nodes"};
-	my @obshash_restriction = map { /^obs_hash(.*)/ ? $1 : () } (keys $realdata);
-	unless(defined $obshash_restriction[0] && $obshash_restriction[0] <= $restriction ){
-			die "realdata restriction is bigger than select_ancestor_nodes restriction: ".$obshash_restriction[0]." > $restriction \n";
-	}
-	my $obs_hash = $realdata->{"obs_hash".$obshash_restriction[0]};
+	#my @obshash_restriction = map { /^obs_hash(.*)/ ? $1 : () } (keys $realdata);
+	#unless(defined $obshash_restriction[0] && $obshash_restriction[0] <= $restriction ){
+	#		die "realdata restriction is bigger than select_ancestor_nodes restriction: ".$obshash_restriction[0]." > $restriction \n";
+	#}
+	#my $obs_hash = $realdata->{"obs_hash".$obshash_restriction[0]};
+	my $obs_hash = $self->get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	my %group_nodes;
-	print "there are ".scalar keys %{$obs_hash}." keys in obshash\n";
+	my $debugnum = scalar keys %{$obs_hash};
+	print "there are $debugnum keys in obshash\n";
 	foreach my $site_node(keys %{$obs_hash}){
 			my ($site, $node_name) = split(/_/, $site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
