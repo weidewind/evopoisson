@@ -258,6 +258,7 @@ $| = 1;
 				static_hash_of_nodes => $realdata->{"hash_of_nodes"}, 
 				static_distance_hash => $realdata->{"distance_hash"},
 				static_subs_on_node => $realdata->{"subs_on_node"}, # we never use these two when we produce new mutmappers from file (they are taken from observaton_vectors)
+				obs_vectors => $realdata->{"obs_vectors"}, #added on 17.11.2016
 				static_nodes_with_sub => $realdata->{"static_nodes_with_sub"}, #
 				static_background_subs_on_node => $realdata->{"bkg_subs_on_node"},
 				static_background_nodes_with_sub => $realdata->{"bkg_nodes_with_sub"},
