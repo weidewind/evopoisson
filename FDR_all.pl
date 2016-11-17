@@ -57,7 +57,7 @@ for (my $i = 1; $i <= $number_of_fakes; $i++){
 	$mock_mutmap -> set_tag($tag."_fake_".$i); #fake realdata must be written in the subfolder
 	$mock_mutmap = $mock_mutmap-> shuffle_mutator();
 	#$mock_mutmap-> shuffle_mutator(); #same thing
-	$mock_mutmap-> prepare_real_data ({restriction => $restriction, fake => 1});
+	$mock_mutmap-> prepare_real_data ({restriction => $sr, fake => 1});
 	my $newargs = {%{$args}}; # that's a reference to a new hash
 	$newargs->{fake} = 1;
 	$newargs->{tag} = $tag."_fake_".$i;

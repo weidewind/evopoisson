@@ -1069,6 +1069,7 @@ sub get_obshash {
 	my $realdata = shift;
 	my $restriction = shift;
 	my $rr = get_realdata_restriction($realdata);
+	print "realdata restriction is $rr and we need $restriction\n"; 
 	unless(defined $rr && $rr <= $restriction ){
 			die "realdata restriction is undefined or is greater than get_obshash restriction: ".$rr." > $restriction \n";
 	}
@@ -1210,8 +1211,8 @@ sub prepare_real_data {
 	
 #	print " NORM50 $norm50  NORM100 $norm100  NORM150 $norm150 \n";
 	my %obs_vectors = $self ->get_observation_vectors();
-	
-	
+	my $debugnum = scalar keys %restricted_obs_hash;
+	print "News from prepare: there is $debugnum keys in restricted_obs_hash\n";
 	my %realdata = (
 		"norm".$restriction => $restricted_norm,
 		step => $step,
@@ -2919,6 +2920,8 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
 	my @args = ( $step, $root);
 	$self->visitor_coat ($root, \@array,\&entrenchment_visitor,\&no_check,\@args,0);
+	my $debugnum = scalar keys %{$self ->{static_nodes_with_sub}};
+	print "News from depth..2: static_nodes_with_sub contains $debugnum keys\n";
 	foreach my $ind (@group){
 		foreach my $nod(@{$self ->{static_nodes_with_sub}{$ind}}){
 			my $node;
