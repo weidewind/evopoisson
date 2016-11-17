@@ -1189,12 +1189,13 @@ sub prepare_real_data {
 	foreach my $ancnode(keys %full_obs_hash){
 	my @splitter = split(/_/, $ancnode);
 		$ancestor_nodes{$splitter[-1]} = 1;
+		print "Ancestor: ".$splitter[-1]."\n";
 	}	
-	
 	my $restricted_norm;
 	my %restricted_obs_hash;
 	my $maxbin = 0;
-	
+	my $debugnum = scalar keys %full_obs_hash;
+	print "Early news from prepare: there are $debugnum keys in full_obs_hash\n";
 	foreach my $site_node(keys %full_obs_hash){
 		my ($site, $node_name) = split(/_/, $site_node);
 		my $maxdepth = $self -> {static_subtree_info}{$node_name}{$site}{"maxdepth"};
@@ -1212,7 +1213,7 @@ sub prepare_real_data {
 #	print " NORM50 $norm50  NORM100 $norm100  NORM150 $norm150 \n";
 	my %obs_vectors = $self ->get_observation_vectors();
 	my $debugnum = scalar keys %restricted_obs_hash;
-	print "News from prepare: there is $debugnum keys in restricted_obs_hash\n";
+	print "News from prepare: there are $debugnum keys in restricted_obs_hash\n";
 	my %realdata = (
 		"norm".$restriction => $restricted_norm,
 		step => $step,
