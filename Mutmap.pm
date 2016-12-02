@@ -244,6 +244,22 @@ $| = 1;
 			else { $realdatapath = File::Spec->catfile($output_base, $realdataname); }
 			print "Creating mutmap from realdata $realdatapath\n";
 			my $realdata = lock_retrieve ($realdatapath) or die "Cannot retrieve ".$realdatapath;
+			if ($args->{fake}){
+				unlink $realdatapath or warn "Could not unlink $realdatapath: $!";;
+			}
+			
+			#foreach my $ind(1..300){
+			#if ($realdata->{static_nodes_with_sub}{$ind}){
+			#my $debugnum = scalar @{$realdata->{static_nodes_with_sub}{$ind}};
+			#print "Early news from nnew: numnodes for $ind is $debugnum\n";
+			#}
+			#if ($realdata->{static_nodes_with_sub}{$ind} && scalar @{$realdata->{static_nodes_with_sub}{$ind}} > 0){# possibility to have at least 2 mutations after an ancestral one
+			#foreach my $node(@{$realdata->{static_nodes_with_sub}{$ind}}){
+		#		print "Early News from nnew: nnode_name ".$$node->get_name()."\n";
+		#	}
+		#	}
+		#	}
+			
 			
 			$self = { 
 				static_output_base => $output_base,
@@ -253,18 +269,32 @@ $| = 1;
 				static_tree => $static_tree,
 				static_treefile => $treefile,
 				static_state => $args->{state},
-				static_no_neighbour_changing =>$realdata->{"no_neighbour_changing"}, 
-				static_no_leaves =>$realdata->{"no_leaves"},
-				static_alignment_length => $realdata->{"alignment_length"}, 
-				static_hash_of_nodes => $realdata->{"hash_of_nodes"}, 
-				static_distance_hash => $realdata->{"distance_hash"},
-				static_subs_on_node => $realdata->{"subs_on_node"}, # we never use these two when we produce new mutmappers from file (they are taken from observaton_vectors)
-				obs_vectors => $realdata->{"obs_vectors"}, #added on 17.11.2016
-				static_nodes_with_sub => $realdata->{"static_nodes_with_sub"}, #
-				static_background_subs_on_node => $realdata->{"bkg_subs_on_node"},
-				static_background_nodes_with_sub => $realdata->{"bkg_nodes_with_sub"},
+				static_no_neighbour_changing =>$realdata->{no_neighbour_changing}, 
+				static_no_leaves =>$realdata->{no_leaves},
+				static_alignment_length => $realdata->{alignment_length}, 
+				static_hash_of_nodes => $realdata->{hash_of_nodes}, 
+				static_distance_hash => $realdata->{distance_hash},
+				static_subs_on_node => $realdata->{static_subs_on_node}, # we never use these two when we produce new mutmappers from file (they are taken from observaton_vectors)
+				obs_vectors => $realdata->{obs_vectors}, #added on 17.11.2016
+				static_nodes_with_sub => $realdata->{static_nodes_with_sub}, #
+				static_background_subs_on_node => $realdata->{bkg_subs_on_node},
+				static_background_nodes_with_sub => $realdata->{bkg_nodes_with_sub},
 				realdata => $realdata,
 			};
+			
+			
+		#	foreach my $ind(1..300){
+		#	if ($self->{static_nodes_with_sub}{$ind}){
+		#	my $debugnum = scalar @{$self->{static_nodes_with_sub}{$ind}};
+		#	print "news from nnew: numnodes for $ind is $debugnum\n";
+		#	}
+		#	if ($self->{static_nodes_with_sub}{$ind} && scalar @{$self->{static_nodes_with_sub}{$ind}} > 0){# possibility to have at least 2 mutations after an ancestral one
+		##	foreach my $node(@{$self->{static_nodes_with_sub}{$ind}}){
+		#		print "News from nnew: nnode_name ".$$node->get_name()."\n";
+		#	}
+		#	}
+		#	}
+			
 		}
 		else {
 			my @arr = parse_fasta(File::Spec->catfile($input_base, $args->{protein}.".all.fa"));
@@ -498,11 +528,16 @@ sub incidence_matrix {
 	# select sites with at least 3 mutations of the corresponding type
 	# upd - not sure if such sites should be excluded, changed minimum to 1
 	foreach my $ind(1..$length){
-		if($self->{static_nodes_with_sub}{$ind} && scalar @{$self->{static_nodes_with_sub}{$ind}} > 0){# possibility to have at least 2 mutations after an ancestral one
+		if ($self->{static_nodes_with_sub}{$ind}){
+			my $debugnum = scalar @{$self->{static_nodes_with_sub}{$ind}};
+			print "news from incidence: numnodes for $ind is $debugnum\n";
+		}
+		if ($self->{static_nodes_with_sub}{$ind} && scalar @{$self->{static_nodes_with_sub}{$ind}} > 0){# possibility to have at least 2 mutations after an ancestral one
 			my %site_incidence = %empty_nodes_hash;
 			push @sorted_sites, $ind;
 			#print " added $ind to sorted sites\n";
 			foreach my $node(@{$self->{static_nodes_with_sub}{$ind}}){
+				print "News from incidence_matrix: nnode_name ".$$node->get_name()."\n";
 				$site_incidence{$$node->get_name()} = 1;
 			}
 			$incidence_hash{$ind} = \%site_incidence;
@@ -856,31 +891,7 @@ sub myclone {
 	return $clone;
 }
 
-sub mydeepclone {
-	my $self = shift;
-	my $clone = {
-			static_output_base => $self->{static_output_base},
-			static_input_base => $self->{static_input_base},
-			static_protein => $self->{static_protein},
-			static_tree =>  $self->{static_tree},
-			static_treefile => $self->{static_treefile},
-			static_fasta => $self->{static_fasta},
-			static_state  => $self->{static_state},
-			realdata => clone($self->{realdata}),
-			static_alignment_length  => $self->{static_alignment_length},
-			static_hash_of_nodes => $self->{static_hash_of_nodes},
-			static_background_subs_on_node => $self->{static_background_subs_on_node },
-			static_background_nodes_with_sub => $self->{static_background_nodes_with_sub},
-			static_subtract_tallest => $self->{static_subtract_tallest},
-			static_no_neighbour_changing =>$self->{static_no_neighbour_changing}, 
-			static_no_leaves =>$self->{static_no_neighbour_changing},
-			static_distance_hash => $self->{realdata}{"distance_hash"},
-			obs_vectors => clone($self->{realdata}{"obs_vectors"})  #the only structure which can (and will) be changed
-	};
-	
-	bless $clone, ref $self; #ref $self returns class of object $self
-	return $clone;
-}
+
 
 # outputs hash of hashes used for construction of observed_vector
 sub get_hashes {
@@ -1021,7 +1032,7 @@ sub iterations_gulp {
 	
 	for (my $i = 1; $i <= $iterations; $i++){
 		#if ($verbose){print "Creating clone..\n";}
-		#my $mock_mutmap = $self->myclone(); 
+		my $mock_mutmap = $self->myclone(); # 30.11 test
 		if ($verbose){print "Shuffling clone..\n";}
 		$mock_mutmap->shuffle_mutator(); # this method shuffles observation vectors and sets new $static_nodes.. and static_subs..
 		my %hash;
@@ -1182,6 +1193,8 @@ sub prepare_real_data {
 	$self -> set_distance_matrix();
 	my %matrix = $self->incidence_matrix(); 
 	$self -> print_incidence_matrix(\%matrix);
+	my $debugnum = scalar keys %{$self ->{static_nodes_with_sub}};
+	print "Very early News from prepare: static_nodes_with_sub contains $debugnum keys\n";
 	# used depth_groups_entrenchment_optimized_selector_alldepths but changed it for depth_groups_entrenchment_optimized_selector_alldepths_2, because the latter
 	# keeps in obs_hash info about site index as well as about node name
 	my %full_obs_hash = $self -> depth_groups_entrenchment_optimized_selector_alldepths_2($step, $restriction); # bin size
@@ -2923,23 +2936,28 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 	$self->visitor_coat ($root, \@array,\&entrenchment_visitor,\&no_check,\@args,0);
 	my $debugnum = scalar keys %{$self ->{static_nodes_with_sub}};
 	print "News from depth..2: static_nodes_with_sub contains $debugnum keys\n";
+	my $debugnum = scalar keys %{$self ->{static_subtree_info}};
+	print 	"News from depth..2: static_subtree_info contains $debugnum keys (nodes)\n";
 	foreach my $ind (@group){
 		foreach my $nod(@{$self ->{static_nodes_with_sub}{$ind}}){
+			print "nod is ".$nod." ref(nod) is ".ref($nod)."\n";
 			my $node;
 			if(ref($nod) eq "REF"){
 				$node = ${$nod};
 			}
 			else {$node = $nod;}
 			my $site_node = $ind."_".$node->get_name();
+			print "site_node $site_node \n";
 			my $total_muts;
 			my $total_length;
 	#print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
+			print " maxdepth is ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}. " and restriction is $restriction\n";
 			if ($self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"} > $restriction){
-				
+				print "will try it\n";
 				my %subtract_hash;
 				
 				if ($self ->{static_subtract_tallest}){
-					#print "just checking ".$static_subtree_info{$node->get_name()}{$ind}{"maxdepth_node"}."\n";
+					print "just checking ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth_node"}."\n";
 					my $tallest_tip = ${$self ->{static_hash_of_nodes}{$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth_node"}}};	
 					my @path_to_tallest_tip = @{$tallest_tip->get_ancestors()};	
 					my $index_of_ancestor_node;
@@ -2963,10 +2981,10 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 						$total_length -= $subtract_hash{$bin};
 					}
 				}	
-				#print $node->get_name()." ".$ind." TOTALS: $total_muts, $total_length, maxdepth ".$static_subtree_info{$node->get_name()}{$ind}{"maxdepth"}."\n";
+				print $node->get_name()." ".$ind." TOTALS: $total_muts, $total_length, maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n";
 				#if ($total_length > 0 && $total_muts/$total_length < 0.005){
 				if ($total_length > 0 && $total_muts > 0){ # 21.10 added total_muts > 0
-				#print "total muts $total_muts \n";
+				print "total muts $total_muts \n";
 			#	print "site $ind node ".$node->get_name()." maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n"; # commented out 16.09
 					foreach my $bin (sort {$a <=> $b} (keys %{$self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}})){
 						#if ($total_length > 0 && $static_subtree_info{$node->get_name()}{$ind}{"hash"}{$bin}[1] > 0){ #there are some internal nodes with 0-length terminal daughter branches
@@ -3936,8 +3954,10 @@ sub visitor_coat {
    
    sub fake_predefined_groups_and_names {
    	 	my $self = shift;
+   	 	my $exclude = shift;
  		my $prot = $self->{static_protein};
- 		return Groups::get_fake_predefined_groups_and_names_for_protein($prot, $self->mylength());
+ 		my $state = $self->{static_state};
+ 		return Groups::get_fake_predefined_groups_and_names_for_protein($prot, $self->mylength(), $exclude, $state);
    }
 
 	sub protein_no_group {

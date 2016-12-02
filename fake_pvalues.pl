@@ -21,6 +21,7 @@ my $restrictions = '50';
 my $tag = '';
 my $bootnum = 1000;
 my $verbose;
+my $exclude; #exclude a predefined set of sites (defined in Groups.pm). Was used for testing if exclusion of sites with small p-values would suppress spurious group enrichment 
 
 
 GetOptions (	'protein=s' => \$protein,
@@ -32,6 +33,7 @@ GetOptions (	'protein=s' => \$protein,
 		'restrictions=s' => \$restrictions,
 		'bootnum=i' => \$bootnum,
 		'verbose'  => \$verbose,
+		'exclude'  => \$exclude,
 	);
 
 
@@ -50,7 +52,7 @@ if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restric
 my $mutmap = Mutmap->new($args);
 $mutmap ->set_tag($tag);
 for (my $i = 0; $i < $bootnum; $i++){
-	my @groups_and_names = $mutmap-> fake_predefined_groups_and_names();
+	my @groups_and_names = $mutmap-> fake_predefined_groups_and_names($exclude);
 	$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 	$mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}, "fake"); #$self;  @restriction_levels; my @groups; my @group_names;
 }

@@ -112,8 +112,44 @@ sub get_predefined_groups_and_names_for_protein {
 	my @groups;
 	my @names;
 	my @real_groups_and_names = only_groups($prot);
-	my @groups_and_names = prepare_groups_and_names($real_groups_and_names[0], $real_groups_and_names[1], $length);
+	my @sites = (1..$length);
+	my @groups_and_names = prepare_groups_and_names($real_groups_and_names[0], $real_groups_and_names[1], \@sites);
 	return @groups_and_names;
+}
+
+
+## sites with median stat p-values < 0.01 (from Groups_and_sites.xls), restriction = 50
+my @h1_nsyn_epi = (171,184,202,287,4,90,73,151,88,179);
+my @h1_nsyn_env = (206,289,13,144);
+my @h1_nsyn_epi_005 = (171,184,202,361,287,4,90,73,151,88,179,201,415,238,232,269); # p-values < 0.05 
+my @h1_nsyn_env_005 = (155,209,470,169,97,223,207,169,12,206,289,13,144);
+my @h1_syn_epi_005 = (484,108,149,478,176,242,453,453,98,248,10,59,170,354,123,561,60,280,525,379,254,543,89,2,539,514,476,40,241,55,61,495);
+my @h1_syn_env_005 = (304,495,51,250,451,49,507,498,70,356,290,352,482,156,58,249,506,134,550,501,170,478,228);
+my @h1_syn_epi = (354,123,561,60,280,525,379,254,543,89,2,539,514,476,40,241,55,61,495);
+my @h1_syn_env = (304,495,51,250,451,49,507);
+
+
+sub best_sites {
+	my $prot = shift;
+	my $state = shift;
+	my @array;
+	switch ($prot) {
+		case "h1" {	
+			if ($state == "nsyn"){
+				push @array, @h1_nsyn_env;
+				push @array, @h1_nsyn_epi;
+			}
+			if ($state == "syn"){
+				push @array, @h1_syn_env;
+				push @array, @h1_syn_epi;
+			}
+					  }
+		else {
+			print "Panic! no best sites defined for protein $prot\n";
+			die;
+		}			  
+	}
+	return @array;
 }
 
 
@@ -121,12 +157,25 @@ sub get_predefined_groups_and_names_for_protein {
 sub get_fake_predefined_groups_and_names_for_protein {
 	my $prot = shift;
 	my $length = shift;
+	my $exclude = shift;
+	my $state = shift;
 	my @groups;
 	my @real_groups_and_names = only_groups($prot);
+	my @allsites = (1..$length);
+	my @sites;
+	if ($exclude){
+		my @sites_to_exclude = best_sites($prot, $state);
+		my %exclude_map = map {$_ => 1} @sites_to_exclude;
+		@sites = grep {not $exclude_map{$_}} @allsites;
+	}
+	else {
+		@sites = @allsites;
+	}
+
 	foreach my $g(@{$real_groups_and_names[0]}){
 		my $group_size = scalar @{$g};
 		my @group;
-		my @sites = (1..$length);
+		
   		for ( 1..$group_size ){
   			push @group, splice @sites, rand @sites, 1;
   		}
@@ -137,7 +186,7 @@ sub get_fake_predefined_groups_and_names_for_protein {
   		
   		push @groups, \@group;
 	}
-	my @groups_and_names = prepare_groups_and_names(\@groups, $real_groups_and_names[1], $length);
+	my @groups_and_names = prepare_groups_and_names(\@groups, $real_groups_and_names[1], \@sites);
 	return @groups_and_names;
 	
 }
@@ -200,7 +249,7 @@ sub describe_site{
 sub prepare_groups_and_names {
 	my @pregroups = @{$_[0]};
 	my @pregroup_names = @{$_[1]};
-	my $length = $_[2];
+	my @sites = @{$_[2]};
 	my @group_names;
 	
 	foreach my $group_name(@pregroup_names){
@@ -208,7 +257,7 @@ sub prepare_groups_and_names {
 		push @group_names, $group_name."_complement";
 	}
 	
-	my @groups = prepare_groups(\@pregroups, $length);
+	my @groups = prepare_groups(\@pregroups, \@sites);
 
 	#my @all_variable_sites;
 	#my %nodes_with_sub = $realdata->{"nodes_with_sub"};
@@ -219,9 +268,8 @@ sub prepare_groups_and_names {
 	#	}
 	#}
 	
-	my @all_sites = (1..$length);
 #	print ("debugging prep_groups length is $length\n");
-	push @groups, \@all_sites;
+	push @groups, \@sites;
 	push @group_names, "all";
 	
 	return (\@groups, \@group_names);
@@ -231,7 +279,7 @@ sub prepare_groups_and_names {
 
 sub prepare_groups {
 	my @groups = @{$_[0]};
-	my $length = $_[1];
+	my @sites = @{$_[1]};
 	my @final_groups;
 	foreach my $pregroup (@groups){
 		my %ghash;
@@ -241,7 +289,7 @@ sub prepare_groups {
 			push @group, $s;
 		}
 		my @complement;
-		foreach my $s(1..$length){
+		foreach my $s(@sites){
 			if (!$ghash{$s}){
 				push @complement, $s;
 			}
@@ -255,7 +303,7 @@ sub prepare_groups {
 #16.02 complement to leading is trailing, and vice versa
 sub prepare_lt_groups_and_names {
 	my $prot = $_[0];
-	my $length = $_[1];
+	my @sites = @{$_[1]};
 	my @group_names;
 	push @group_names, "pure_leading";
 	push @group_names, "trailing_as_complement";
@@ -264,9 +312,7 @@ sub prepare_lt_groups_and_names {
 
 	my @groups = prepare_lt_groups($prot);
 	
-	my @all_sites = (1..$length);
-	
-	push @groups, \@all_sites;
+	push @groups, \@sites;
 	push @group_names, "all";
 	
 	return (\@groups, \@group_names);
