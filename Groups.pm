@@ -171,13 +171,13 @@ sub get_fake_predefined_groups_and_names_for_protein {
 	else {
 		@sites = @allsites;
 	}
-
+	my @heap_of_sites = @sites; # it's a copy, yes
 	foreach my $g(@{$real_groups_and_names[0]}){
 		my $group_size = scalar @{$g};
 		my @group;
 		
   		for ( 1..$group_size ){
-  			push @group, splice @sites, rand @sites, 1;
+  			push @group, splice @heap_of_sites, rand @heap_of_sites, 1;
   		}
   		print "\n new group ";
   		foreach my $s (@group){

@@ -1032,7 +1032,7 @@ sub iterations_gulp {
 	
 	for (my $i = 1; $i <= $iterations; $i++){
 		#if ($verbose){print "Creating clone..\n";}
-		my $mock_mutmap = $self->myclone(); # 30.11 test
+		#my $mock_mutmap = $self->myclone(); # 30.11 test
 		if ($verbose){print "Shuffling clone..\n";}
 		$mock_mutmap->shuffle_mutator(); # this method shuffles observation vectors and sets new $static_nodes.. and static_subs..
 		my %hash;
