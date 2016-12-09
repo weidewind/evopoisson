@@ -318,6 +318,8 @@ $| = 1;
 			else {
 				die "only syn or nsyn can be used as the second argument; unknown ".$args->{state}." was used instead";
 			}
+			
+			# static_hash_of_nodes is here now
 
 			$self = {
 				static_output_base => $output_base,
@@ -337,10 +339,11 @@ $| = 1;
 				static_background_subs_on_node => $bkg_mutmaps[0],
 				static_background_nodes_with_sub => $bkg_mutmaps[1],
 			};
+## static_hash_of_nodes been here
 			foreach my $node(@nodes){
 				#if ($node->is_root()) {next;}
 				my $name = $node ->get_name();
-				$self ->{static_hash_of_nodes}{$name} = \$node;
+				$self->{static_hash_of_nodes}{$name} = \$node;
 			}
 		}	
 		
@@ -975,6 +978,26 @@ sub read_observation_vectors {
 	return (\%subs_on_node, \%nodes_with_sub);
 }
 
+
+# prints a table: nodename,nodelength,mutnum 
+# used for checking if the amount of mutations is really proprotional to the length of the branch
+
+sub shuffle_sanity_check {
+	my $self = shift;
+	my $tag = shift;
+	my $file = File::Spec->catfile($self->{static_output_base}, "shuffler_check".$tag);
+	open FILE, ">$file";
+	print FILE "nodename,length,mutnum,bkgrmutnum\n";
+	foreach my $nodname (keys %{$self->{static_background_subs_on_node}}){
+			my $mutnum = scalar keys %{$self->{static_subs_on_node}{$nodname}};
+			my $bkgrmutnum = scalar keys %{$self->{static_background_subs_on_node}{$nodname}};
+			my $node = ${$self->{static_hash_of_nodes}{$nodname}};
+			my $length = $node->get_branch_length;
+			print FILE $nodname.",".$length.",".$mutnum.",".$bkgrmutnum."\n";
+	}
+	close FILE;
+
+}
 
 
 sub shuffle_mutator {
@@ -2678,12 +2701,14 @@ sub count_single_site_pvalues{
 			$iteration++;
 		}
 		
-		for (my $j = 0; $j < scalar @hist_obs; $j++){
-			my $mean_obs = $hist_obs[$j]/$iteration;
-			my $mean_exp = $hist_exp[$j]/$iteration;
-			my $stat_obs = Statistics::Descriptive::Full->new();
-			$stat_obs->add_data(\@{$array_obs_minus_exp[$j]});
-			print $outputfile "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
+		if ($iteration > 0) {
+			for (my $j = 0; $j < scalar @hist_obs; $j++){
+				my $mean_obs = $hist_obs[$j]/$iteration;
+				my $mean_exp = $hist_exp[$j]/$iteration;
+				my $stat_obs = Statistics::Descriptive::Full->new();
+				$stat_obs->add_data(\@{$array_obs_minus_exp[$j]});
+				print $outputfile "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
+			}
 		}
 	
 		close CSVFILE;
@@ -2695,8 +2720,13 @@ sub count_single_site_pvalues{
 		my $pmaxdepth = $subtree_info->{$pnode_name}->{$psite}->{"maxdepth"};
 		my $pmutcount = sum(values %flat_obs_hash);
 		print $outputfile "Number of iterations: $iteration\n";
-		print $outputfile "#\tsite_node\tmutations\tmaxlength\tpvalue_epistasis(median)\tpvalue_epistasis(mean)\tpvalue_environment(median)\tpvalue_environment(mean)\n";
-		print $outputfile ">\t".$site_node."\t".$pmutcount."\t".$pmaxdepth."\t".($pval_epi/$iteration)."\t".($pval_epi_for_mean/$iteration)."\t".($pval_env/$iteration)."\t".($pval_env_for_mean/$iteration)."\n";
+			if ($iteration > 0){
+				print $outputfile "#\tsite_node\tmutations\tmaxlength\tpvalue_epistasis(median)\tpvalue_epistasis(mean)\tpvalue_environment(median)\tpvalue_environment(mean)\n";
+				print $outputfile ">\t".$site_node."\t".$pmutcount."\t".$pmaxdepth."\t".($pval_epi/$iteration)."\t".($pval_epi_for_mean/$iteration)."\t".($pval_env/$iteration)."\t".($pval_env_for_mean/$iteration)."\n";
+			}
+			else {
+				print $outputfile "No iterations found for site_node $site_node !\n";
+			}
 		}
 		else {
 			print $outputfile "hist sum is 0";	
