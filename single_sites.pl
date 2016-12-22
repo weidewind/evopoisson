@@ -20,6 +20,7 @@ my $subtract_tallest = '0';
 my $restrictions = '50,100,150';
 my $verbose;
 my $tag = '';
+my $mutnum_control = 0.2;
 
 
 GetOptions (	'protein=s' => \$protein,
@@ -30,6 +31,7 @@ GetOptions (	'protein=s' => \$protein,
 		'restrictions=s' => \$restrictions,
 		'verbose'  => \$verbose,
 		'tag=s' => \$tag,
+		'mutnum_control=i' => \$mutnum_control,
 	);
 
 
@@ -48,6 +50,6 @@ if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restric
 my $mutmap = Mutmap->new($args);
 $mutmap -> set_tag($tag);
 $mutmap-> createCodeversionFile("single_sites");
-$mutmap-> concat_and_divide_simult_single_sites (\@restriction_levels);
+$mutmap-> concat_and_divide_simult_single_sites (\@restriction_levels, $mutnum_control);
 $mutmap-> count_single_site_pvalues(\@restriction_levels); #$self;  @restriction_levels; my @groups; my @group_names;
 

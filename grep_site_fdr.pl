@@ -22,7 +22,7 @@ if (scalar @dirs == 0){
 my %hash;
 my $sitesfile = File::Spec->catfile($dirname, "h1_sites_fdr_with_stats");
 open GROUPS, ">>$sitesfile" or die "Cannot open $sitesfile: $!\n";
-print GROUPS "depth,site,node,mutations,maxlength,pvalue_epistasis_median,pvalue_epistasis_mean,pvalue_environment_median,pvalue_environment_mean,obs_median,exp_median,obs_mean,exp_mean\n";
+print GROUPS "depth,site,node,mutations,maxlength,pvalue_epistasis_median,pvalue_epistasis_mean,pvalue_environment_median,pvalue_environment_mean,obs_median,exp_median,obs_mean,exp_mean,iterations\n";
 close GROUPS;
 foreach my $di(sort @dirs){
 	
@@ -65,7 +65,16 @@ foreach my $di(sort @dirs){
 					if ($_ =~ /^[\s\t]*poisson.*mean/){
 						my $expmean = (split(/:/, $_))[1];
 						$expmean =~ s/[\s\t]+//g; 
-						$obss = $obss.$expmean;
+						$obss = $obss.$expmean.",";
+					}
+					if($_ =~ /^Number of iterations/){
+						my $its = (split(/:/, $_))[1];
+						$its =~ s/[\s\t]+//g; 
+						$obss = $obss.$its;
+					}
+					if($_ =~ /^No iterations found.*\s+([0-9]+)_(INTNODE[0-9]+)/){
+						print SITES $depth.",".$1.",".$2."\n";
+						$obss = "";
 					}
 					if ($_ =~ /^>(.*)/){
 						my @args = split(/[_\s+]/, $1); 

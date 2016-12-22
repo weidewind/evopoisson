@@ -215,6 +215,9 @@ sub only_groups {
 	return (\@groups, \@names)
 }
 
+
+
+
 sub get_no_groups_for_protein {
 	my $prot = shift;
 	my $length = shift;

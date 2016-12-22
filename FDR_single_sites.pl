@@ -21,7 +21,7 @@ my $input = '';
 my $output = '';	# option variable with default value
 my $subtract_tallest = '0';
 my $restrictions = '50,100,150';
-
+my $mutnum_control = 0.2;
 my $number;
 my $verbose;
 my $tag = '';
@@ -36,6 +36,7 @@ GetOptions (	'protein=s' => \$protein,
 		'verbose'  => \$verbose,
 		'number=i' => \$number,
 		'tag=s' => \$tag,
+		'mutnum_control=i' => \$mutnum_control,
 	);
 
 
@@ -61,7 +62,7 @@ $mutmap-> prepare_real_data ({restriction => $sr, fake => 1});
 $args->{fake} = 1;
 $args->{tag} = $tag."_fake_".$number;
 $mutmap = Mutmap->new($args); #fake realdata is taken from subfolder
-$mutmap-> concat_and_divide_simult_single_sites (\@restriction_levels);
+$mutmap-> concat_and_divide_simult_single_sites (\@restriction_levels, $mutnum_control);
 $mutmap-> count_single_site_pvalues(\@restriction_levels); #$self;  @restriction_levels; my @groups; my @group_names;
 
 #delete files

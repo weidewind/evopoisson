@@ -32,6 +32,7 @@ my $verbose;
 my $no_neighbour_changing;
 my $no_leaves;
 my $switch;
+my $mutnum_control = 0.2;
 
 
 GetOptions (	'protein=s' => \$protein,
@@ -48,6 +49,7 @@ GetOptions (	'protein=s' => \$protein,
 		'no_neighbour_changing' => \$no_neighbour_changing,
 		'no_leaves' => \$no_leaves,
 		'switch' =>\$switch,
+		'mutnum_control=i' => \$mutnum_control,
 	);
 
 $| = 1;
@@ -187,7 +189,7 @@ else {
 	@groups_and_names = $mutmap-> predefined_groups_and_names();
 }
 
-$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}, $mutnum_control);
 $mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;
 
 
