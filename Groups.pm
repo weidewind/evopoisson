@@ -192,6 +192,17 @@ sub get_fake_predefined_groups_and_names_for_protein {
 }
 
 # without complement
+sub only_groups_debugging {
+	my $prot = shift;
+	my @groups;
+	my @names;
+	if ($prot eq "h1"){
+		@groups = ( \@h1_internal);
+		@names = ( "internal");
+	}
+	return (\@groups, \@names)
+}
+
 sub only_groups {
 	my $prot = shift;
 	my @groups;
@@ -214,8 +225,6 @@ sub only_groups {
 	}
 	return (\@groups, \@names)
 }
-
-
 
 
 sub get_no_groups_for_protein {

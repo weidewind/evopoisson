@@ -72,9 +72,8 @@ sub shuffle_obsv{
 		my $i=0;
 		for(;$i<@{$ra_obsv};$i++){					# select the least i at which "CDF" reaches $val (
 			last if ($val<=$new_obsv[$i]->[1]); 
-		};
-		#last if $restrictor{$i};					# prohibit addition of more than one observation 
-		next if $restrictor{$i};					# 27.09.2016 epic bug found. prohibit addition of more than one observation
+		};	
+		next if $restrictor{$i};					# prohibit addition of more than one observation 
 #die "\nOut of range" if $i==@{$ra_obsv};
 		$new_obsv[$i]->[2]++;						# add observation to the corresponding array ( cannot be more than one in our case)
 		$restrictor{$i} = 1;											

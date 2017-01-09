@@ -17,27 +17,20 @@
 	#		while ($str =~ /^[^>]/){ 
 
 			
-				if ($str =~ /^site/){
-					
-					unless ($test_obs_summ - $test_exp_summ < 0.0001 && -$test_obs_summ + $test_exp_summ < 0.0001){
-						print "summtest failed! $simsite $simnode obssum $test_obs_summ, expsum $test_exp_summ\n";
-					}
-		
-					$test_obs_summ = 0;
-					$test_exp_summ = 0;	
-						
+				if ($str =~ /^site/){ # no more than a sanity check
 					my @str_array = split(/\s+/, $str);
 					$simsite = $str_array[1]; # careful
 					$simnode = $str_array[3];
 					$max_depth = $str_array[5];
-					$simmutnum = $str_array[7];
-
-						
+					$simmutnum = $str_array[7];	
 					print "CONC ".$simsite." site,".$simnode." node,".$max_depth." maxdepth\n";
 					$str = <GULP>; #5.02
 				}
+				else {print "something failed! wtf in reading iteration gulp\n"};
 				
 				my @bin_data;
+				my $test_obs_summ = 0;
+				my $test_exp_summ = 0;	
 				while (!($str =~ /^site/)){
 					@str_array = split(/,/, $str);
 					$test_obs_summ += $str_array[1];
@@ -45,6 +38,10 @@
 					push @bin_data, \@str_array;
 					$str = <GULP>;			
 				}
+				unless ($test_obs_summ - $test_exp_summ < 0.0001 && -$test_obs_summ + $test_exp_summ < 0.0001){
+						print "summtest failed! $simsite $simnode obssum $test_obs_summ, expsum $test_exp_summ\n";
+				}
+	
 				# now $str is site..
 				
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
@@ -153,3 +150,52 @@ print "CONC "."maxbin $maxbin\n";
 				print "Iteration number ".$iteration_number."\n";
 			}
 		}
+		
+		
+		local *printer = sub {
+				foreach my $md(@maxdepths){ 
+					foreach my $group_number(0..scalar @groups-1){
+							
+						print "For ".$group_names[$group_number]." ".$md." we needed ";
+						foreach my $snode (keys %{$group_hashes{$md}[$group_number]}){
+							print "$snode :";
+							foreach my $mnum (@{$group_hashes{$md}[$group_number]{$snode}}){
+								print "$mnum".",";
+							}
+							print "; ";
+						}
+						print "\n";
+						unless (! exists $label_hashes{$md}[$group_number]){
+							print "found ".$label_hashes{$md}[$group_number]." labels for group ".$group_names[$group_number]."\n";
+							foreach my $label(0..($label_hashes{$md}[$group_number]-1)){ # last hash (with current label) is uncomplete
+								#print "maxdepth $md group number $group_number \n";
+								if ($sums{$md}[$group_number]{$label} == 0){ # now it's impossible :)
+									foreach my $bin(1..$maxbin){
+										$hash{$md}[$group_number]{$label}{$bin}[0] = "NA";
+										$hash{$md}[$group_number]{$label}{$bin}[1] = "NA";
+									}
+								}
+								else {
+									print "CONC "."norm ".$norms{$md}[$group_number]."\n";
+									print "CONC "."sum ".$sums{$md}[$group_number]{$label}."\n";
+									#print "CONC "."in hash, bin 12: ".$hash{$md}[$group_number]{$label}{12}[0]."\n";
+									
+									foreach my $bin(1..$maxbin){
+										$hash{$md}[$group_number]{$label}{$bin}[0] = $hash{$md}[$group_number]{$label}{$bin}[0]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
+										$hash{$md}[$group_number]{$label}{$bin}[1] = $hash{$md}[$group_number]{$label}{$bin}[1]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
+									}
+								}
+								
+								my $filehandle = $filehandles{$md}{$group_number};
+								print "CONC "."going to print something\n";
+								foreach my $bin(1..$maxbin){
+									print $filehandle $hash{$md}[$group_number]{$label}{$bin}[0].",".$hash{$md}[$group_number]{$label}{$bin}[1].",";
+								}
+								delete $hash{$md}[$group_number]{$label};
+								print $filehandle "\n";
+							}
+						}
+				
+					}
+				}
+			};

@@ -29,9 +29,17 @@ foreach my $filename(sort @files){
 		my $group = $1;
 		my $groupfile = File::Spec->catfile($dirname, $prot."_groups");
 		open GROUPS, ">>$groupfile" or die "Cannot open $groupfile: $!\n";
+		my $its;
 		while(<FILE>){
+			if($_ =~ /^Number of iterations/){
+						$its = (split(/:/, $_))[1];
+						$its =~ s/[\s\t]+//g; 
+			}
 			if ($_ =~ /^me/){
-				print GROUPS $group."\t".$depth."\t".$_;
+				print GROUPS $group."\t".$depth."\t".$its."\t".$_;
+			}
+			if ($_ =~ /^#/){
+				$its = "";
 			}
 		}
 		close GROUPS;

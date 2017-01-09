@@ -976,13 +976,13 @@ sub shuffle_observation_vectors {
 	return %shuffled_obs_vectors;
 }
 
-# constructs our object given the observation_vectors (shuffled)
+# constructs Mutmap object given the observation_vectors (shuffled)
 sub read_observation_vectors {
 	my $self = shift;
 	my $obs_vectors = shift;
 	my %subs_on_node;
 	my %nodes_with_sub;
-#my $counter = 0;	
+	#my $counter = 0;	
 	foreach my $ind(keys %{$obs_vectors}){
 		foreach my $set(@{$obs_vectors->{$ind}}){
 		if ($set->[2] == 1){
@@ -995,14 +995,14 @@ sub read_observation_vectors {
 			if (! exists $nodes_with_sub{$ind}){
 					$nodes_with_sub{$ind} = ();
 			}
-#$counter++;			
+		#$counter++;			
 			push (@{$nodes_with_sub{$ind}}, \${$self->{static_hash_of_nodes}{$nodname}});
-		#print "TEST1 ".${$static_hash_of_nodes{$nodname}}->get_name()."\n"; # часть имен исчезла, а часть - осталась ОО
+		#print "TEST1 ".${$static_hash_of_nodes{$nodname}}->get_name()."\n"; 
 		#print "TEST2 ".$nodname."\n";
 		}
 		}
 	}
-#print "There are $counter mutations in this clone\n";	
+	#print "There are $counter mutations in this clone\n";	
 	return (\%subs_on_node, \%nodes_with_sub);
 }
 
@@ -1441,7 +1441,7 @@ sub concat_and_divide_simult {
 	
 	my $realdata = $self->{realdata};
 	my %hash;
-	my $iteration_number = 1;
+	my $iteration_number = 0;
 	my $maxbin = $realdata->{"maxbin"};
 	
 	my %norms;
@@ -1465,7 +1465,8 @@ sub concat_and_divide_simult {
 	
 	my %counter_hashes = %{ dclone(\%group_hashes) }; # tracks subtrees (node and number of muts) which where already found
 	my %label_hashes; # keeps labels for hashes that are currently being filled in (used instead of {$simsite} label in _single_sites sub)
-	
+	my %sums;
+	my %hash;
 	
 	my $dirname = File::Spec->catdir($dir, $prot); 
 	make_path ($dirname);
@@ -1488,101 +1489,143 @@ sub concat_and_divide_simult {
 		
 	}
 
+	local *printer = sub {
+				foreach my $md(@maxdepths){ 
+					foreach my $group_number(0..scalar @groups-1){
+							
+						unless (! exists $label_hashes{$md}[$group_number]){
+							my $new_labels = $label_hashes{$md}[$group_number]{"current"} - $label_hashes{$md}[$group_number]{"printed"};
+							if($new_labels > 1){
+								#print "found ".($new_labels-1)." new labels for group ".$group_names[$group_number]."\n";
+								my $next_to_print = $label_hashes{$md}[$group_number]{"printed"}+1;
+								foreach my $label($next_to_print..($label_hashes{$md}[$group_number]{"current"}-1)){ # last hash (with current label) is uncomplete
+									#print " looking at label $label \n";
+									if ($sums{$md}[$group_number]{$label} == 0){ # now it's impossible :)
+										foreach my $bin(1..$maxbin){
+											$hash{$md}[$group_number]{$label}{$bin}[0] = "NA";
+											$hash{$md}[$group_number]{$label}{$bin}[1] = "NA";
+										}
+									}
+									else {
+										#print "CONC "."norm ".$norms{$md}[$group_number]."\n";
+										#print "CONC "."sum ".$sums{$md}[$group_number]{$label}."\n";
+										#print "CONC "."in hash, bin 12: ".$hash{$md}[$group_number]{$label}{12}[0]."\n";
+										
+										foreach my $bin(1..$maxbin){
+											$hash{$md}[$group_number]{$label}{$bin}[0] = $hash{$md}[$group_number]{$label}{$bin}[0]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
+											$hash{$md}[$group_number]{$label}{$bin}[1] = $hash{$md}[$group_number]{$label}{$bin}[1]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
+										}
+										#print "CONC expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2 (4th column) \n";
+									}
+									
+									my $filehandle = $filehandles{$md}{$group_number};
+									#print "CONC "."going to print something\n";
+									#print "CONC now expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2 (4th column) \n";
+									foreach my $bin(1..$maxbin){
+										print $filehandle $hash{$md}[$group_number]{$label}{$bin}[0].",".$hash{$md}[$group_number]{$label}{$bin}[1].",";
+									}
+									#print "CONC and now expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2 (4th column) \n";
+									print $filehandle "\n";
+									delete $hash{$md}[$group_number]{$label};
+									$label_hashes{$md}[$group_number]{"printed"} = $label;
+								}
+							}
+						}
+				
+					}
+				}
+			};
 	
 	foreach my $gulp_filename(@files){
 	next if (-d $gulp_filename);
 	my $fullpath = File::Spec -> catfile($dirname, $gulp_filename);
 	open GULP, "<$fullpath" or die "Cannot open $fullpath";
-	
-	my $simsite; # careful	
-	my $simnode;
-	my $simmutnum;
-	my $str = <GULP>; # skipping first ">iteration" line 
-		while (<GULP>){
-print ">iteration number $iteration_number\n";
-			my $max_depth;
-			my @str_array;
-			$str = $_; 
 
-			
-			my %sums;
-			my %hash;
-			
-			my $test_obs_summ;
-			my $test_exp_summ;
-			print "str is now $str\n";
-			
-			while ($str =~ /^[^>]/){ 
-
-			
-				if ($str =~ /^site/){
-					
-					unless ($test_obs_summ - $test_exp_summ < 0.0001 && -$test_obs_summ + $test_exp_summ < 0.0001){
-						print "summtest failed! $simsite $simnode obssum $test_obs_summ, expsum $test_exp_summ\n";
+		my $str = <GULP>;
+		while ($str){
+				if ($str=~ /^>/) {  #skipping  ">iteration" lines 
+					$iteration_number++;
+					if ($iteration_number == 1 || ($iteration_number>=50 && $iteration_number%50 == 0)){
+						print "Iteration number ".$iteration_number."\n";
 					}
-		
-					$test_obs_summ = 0;
-					$test_exp_summ = 0;	
-						
-					my @str_array = split(/\s+/, $str);
-					$simsite = $str_array[1]; # careful
-					$simnode = $str_array[3];
-					$max_depth = $str_array[5];
-					$simmutnum = $str_array[7];
-							
-					## 15.02 iterations: count number of nodes in each group
-			#		foreach my $md(@maxdepths){
-			#			if ($max_depth > $md){
-			#				foreach my $group_number(0..scalar @groups-1){
-			#					if ($group_hashes{$md}[$group_number]{$simnode}){
-			#			#			print NODECOUNT "maxdepth $md group ".$group_names[$group_number]." node $node_name\n";
-			#					}
-			#				}
-			#			}	
-			#		}
-					##
-						
-					print "CONC ".$simsite." site,".$simnode." node,".$max_depth." maxdepth\n";
-					#5.02 my $str = <GULP>; 
+					$str = <GULP>;
+				}
+				#print ">iteration number $iteration_number\n";
+				my $max_depth;
+				my $simsite;
+				my $simnode;
+				my $simmutnum;
+
+				print "str is now $str\n";
+
+				if ($str =~ /^site/){ # no more than a sanity check
+					my @site_array = split(/\s+/, $str);
+					$simsite = $site_array[1]; # careful
+					$simnode = $site_array[3];
+					$max_depth = $site_array[5];
+					$simmutnum = $site_array[7];	
+					#print "CONC ".$simsite." site,".$simnode." node,".$max_depth." maxdepth\n";
 					$str = <GULP>; #5.02
 				}
-				@str_array = split(/,/, $str);
+				else {print "something failed! wtf in reading iteration gulp\n"};
 				
-				$test_obs_summ += $str_array[1];
-				$test_exp_summ += $str_array[2];
-								
+				my @bin_data;
+				my $test_obs_summ = 0;
+				my $test_exp_summ = 0;	
+				while ($str =~ /^[0-9]/){
+					my @onebin_array = split(/,/, $str);
+					$test_obs_summ += $onebin_array[1];
+					$test_exp_summ += $onebin_array[2];
+					push @bin_data, \@onebin_array;
+					$str = <GULP>;			
+				}
+				unless ($test_obs_summ - $test_exp_summ < 0.0001 && -$test_obs_summ + $test_exp_summ < 0.0001){
+						#print "summtest failed! $simsite $simnode obssum $test_obs_summ, expsum $test_exp_summ\n";
+				}
+				#print "read all bins..str is now $str\n";
+				# now $str is site.. or new iteration
 				
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
 				foreach my $md(@maxdepths){
 					if ($max_depth > $md){
 						foreach my $group_number(0..scalar @groups-1){
 							my $label;
-							if (exists $label_hashes{$md}[$group_number]) {$label = $label_hashes{$md}[$group_number];}
+							if (exists $label_hashes{$md}[$group_number]{"current"}) {$label = $label_hashes{$md}[$group_number]{"current"};}
 							else {$label = 0;}
-							if ($counter_hashes{$md}[$group_number]{$simnode}){ # change group_hashes to counter_hashes
+							if ($counter_hashes{$md}[$group_number]{$simnode}){ 
 								my $mutnums = $counter_hashes{$md}[$group_number]{$simnode};
 								for (my $i = 0; $i < scalar @{$mutnums}; $i++){
 									my $diff = abs($simmutnum - $mutnums->[$i])/$mutnums->[$i];
 									if ($diff <= $mutnum_control){
 										## ! we need bin loop here, not outside!
 										## hash hash hash
-										if ({$str_array[0]} == 1 ) {print "CONC "."group number $group_number md $md node name $simnode simmutnum $simmutnum realmutnum".$mutnums->[$i]."\n";}
-										$sums{$md}[$group_number][$label] += $str_array[1];
-										$hash{$md}[$group_number][$label]{$str_array[0]}[1] += $str_array[2];
-										$hash{$md}[$group_number][$label]{$str_array[0]}[0] += $str_array[1];
-										if ({$str_array[0]} == 1 ) {print "CONC ".$hash{$md}[$group_number][$label]{$str_array[0]}[0]." obs integral\n"; }
+										#print " sum for ".$group_names[$group_number]." was ".$sums{$md}[$group_number]{$label}."\n";
+										#print "CONC "."group number $group_number md $md node name $simnode simmutnum $simmutnum realmutnum".$mutnums->[$i]."\n";
+										foreach my $bindat (@bin_data){
+											$sums{$md}[$group_number]{$label} += $bindat->[1];
+											$hash{$md}[$group_number]{$label}{$bindat->[0]}[1] += $bindat->[2];
+											$hash{$md}[$group_number]{$label}{$bindat->[0]}[0] += $bindat->[1];
+										}
+										#print " sum for ".$group_names[$group_number]." is now ".$sums{$md}[$group_number]{$label}."\n";
+										#print "before splicing ".scalar @{$mutnums}.", ";
 										splice (@{$mutnums}, $i, 1);
-										last; #we cant use one subtree more than once
+										#print "after splicing ".scalar @{$mutnums}."\n";
+										last; #we cant use one subtree more than once (in the same group)
 									}
 								}
 								if (scalar @{$mutnums} == 0){
-									"CONC no more mutnums for group number $group_number md $md node name $simnode, deleting this node\n";
+									#print "CONC no more mutnums for group number $group_number md $md node name $simnode, deleting this node\n";
+									my $older = scalar keys %{$counter_hashes{$md}[$group_number]};
+									#print "had $older , ";
 									delete $counter_hashes{$md}[$group_number]{$simnode};
+									my $newer = scalar keys %{$counter_hashes{$md}[$group_number]};
+									#print "now has $newer \n";
 								}
-								if (scalar keys %{$counter_hashes{$md}[$group_number]} == 0){
-									"CONC no more nodes for group number $group_number md $md, starting new collection\n";
-									$label_hashes{$md}[$group_number] += 1; # label corresponds to number of full collections (undef, if there is 0, 1, if we got one. But collection with this label is not full!)
-									$counter_hashes{$md}[$group_number] = \%{ dclone($group_hashes{$md}[$group_number]) };
+								if ((scalar keys %{$counter_hashes{$md}[$group_number]}) == 0){
+									#print "Win! sum for label $label $md ".$group_names[$group_number]." is ".$sums{$md}[$group_number]{$label}."\n";
+									#print "CONC no more nodes for group number $group_number md $md, starting new collection\n";
+									$label_hashes{$md}[$group_number]{"current"} += 1; # label corresponds to number of full collections (undef, if there is 0, 1, if we got one. But collection with this label is not full!)
+									$counter_hashes{$md}[$group_number] = dclone($group_hashes{$md}[$group_number]);
 								}
 
 							}
@@ -1591,81 +1634,37 @@ print ">iteration number $iteration_number\n";
 				}
 
 				
-				$str = <GULP>;
-				
+	# because we iterate through site earlier $str = <GULP>;
+			
+			# maxbins are different for every iteration. Find maximum and use it.
+			$maxbin = max($maxbin, scalar @bin_data);
+			print "CONC "."maxbin $maxbin\n";	
+			
+			if ($iteration_number>=50 && $iteration_number%50 == 0){
+				printer();
 			}
 			
-
-			# maxbins are different for every iteration. Find maximum and use it.
-
-			$maxbin = max($maxbin, $str_array[0]);
-print "CONC "."maxbin $maxbin\n";	
-#print "CONC "."sum50 $sum50 sum100 $sum100 sum150 $sum150 norm 50 $norm50 norm 100 $norm100 norm 150 $norm150\n";		
-			
-			foreach my $md(@maxdepths){ 
-				foreach my $group_number(0..scalar @groups-1){
-					
+		}
+		close GULP;	
+	}
+	
+	## here 
+	printer();
+	
+#	close NODECOUNT;
+	
+	foreach my $md(@maxdepths){
+		foreach my $group_number(0.. scalar @groups - 1){	
 					print "For ".$group_names[$group_number]." ".$md." we needed ";
-					foreach my $snode (keys %{$counter_hashes{$md}[$group_number]}){
+					foreach my $snode (keys %{$group_hashes{$md}[$group_number]}){
 						print "$snode :";
-						foreach my $mnum (@{$counter_hashes{$md}[$group_number]{$snode}}){
+						foreach my $mnum (@{$group_hashes{$md}[$group_number]{$snode}}){
 							print "$mnum".",";
 						}
 						print "; ";
 					}
 					print "\n";
 					
-					
-					
-					
-					unless (! exists $label_hashes{$md}[$group_number]){
-						print "found ".$label_hashes{$md}[$group_number]." labels for group ".$group_names[$group_number]."\n";
-						foreach my $label(0..($label_hashes{$md}[$group_number]-1)){ # last hash (with current label) is uncomplete
-							#print "maxdepth $md group number $group_number \n";
-							if ($sums{$md}[$group_number][$label] == 0){
-								foreach my $bin(1..$maxbin){
-									$hash{$md}[$group_number][$label]{$bin}[0] = "NA";
-									$hash{$md}[$group_number][$label]{$bin}[1] = "NA";
-								}
-							}
-							else {
-								print "CONC "."norm ".$norms{$md}[$group_number]."\n";
-								print "CONC "."sum ".$sums{$md}[$group_number][$label]."\n";
-								print "CONC "."in hash, bin 12: ".$hash{$md}[$group_number][$label]{12}[0]."\n";
-								
-								foreach my $bin(1..$maxbin){
-									$hash{$md}[$group_number][$label]{$bin}[0] = $hash{$md}[$group_number][$label]{$bin}[0]*$norms{$md}[$group_number]/$sums{$md}[$group_number][$label];
-									$hash{$md}[$group_number][$label]{$bin}[1] = $hash{$md}[$group_number][$label]{$bin}[1]*$norms{$md}[$group_number]/$sums{$md}[$group_number][$label];
-								}
-							}
-							
-							my $filehandle = $filehandles{$md}{$group_number};
-							print "CONC "."going to print something\n";
-							foreach my $bin(1..$maxbin){
-								print $filehandle $hash{$md}[$group_number][$label]{$bin}[0].",".$hash{$md}[$group_number][$label]{$bin}[1].",";
-							}
-							print $filehandle "\n";
-						}
-					}
-				}
-			}
-			
-
-			
-			$iteration_number++;
-			if ($iteration_number%50 == 0){
-				print "Iteration number ".$iteration_number."\n";
-			}
-		}
-		
-		close GULP;
-		
-	}
-	
-#	close NODECOUNT;
-	
-	foreach my $md(@maxdepths){
-		foreach my $group_number(0.. scalar @groups - 1){
 					my $filehandle = $filehandles{$md}{$group_number};
 					close $filehandle;
 		}
@@ -1870,7 +1869,7 @@ sub concat_and_divide_simult_single_sites {
 			
 			
 			
-print ">iteration number ".$iteration_number."\n";		
+#print ">iteration number ".$iteration_number."\n";		
 foreach my $md (@maxdepths)	{
 		foreach my $site_node(keys %{$obs_hash}){
 			foreach my $simsite(keys %{$sums{$md}{$site_node}}){	
@@ -2540,16 +2539,26 @@ sub count_pvalues{
 				if (scalar @{$array_gbo_minus_gbe[$j]}  != scalar @{$array_cbo_minus_cbe[$j]}){
 					print "itertest failed! number of iterations in group array for $j bin is ".scalar @{$array_gbo_minus_gbe[$j]}.", in complement array  ".scalar @{$array_cbo_minus_cbe[$j]}."\n";
 					print "Now you can start worrying\n";
+					print "It's ok, if you mix iterations and don't print NAs in .csv. I'll just compute the difference between all full arrays\n";
+					my $number_of_iterations = min(scalar @{$array_gbo_minus_gbe[$j]}, scalar @{$array_cbo_minus_cbe[$j]});
+					foreach my $iteration(0..($number_of_iterations-1)){
+						push @{$array_diffdiff[$j]}, $array_gbo_minus_gbe[$j][$iteration] - $array_cbo_minus_cbe[$j][$iteration];
+					}
+					
 				}
-				foreach my $iteration(@{$array_gbo_minus_gbe[$j]}){
-					push @{$array_diffdiff[$j]}, $array_gbo_minus_gbe[$j][$iteration] - $array_cbo_minus_cbe[$j][$iteration];
+				else {
+					foreach my $iteration(@{$array_gbo_minus_gbe[$j]}){
+						push @{$array_diffdiff[$j]}, $array_gbo_minus_gbe[$j][$iteration] - $array_cbo_minus_cbe[$j][$iteration];
+					}
 				}
-			}
-			
-			if (scalar @complement_boot_medians != scalar @group_boot_medians){
-				print "Error! complement_boot_medians size is not equal to group_boot_medians size: ".scalar @complement_boot_medians." != ".scalar @group_boot_medians."\n";
 			}
 			my $updated_iteration_number = scalar @complement_boot_medians;
+			if (scalar @complement_boot_medians != scalar @group_boot_medians){
+				print "Error! complement_boot_medians size is not equal to group_boot_medians size: ".scalar @complement_boot_medians." != ".scalar @group_boot_medians."\n";
+				print "It's ok, if you mix iterations and don't print NAs in .csv. I'll just compute the difference between all full arrays\n";
+				$updated_iteration_number = min(scalar @complement_boot_medians, scalar @group_boot_medians);
+			}
+			
 			
 			unless($fake){
 			print $outputfile "bin mean_group_boot_obs mean_group_boot_exp ";
@@ -2596,7 +2605,7 @@ sub count_pvalues{
 			my $pval_epi_for_mean;
 			my $pval_env_for_mean;
 			
-			for (my $i = 0; $i < scalar @group_boot_medians; $i++){
+			for (my $i = 0; $i < $updated_iteration_number; $i++){
 			## medians
 				if (nearest(0.00000001, ($group_boot_medians[$i][0] - $group_boot_medians[$i][1]) - ($complement_boot_medians[$i][0] - $complement_boot_medians[$i][1]))
 					>= nearest(0.00000001, ($obs_median - $exp_median) - ($complement_obs_median - $complement_exp_median))){
