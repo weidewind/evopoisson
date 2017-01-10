@@ -3851,6 +3851,9 @@ sub visitor_coat {
  			if (${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}){
  				return 0;
  			}
+ 			else if ($self->{static_no_neighbour_changing} && compare::is_neighbour_changing(${$self->{static_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){ # added at 10.01.2017
+ 				return 0;
+ 			}
  			else {
  				return 1;
  			}
