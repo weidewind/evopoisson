@@ -31,7 +31,7 @@ GetOptions (	'protein=s' => \$protein,
 		'restrictions=s' => \$restrictions,
 		'verbose'  => \$verbose,
 		'tag=s' => \$tag,
-		'mutnum_control=i' => \$mutnum_control,
+		'mutnum_control=s' => \$mutnum_control,
 	);
 
 

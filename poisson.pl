@@ -49,7 +49,7 @@ GetOptions (	'protein=s' => \$protein,
 		'no_neighbour_changing' => \$no_neighbour_changing,
 		'no_leaves' => \$no_leaves,
 		'switch' =>\$switch,
-		'mutnum_control=i' => \$mutnum_control,
+		'mutnum_control=s' => \$mutnum_control,
 	);
 
 $| = 1;
