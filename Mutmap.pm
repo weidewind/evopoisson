@@ -167,6 +167,7 @@ $| = 1;
 		print $outputStream "## protein ".$self->{static_protein}."\n";
 		print $outputStream "## subtract_tallest ".$self->{static_subtract_tallest}."\n";
 		print $outputStream "## state ".$self->{static_state}."\n";
+		print $outputStream "## mutnum_control ".$self->{mutnum_control}."\n";
 		print $outputStream "## omit neighbour-changing mutations (only for 'reversals', ancestor n-ch muts are not skipped. Only valid for syn state)? 1 if true ".$self->{static_no_neighbour_changing}."\n";
 		print $outputStream "## omit mutations on terminal branches? 1 if true ".$self->{static_no_leaves}."\n";
 		print $outputStream "## output_base ".$self->{static_output_base}."\n";
@@ -272,6 +273,7 @@ $| = 1;
 				static_treefile => $treefile,
 				static_state => $args->{state},
 				static_no_neighbour_changing =>$realdata->{no_neighbour_changing}, 
+				static_mutnum_control => $realdata->{mutnum_control}, 
 				static_no_leaves =>$realdata->{no_leaves},
 				static_alignment_length => $realdata->{alignment_length}, 
 				static_hash_of_nodes => $realdata->{hash_of_nodes}, 
@@ -330,6 +332,7 @@ $| = 1;
 				static_alignment_length => $alignment_length, 
 				static_subtract_tallest => $args->{subtract_tallest},
 				static_no_neighbour_changing =>  $args->{no_neighbour_changing},
+				static_mutnum_control => $args->{mutnum_control}, 
 				static_no_leaves =>$args->{no_leaves},
 				static_tree => $static_tree,
 				static_treefile => $treefile,
@@ -1428,7 +1431,7 @@ sub concat_and_divide_simult {
 	my @maxdepths = @{$_[0]};
 	my @groups = @{$_[1]};
 	my @group_names = @{$_[2]};
-	my $mutnum_control = $_[3];
+	my $mutnum_control = $self->{static_mutnum_control};
 	my $subtract_maxpath = $self->{static_subtract_tallest};
 	my $dir = $self->{static_output_base};
 	my $subdir = $self->{static_output_subfolder};
@@ -1701,7 +1704,7 @@ sub concat_and_divide_simult_single_sites {
 	my $self = shift;
 	my $prot = $self->{static_protein};
 	my @maxdepths = @{$_[0]};
-	my $mutnum_control = $_[1];
+	my $mutnum_control = $self->{static_mutnum_control};
 	#my @groups = @{$_[1]};
 	#my @group_names = @{$_[2]};
 	my $subtract_maxpath = $self->{static_subtract_tallest};

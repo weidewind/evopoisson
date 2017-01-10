@@ -56,7 +56,7 @@ $| = 1;
 
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest,  no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, fromfile => 1}; 
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest,  no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, mutnum_control => $mutnum_control, fromfile => 1}; 
 
 ## Checking if appropriate realdata exists, initializing
 my @restriction_levels = split(/,/, $restrictions);
@@ -189,7 +189,7 @@ else {
 	@groups_and_names = $mutmap-> predefined_groups_and_names();
 }
 
-$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}, $mutnum_control);
+$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 $mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;
 
 
