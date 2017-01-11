@@ -167,7 +167,7 @@ $| = 1;
 		print $outputStream "## protein ".$self->{static_protein}."\n";
 		print $outputStream "## subtract_tallest ".$self->{static_subtract_tallest}."\n";
 		print $outputStream "## state ".$self->{static_state}."\n";
-		print $outputStream "## mutnum_control ".$self->{mutnum_control}."\n";
+		print $outputStream "## mutnum_control ".$self->{static_mutnum_control}."\n";
 		print $outputStream "## omit neighbour-changing mutations (only for 'reversals', ancestor n-ch muts are not skipped. Only valid for syn state)? 1 if true ".$self->{static_no_neighbour_changing}."\n";
 		print $outputStream "## omit mutations on terminal branches? 1 if true ".$self->{static_no_leaves}."\n";
 		print $outputStream "## output_base ".$self->{static_output_base}."\n";
@@ -273,7 +273,7 @@ $| = 1;
 				static_treefile => $treefile,
 				static_state => $args->{state},
 				static_no_neighbour_changing =>$realdata->{no_neighbour_changing}, 
-				static_mutnum_control => $realdata->{mutnum_control}, 
+				static_mutnum_control => $args->{mutnum_control}, 
 				static_no_leaves =>$realdata->{no_leaves},
 				static_alignment_length => $realdata->{alignment_length}, 
 				static_hash_of_nodes => $realdata->{hash_of_nodes}, 
@@ -1053,9 +1053,25 @@ sub FDR_all {
 
 
 
+# interface :)
+sub iterations_gulp{
+	
+}
+
+# new simulation method 11.01.2017 
+# works with each subtree separately
+# tries to assign to subtree exactly the same number of mutations as in real data (proportionally to lengths of branches)
+# subtrees are totally independent
+sub iterations_gulp_subtree_shuffling {
+	
+}
 
 # 5.11 for entrenchment_bootstrap_full_selection_vector
-sub iterations_gulp {
+# was used before 11.01.2017 (previous name - iterations_gulp)
+# constraint: total number of mutations in each site
+# mutations are assigned to branches proportionally to their lengths
+# works with the whole tree
+sub iterations_gulp_vector_shuffling {
 	my $self = shift;
 	my $iterations = shift;
 	my $tag = shift;
@@ -1299,6 +1315,7 @@ sub prepare_real_data {
 		subtree_info => $self -> {static_subtree_info},
 		alignment_length => $self -> {static_alignment_length},
 		no_neighbour_changing => $self -> {static_no_neighbour_changing},
+		mutnum_control => $self -> {static_mutnum_control},
 		no_leaves => $self -> {static_no_leaves},
 		"obs_hash".$restriction => \%restricted_obs_hash,
 	);

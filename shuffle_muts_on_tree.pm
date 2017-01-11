@@ -263,7 +263,7 @@ sub shuffle_mutations_on_tree{
 				if(defined $tmp[$i]){
 					$rh_out_subtree->{$name}->{$site}=[] unless defined $rh_out_subtree->{$name}->{$site};
 					die "\nNot all mutations were positioned on the tree!" unless $mnumber[$i]==scalar(@{$tmp[$i]});
-					push @{$rh_out_subtree->{$site}},@{$tmp[$i]};
+					push @{$rh_out_subtree->{$name}->{$site}},@{$tmp[$i]};
 				}else{
 					$rh_out_subtree->{$name}->{$site}=undef;
 				}
