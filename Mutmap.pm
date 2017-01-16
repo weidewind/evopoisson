@@ -41,6 +41,7 @@ use observation_vector qw(make_observation_vector shuffle_obsv);
 #use DnaUtilities::compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing);
 use compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing get_synmuts);
 #use TreeUtils::Phylo::PhyloUtils qw(remove_zero_branches);
+use shuffle_muts_on_tree qw(shuffle_mutations_on_tree prepare_shuffler StripConstrains Shuffler);
 use PhyloUtils qw(remove_zero_branches);
 use Groups;
 use Memusage;
@@ -1055,7 +1056,13 @@ sub FDR_all {
 
 # interface :)
 sub iterations_gulp{
-	
+	my $self = shift;
+	my $iterations = shift;
+	my $tag = shift;
+	my $verbose = shift;
+	my $memusage = shift;
+	my $restriction = shift;
+	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction);
 }
 
 # new simulation method 11.01.2017 
@@ -1064,6 +1071,98 @@ sub iterations_gulp{
 # subtrees are totally independent
 sub iterations_gulp_subtree_shuffling {
 	
+	my $self = shift;
+	my $iterations = shift;
+	my $tag = shift;
+	my $verbose = shift;
+	my $memusage = shift;
+	my $restriction = shift;
+		
+	if ($verbose){print "Extracting realdata..\n";}	
+	my $realdata = $self->{realdata};
+	my $maxbin = $realdata->{"maxbin"};
+	my $step = $realdata->{"step"}; #bin size
+	unless (defined $step) {die "Oh no, bin size in realdata is not defined. Won't proceed with simulations.\n";}
+	my $ancestor_nodes = $realdata->{"ancestor_nodes"};
+	my $outdir;
+	if ($self->{static_output_subfolder}){
+		$outdir = $self->{static_output_subfolder};
+	}
+	else {
+		$outdir = $self->{static_output_base};
+	}
+	my @simulated_hists;
+	
+	my $rh_constrains = $self->get_constraints($ancestor_nodes); #todo
+	# take it from subtree_info
+	# $rh_constrains->{$name}->{$site}->StripConstrains
+	#struct StripConstrains =>{
+	#number_of_mutations => '$',
+	#lifetime => '$',
+	#stoppers => '@'
+	#}
+	my $shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains) #todo
+	for (my $i = 1; $i <= $iterations; $i++){
+		if ($verbose){print "Creating clone..\n";}
+		my $mock_mutmap = $self->myclone();
+		if ($verbose){print "Shuffling clone..\n";}
+		
+		my $rh_out_subtree = shuffle_muts_on_tree::shuffle_muts_on_tree($shuffler); #todo
+		# $rh_out_subtree->{$name}->{$site}= массив уходов #todo
+		
+		$mock_mutmap->shuffle_mutator(); # this method shuffles observation vectors and sets new $static_nodes.. and static_subs..
+		
+		my %hash;
+		
+		my %prehash = $self->groups_entrenchment_subtree($rh_out_subtree) #todo
+		# >new iteration string and all the corresponding data  are printed inside this sub:
+		my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths($step,$restriction,$ancestor_nodes, "overwrite", $tag, $verbose); #step (bin size), restriction, ancestor_nodes, should I overwrite static hash?
+
+		foreach my $bin(1..$maxbin){
+				foreach my $site_node(keys %prehash){
+					$hash{$bin}[1] += $prehash{$site_node}{$bin}[1];
+					$hash{$bin}[0] += $prehash{$site_node}{$bin}[0];				
+			}
+		}
+		push @simulated_hists, \%hash;
+	}
+	if ($memusage){
+		my $locker = Memusage->get_locker($self);
+		$locker->print_memusage();
+	}
+	my $arref = \@simulated_hists;
+	my $csvfile = File::Spec->catfile($outdir, temp_tag(), $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
+	open CSV, ">$csvfile";
+	foreach my $bin(1..$maxbin){
+			print CSV $bin."_obs,".$bin."_exp,";
+	}
+	print CSV "\n";
+	
+	foreach my $i(0..$iterations-1){
+		foreach my $bin(1..$maxbin){
+			print CSV ($arref->[$i]->{$bin}->[0]).",".($arref->[$i]->{$bin}->[1]).",";
+		}
+		print CSV"\n";
+	}
+	close CSV;
+	
+	
+}
+
+sub get_constraints{
+	my $self = shift;
+	my $ancestor_nodes = shift;
+	# $rh_constrains->{$name}->{$site}->StripConstrains
+	#struct StripConstrains =>{
+	#number_of_mutations => '$',
+	#lifetime => '$',
+	#stoppers => '@'
+	#}
+}
+sub groups_entrenchment_subtree{
+	my $self = shift;
+	my $rh_out_subtree = shift;
+	# $rh_out_subtree->{$name}->{$site}= массив уходов #todo
 }
 
 # 5.11 for entrenchment_bootstrap_full_selection_vector
