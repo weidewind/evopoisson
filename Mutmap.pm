@@ -502,16 +502,7 @@ sub synmutmap {
 
 sub mylength {
 	my $self = shift;	
-	my $length;
-	#if ($self->{static_state} eq "nsyn"){ # 12.10 syn positions also correspond to codons
-		$length = ($self->{static_alignment_length})/3;
-	#	print "debugging mylength is $length\n";
-	#}
-	#elsif ($self->{static_state} eq "syn") {
-	#	$length = $self->{static_alignment_length};
-	#	print "debugging mylength is $length\n";
-	#}
-	#print "debugging returning mylength $length\n";
+	my $length = ($self->{static_alignment_length})/3;
 	return $length;
 }
 # sets static_sorted_nodnames and static_sorted_sites, retruns incidence_hash
@@ -1077,6 +1068,7 @@ sub iterations_gulp_subtree_shuffling {
 	my $verbose = shift;
 	my $memusage = shift;
 	my $restriction = shift;
+	
 		
 	if ($verbose){print "Extracting realdata..\n";}	
 	my $realdata = $self->{realdata};
@@ -1093,77 +1085,82 @@ sub iterations_gulp_subtree_shuffling {
 	}
 	my @simulated_hists;
 	
-	my $rh_constrains = $self->get_constraints($ancestor_nodes); #todo
-	# take it from subtree_info
-	# $rh_constrains->{$name}->{$site}->StripConstrains
-	#struct StripConstrains =>{
-	#number_of_mutations => '$',
-	#lifetime => '$',
-	#stoppers => '@'
-	#}
-	my $shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains) #todo
+	my $length = $self->mylength();
+	my @sites = (1..$length-1);
+	# subtree_info has to be ready at this point. But that's obvious, since we have realdata,
+	# and that's exactly where we take it from - realdata. 
+	my $rh_constrains = $self->get_constraints($restriction, \@group); 
+	my $shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains) 
 	for (my $i = 1; $i <= $iterations; $i++){
-		if ($verbose){print "Creating clone..\n";}
-		my $mock_mutmap = $self->myclone();
-		if ($verbose){print "Shuffling clone..\n";}
-		
-		my $rh_out_subtree = shuffle_muts_on_tree::shuffle_muts_on_tree($shuffler); #todo
+		my $rh_out_subtree = shuffle_muts_on_tree::shuffle_mutations_on_tree($shuffler); 
 		# $rh_out_subtree->{$name}->{$site}= массив уходов #todo
-		
-		$mock_mutmap->shuffle_mutator(); # this method shuffles observation vectors and sets new $static_nodes.. and static_subs..
-		
 		my %hash;
-		
-		my %prehash = $self->groups_entrenchment_subtree($rh_out_subtree) #todo
+		$self->entrenchment_for_subtrees($rh_out_subtree) #todo
 		# >new iteration string and all the corresponding data  are printed inside this sub:
-		my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths($step,$restriction,$ancestor_nodes, "overwrite", $tag, $verbose); #step (bin size), restriction, ancestor_nodes, should I overwrite static hash?
+		# we used to launch visitor_coat in this sub (depth_groups_entrenchment_optimized_selection_alldepths) and take subtree_info from self. 
+		# But now we have no tree - only a set of overlapping subtrees which cannot be converted into a tree.
+		# So.. do we have to launch entrenchment_visitor for each subtree? Nope. Better to write a new algorithm (just tree search with restrictions) that will create the same output structure
+	#	my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths($step,$restriction,$ancestor_nodes, "overwrite", $tag, $verbose); #step (bin size), restriction, ancestor_nodes, should I overwrite static hash?
 
-		foreach my $bin(1..$maxbin){
-				foreach my $site_node(keys %prehash){
-					$hash{$bin}[1] += $prehash{$site_node}{$bin}[1];
-					$hash{$bin}[0] += $prehash{$site_node}{$bin}[0];				
-			}
-		}
-		push @simulated_hists, \%hash;
+#		foreach my $bin(1..$maxbin){
+#				foreach my $site_node(keys %prehash){
+#					$hash{$bin}[1] += $prehash{$site_node}{$bin}[1];
+#					$hash{$bin}[0] += $prehash{$site_node}{$bin}[0];				
+#			}
+#		}
+#		push @simulated_hists, \%hash;
 	}
-	if ($memusage){
-		my $locker = Memusage->get_locker($self);
-		$locker->print_memusage();
-	}
-	my $arref = \@simulated_hists;
-	my $csvfile = File::Spec->catfile($outdir, temp_tag(), $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
-	open CSV, ">$csvfile";
-	foreach my $bin(1..$maxbin){
-			print CSV $bin."_obs,".$bin."_exp,";
-	}
-	print CSV "\n";
+#	if ($memusage){
+#		my $locker = Memusage->get_locker($self);
+#		$locker->print_memusage();
+#	}
+#	my $arref = \@simulated_hists;
+#	my $csvfile = File::Spec->catfile($outdir, temp_tag(), $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
+#	open CSV, ">$csvfile";
+#	foreach my $bin(1..$maxbin){
+#			print CSV $bin."_obs,".$bin."_exp,";
+#	}
+#	print CSV "\n";
 	
-	foreach my $i(0..$iterations-1){
-		foreach my $bin(1..$maxbin){
-			print CSV ($arref->[$i]->{$bin}->[0]).",".($arref->[$i]->{$bin}->[1]).",";
-		}
-		print CSV"\n";
-	}
-	close CSV;
+#	foreach my $i(0..$iterations-1){
+#		foreach my $bin(1..$maxbin){
+#			print CSV ($arref->[$i]->{$bin}->[0]).",".($arref->[$i]->{$bin}->[1]).",";
+#		}
+#		print CSV"\n";
+#	}
+#	close CSV;
 	
 	
 }
 
-sub get_constraints{
+
+sub get_constraints {
 	my $self = shift;
-	my $ancestor_nodes = shift;
-	# $rh_constrains->{$name}->{$site}->StripConstrains
-	#struct StripConstrains =>{
-	#number_of_mutations => '$',
-	#lifetime => '$',
-	#stoppers => '@'
-	#}
-}
-sub groups_entrenchment_subtree{
-	my $self = shift;
-	my $rh_out_subtree = shift;
-	# $rh_out_subtree->{$name}->{$site}= массив уходов #todo
-}
+	my $restriction = $_[0];
+	my @group = @{$_[1]};
+	my %group_hash;
+	foreach my $site(@group){
+		$group_hash{$site} = 1;
+	}
+	my $realdata = $self->{realdata};
+	my $maxbin = $realdata->{"maxbin"};
+	my $obs_hash = get_obshash($realdata, $restriction);
+	my $subtree_info = $realdata->{"subtree_info"};
+	my %constraints;
+	foreach my $site_node(keys %{$obs_hash}){
+			my ($site, $node_name) = split(/_/, $site_node);
+			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
+				if ($maxdepth > $restriction && $group_hash{$site}){
+					my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
+					my $stoppers = $subtree_info->{$node_name}->{$site}->{"stoppers"}; # array of nodes
+					my $constr = StripConstrains->new(number_of_mutations => $mutnum,lifetime => $maxdepth, stoppers => $stoppers);
+					$constraints{$node_name}{$site} = $constr;  
+				}
+		}
+	return %constraints;
+}	
+
+
 
 # 5.11 for entrenchment_bootstrap_full_selection_vector
 # was used before 11.01.2017 (previous name - iterations_gulp)
@@ -1351,7 +1348,7 @@ sub print_nodes_in_analysis {
 
 
 #5.11 for entrenchment_bootstrap_full_selection_vector
-# analyze real data, prepare bkg_mutmap, ancestor_nodes and obs_vector
+# analyze real data, prepare bkg_mutmap, and obs_vector
 #28.12 hash is pruned: we do not keep mutation info if its maxdepth<50
 #1.08 hash is not necessarily pruned - you can set restriction to 0 to get complete data
 sub prepare_real_data {
@@ -1373,9 +1370,11 @@ sub prepare_real_data {
 	my %full_obs_hash = $self -> depth_groups_entrenchment_optimized_selector_alldepths_2($step, $restriction); # bin size
 	my %ancestor_nodes;
 	foreach my $ancnode(keys %full_obs_hash){
-	my @splitter = split(/_/, $ancnode);
-		$ancestor_nodes{$splitter[-1]} = 1;
-		print "Ancestor: ".$splitter[-1]."\n";
+		my ($site, $node_name) = split(/_/, $site_node);
+		$ancestor_nodes{$node_name}{$site} = 1;
+		#my @splitter = split(/_/, $ancnode);
+		#$ancestor_nodes{$splitter[-1]} = 1;
+		#print "Ancestor: ".$splitter[-1]."\n";
 	}	
 	my $restricted_norm;
 	my %restricted_obs_hash;
@@ -1457,12 +1456,6 @@ sub select_ancestor_nodes {
 	}
 	my $realdata = $self->{realdata};
 	my $maxbin = $realdata->{"maxbin"};
-	my $ancestor_nodes = $realdata->{"ancestor_nodes"};
-	#my @obshash_restriction = map { /^obs_hash(.*)/ ? $1 : () } (keys $realdata);
-	#unless(defined $obshash_restriction[0] && $obshash_restriction[0] <= $restriction ){
-	#		die "realdata restriction is bigger than select_ancestor_nodes restriction: ".$obshash_restriction[0]." > $restriction \n";
-	#}
-	#my $obs_hash = $realdata->{"obs_hash".$obshash_restriction[0]};
 	my $obs_hash = get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	my %group_nodes;
@@ -1472,15 +1465,18 @@ sub select_ancestor_nodes {
 			my ($site, $node_name) = split(/_/, $site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
-				if ($maxdepth > $restriction && $group_hash{$site}){
+			#my $stoppers = $subtree_info->{$node_name}->{$site}->{"stoppers"}; # array of nodes
+			if ($maxdepth > $restriction && $group_hash{$site}){
 					push @{$group_nodes{$node_name}}, $mutnum; #mutnum control: keeping mutnums for every site in the group, which mutated at this node
 					#$group_nodes{$node_name} += 1; # mutnum control: changed from = 1 to += 1
 					#print "group_node ".$node_name."\n";
-				}
-		}
-		my $count = scalar keys %group_nodes;
+			}
+	}
+	#	my $count = scalar keys %group_nodes;
 	#print "Total $count\n";
 	return %group_nodes;
+
+	
 }	
 	
 	
@@ -1531,7 +1527,6 @@ sub iterations_maxtag {
 		}
 		else {
 			print "Strange tag in iterations file $gulp_filename ! It might be an error, and it might not.\nWon't change my behavior because of some stupid tag, just wanted you to be aware of it.\n";
-
 		}
 	}
 	my $maxtag = List::Util::max(@tags);
@@ -3161,6 +3156,79 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 
 
 
+sub entrenchment_for_subtrees{
+	my $self = shift;
+	my $rh_out_subtree = shift;
+	# $rh_out_subtree->{$name}->{$site}= массив уходов #todo
+	
+	my $dir = File::Spec->catdir($self->{static_output_base}, $self->{static_protein});
+	make_path($dir);
+	my $filename = File::Spec->catfile($dir, $self->{static_protein}."_for_enrichment_".$tag);
+	if ($verbose){print "Going to print in file $filename \n";}
+	open my $file, ">>$filename" or die "Cannot create $filename\n";
+	my %hist;
+	print $file ">new iteration\n";
+	foreach my $nodename (keys %{$rh_out_subtree}){
+		my $node = $self->{static_hash_of_nodes}{$nodename};
+		my %alive =  map {$_ => 1} keys %{$rh_out_subtree->{$nodename}};
+		$node->set_generic("-alive" => \%alive);
+		my $subtree_info;
+		my @args = ($ind, $step, $node, $subtree_info); #todo
+		#unless ($hash_ready) { #visitor_coat cannot be used inside a cycle; we still do not want to mess the hash up, so we check for its existance before this cycle
+			$self->my_visit_depth_first ($node, \@array,\&subtree_info,\&has_no_mutation,\@args,0);
+		#} 
+		foreach my $site (keys %{$rh_out_subtree->{$nodename}}){
+			my $site_node = $site."_".$nodename;
+			print $file $site_node." ".$subtree_info->{$site}{"maxdepth"}." ".$subtree_info->{$site}{"totmuts"}."\n";
+			
+		}
+		
+		# todo delete all "-alive" hashes in this tree! So, we have to traverse the tree twice anyway. 
+		# Nope! we completely reset these hashes with every traversing, so we do not need to delete them
+	}
+	close $file;
+	
+	
+}
+
+# used by iterations_gulp_subtree_shuffling (entrenchment_for_subtrees)
+# works with individual subtrees defined by an ancestor node (simultaneously with all sites that changed there)
+ 	sub subtree_info {
+ 		my $self = $_[0];
+ 		my $node = $_[1];
+		my $site_index = $_[2]->[0]; # no ind here: 
+		my $step = $_[2]->[1];
+		my $starting_node = $_[2]->[2];
+		my $subtree_info = $_[2]->[3];
+		#my %alive = %{$_[2]->[4]};
+		my %alive = %{$node->get_parent->get_generic("-alive")};  # a copy of existing hash!
+		my $depth = $_[3] - $starting_node->get_branch_length ;
+		if ($node eq $starting_node){
+			#print " \n equality: ".$starting_node ->get_name."\t".$node ->get_name."\n";
+			return;
+		}
+		if ($starting_node -> is_terminal){
+			#print " \n terminal: ".$starting_node ->get_name."\n";
+			return;
+		}
+ 		#print "depth $depth step $step bin ".(bin($depth,$step))."\n";
+ 		foreach my $site_index(keys %{$alive}){
+		 		if (!($self->has_no_same_type_mutation($_[1], \@{$_[2]}))){ #has_no_same_type_mutation
+		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[0] += 1;
+		 			$subtree_info->{$site}{"totmuts"} += 1;
+		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2 # 19.09.2016 mutations happen in the middle of a branch; todo
+		 			#print "addded to 0\n";
+		 			delete $alive{$site_index};
+		 		}
+		 		$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
+		 		if (!($subtree_info->{$site_index}{"maxdepth"}) || $subtree_info->{$site_index}{"maxdepth"} < $depth){
+		 			$subtree_info->{$site_index}{"maxdepth"} = $depth;
+		 		}
+		 		#print "addded to 1\n";
+ 		}
+ 		$node->set_generic("-alive" => \%alive);
+ 	}
+
 # 21.12 Differs from depth_groups_entrenchment_optimized_selector_alldepths in that it keeps both site and node in obs_hash
 # (yes, that's one line) 
 
@@ -3888,11 +3956,8 @@ sub visitor_coat {
 			while($node->get_child($i)){
 				@array = $self -> my_visit_depth_first($node->get_child($i), \@array, \&$action_callback, \&$check_callback, $callback_args, $depth);
 				$i++;
-				#@array = my_visit_depth_first($node->get_first_daughter, \@array, \&$action_callback, \&$check_callback, $callback_args, $depth);
-				#@array = my_visit_depth_first($node->get_last_daughter, \@array, \&$action_callback, \&$check_callback, $callback_args, $depth);
 			}
-		}
-		
+		}	
 		$node = pop @array;
 #print $node->get_name()."\t".$depth."\n";
 		$depth -= $len;
@@ -4061,6 +4126,9 @@ sub visitor_coat {
 				my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()};
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
 			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
+				if (!($self->has_no_background_mutation($node, $site_index))){
+					push $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"stoppers"}, $node;
+				}
 				my $current_maxdepth = $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"};
 				if ($current_maxdepth < $depth){
 						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"} = $depth;
