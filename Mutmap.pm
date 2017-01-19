@@ -1089,13 +1089,13 @@ sub iterations_gulp_subtree_shuffling {
 	my @sites = (1..$length-1);
 	# subtree_info has to be ready at this point. But that's obvious, since we have realdata,
 	# and that's exactly where we take it from - realdata. 
-	my $rh_constrains = $self->get_constraints($restriction, \@group); 
-	my $shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains) 
+	my $rh_constrains = $self->get_constraints($restriction, \@sites); 
+	my $shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains); 
 	for (my $i = 1; $i <= $iterations; $i++){
 		my $rh_out_subtree = shuffle_muts_on_tree::shuffle_mutations_on_tree($shuffler); 
 		# $rh_out_subtree->{$name}->{$site}= массив уходов #todo
 		my %hash;
-		$self->entrenchment_for_subtrees($rh_out_subtree) #todo
+		$self->entrenchment_for_subtrees($rh_out_subtree, $step, $tag, $verbose) #todo
 		# >new iteration string and all the corresponding data  are printed inside this sub:
 		# we used to launch visitor_coat in this sub (depth_groups_entrenchment_optimized_selection_alldepths) and take subtree_info from self. 
 		# But now we have no tree - only a set of overlapping subtrees which cannot be converted into a tree.
@@ -1370,7 +1370,7 @@ sub prepare_real_data {
 	my %full_obs_hash = $self -> depth_groups_entrenchment_optimized_selector_alldepths_2($step, $restriction); # bin size
 	my %ancestor_nodes;
 	foreach my $ancnode(keys %full_obs_hash){
-		my ($site, $node_name) = split(/_/, $site_node);
+		my ($site, $node_name) = split(/_/, $ancnode);
 		$ancestor_nodes{$node_name}{$site} = 1;
 		#my @splitter = split(/_/, $ancnode);
 		#$ancestor_nodes{$splitter[-1]} = 1;
@@ -3067,7 +3067,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 			my $total_length;
 	#print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
 	#print "maxdepth ".$static_subtree_info{$node->get_name()}{$ind}{"maxdepth"}."\n";
-			if ($self->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"} > $restriction){ #10.10 restriction returns
+			if ($self->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"} > $restriction){ #10.10 restriction returns. 
 				
 				my %subtract_hash;
 				
@@ -3159,6 +3159,9 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 sub entrenchment_for_subtrees{
 	my $self = shift;
 	my $rh_out_subtree = shift;
+	my $step = shift;
+	my $tag = shift;
+	my $verbose = shift;
 	# $rh_out_subtree->{$name}->{$site}= массив уходов #todo
 	
 	my $dir = File::Spec->catdir($self->{static_output_base}, $self->{static_protein});
@@ -3173,7 +3176,8 @@ sub entrenchment_for_subtrees{
 		my %alive =  map {$_ => 1} keys %{$rh_out_subtree->{$nodename}};
 		$node->set_generic("-alive" => \%alive);
 		my $subtree_info;
-		my @args = ($ind, $step, $node, $subtree_info); #todo
+		my @array;
+		my @args = (undef, $step, $node, $subtree_info); # undef - site_index
 		#unless ($hash_ready) { #visitor_coat cannot be used inside a cycle; we still do not want to mess the hash up, so we check for its existance before this cycle
 			$self->my_visit_depth_first ($node, \@array,\&subtree_info,\&has_no_mutation,\@args,0);
 		#} 
@@ -3196,7 +3200,7 @@ sub entrenchment_for_subtrees{
  	sub subtree_info {
  		my $self = $_[0];
  		my $node = $_[1];
-		my $site_index = $_[2]->[0]; # no ind here: 
+		my $ind = $_[2]->[0]; # no ind here: 
 		my $step = $_[2]->[1];
 		my $starting_node = $_[2]->[2];
 		my $subtree_info = $_[2]->[3];
@@ -3212,11 +3216,11 @@ sub entrenchment_for_subtrees{
 			return;
 		}
  		#print "depth $depth step $step bin ".(bin($depth,$step))."\n";
- 		foreach my $site_index(keys %{$alive}){
+ 		foreach my $site_index(keys %alive){
 		 		if (!($self->has_no_same_type_mutation($_[1], \@{$_[2]}))){ #has_no_same_type_mutation
 		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[0] += 1;
-		 			$subtree_info->{$site}{"totmuts"} += 1;
-		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2 # 19.09.2016 mutations happen in the middle of a branch; todo
+		 			$subtree_info->{$site_index}{"totmuts"} += 1;
+		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2; # 19.09.2016 mutations happen in the middle of a branch; todo
 		 			#print "addded to 0\n";
 		 			delete $alive{$site_index};
 		 		}
@@ -4127,7 +4131,7 @@ sub visitor_coat {
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
 			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				if (!($self->has_no_background_mutation($node, $site_index))){
-					push $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"stoppers"}, $node;
+					push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"stoppers"}}, $node;
 				}
 				my $current_maxdepth = $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"};
 				if ($current_maxdepth < $depth){

@@ -203,7 +203,7 @@ sub mycomm {
 		$perlocation = "~/perl5/perlbrew/perls/perl-5.22.1/bin/perl";
 	 	$exports = "export PERL5LIB=/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/.perl/lib/perl5/5.22.1/x86_64-linux:/export/home/popova/.perl/lib/perl5/5.22.1:/export/home/popova/.perl/lib/perl5/x86_64-linux:/export/home/popova/.perl/lib/perl5:/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/workspace/evopoisson:$PERL5LIB; ";
 	}
-	my $command = $exports.$perlocation." iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag ";
+	my $command = $exports.$perlocation." iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag --restriction $specified_restriction";
 	if($output){$command = $command."--output $output ";}
 	if($input){$command = $command."--input $input ";}
 	if ($verbose){ $command = $command." --verbose ";}

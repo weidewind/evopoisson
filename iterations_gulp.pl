@@ -21,6 +21,7 @@ my $verbose;
 my $memusage;
 my $no_neighbour_changing;
 my $no_leaves;
+my $restriction;
 
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
@@ -33,6 +34,7 @@ GetOptions (	'protein=s' => \$protein,
 		'memusage'  => \$memusage, # should i print memusage in file?
 		'no_neighbour_changing' => \$no_neighbour_changing,
 		'no_leaves' => \$no_leaves,
+		'restriction=i' => \$restriction,
 	);
 
 
@@ -46,7 +48,7 @@ print "realdata restriction is ".Mutmap::check_realdata_restriction($args)."\n";
 if ($verbose) { print "Starting gulp $tag of $iterations iterations for protein $protein..\n"; }
 ## for launching iterations you need a mutmap produced from realdata, therefore fromfile => true
 my $mutmap = Mutmap->new($args);
-$mutmap-> iterations_gulp ($iterations, $tag, $verbose, $memusage);
+$mutmap-> iterations_gulp ($iterations, $tag, $verbose, $memusage, $restriction);
 if ($verbose) { print "Finished gulp $tag of $iterations iterations for protein $protein\n"; }
 ###
 
