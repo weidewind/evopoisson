@@ -57,10 +57,13 @@ print "Fake no $number\n";
 my $mutmap = Mutmap->new($args);
 my @groups_and_names = $mutmap-> protein_no_group();
 $mutmap -> set_tag($tag."_fake_".$number);  #fake realdata must be written in the subfolder
+print "Fake no $number : shuffling\n";
 $mutmap = $mutmap-> shuffle_mutator();
-$mutmap-> prepare_real_data ({restriction => $sr, fake => 1});
+print "Fake no $number : preparing real_data\n";
+ $mutmap-> prepare_real_data ({restriction => $sr, fake => 1});
 $args->{fake} = 1;
 $args->{tag} = $tag."_fake_".$number;
+print "Fake no $number : creating mutmap from real_data\n";
 $mutmap = Mutmap->new($args); #fake realdata is taken from subfolder
 $mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 $mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;	

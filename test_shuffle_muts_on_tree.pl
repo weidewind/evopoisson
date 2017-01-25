@@ -52,7 +52,7 @@ my $rh_constrains = {
 			print "\t".$site."\n";
 			print "\t\t";
 			foreach my $exitnode (@{$rh_out_subtree->{$name}->{$site}}){
-				print $exitnode->get_name()."\t";
+				print $exitnode."\t";
 			}
 			print "\n";
 		}

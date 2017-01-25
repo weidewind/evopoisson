@@ -1,4 +1,7 @@
 #!/usr/bin/perl
+## launched in parallel by FDR.sh, which produces many fake samples. 
+## Results are processed by grep_fdr.pl
+
 
 use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
@@ -13,10 +16,7 @@ use POSIX qw(floor ceil);
 use Parallel::ForkManager;
 use Memory::Usage;
 
-my $mu = Memory::Usage->new();
-$mu->record('starting work');
 
-#
 
 my $protein;
 my $state = 'nsyn';
@@ -24,15 +24,13 @@ my $input = '';
 my $output = '';	# option variable with default value
 my $subtract_tallest = '0';
 my $restrictions = '50,100,150';
-my $step = 0.5;
+#my $number_of_fakes = 200;
+my $number;
+my $verbose;
+my $tag = '';
 my $simnumber = 10000;
 my $maxmem = 4000000;
-my $no_groups;
-my $verbose;
-my $no_neighbour_changing;
-my $no_leaves;
-my $switch;
-my $mutnum_control = 0.2;
+my $step = 0.5;
 
 
 GetOptions (	'protein=s' => \$protein,
@@ -41,53 +39,44 @@ GetOptions (	'protein=s' => \$protein,
 		'output=s' => \$output,
 		'subtract_tallest=i' => \$subtract_tallest,
 		'restrictions=s' => \$restrictions,
+		'verbose'  => \$verbose,
+		#'number_of_fakes=i' => \$number_of_fakes,
+		'number=i' => \$number,
+		'tag=s' => \$tag,
 		'simnumber=i' => \$simnumber,
 		'maxmem=i' => \$maxmem,
 		'step=s' => \$step,
-		'no_groups'  => \$no_groups,
-		'verbose'  => \$verbose,
-		'no_neighbour_changing' => \$no_neighbour_changing,
-		'no_leaves' => \$no_leaves,
-		'switch' =>\$switch,
-		'mutnum_control=s' => \$mutnum_control,
 	);
 
-$| = 1;
 
+print "Will produce ".$number_of_fakes." fakes\n";
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest,  no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, mutnum_control => $mutnum_control, fromfile => 1}; 
-
-## Checking if appropriate realdata exists, initializing
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, fromfile => 1}; 
+unless  (Mutmap::realdata_exists($args)) { die "No such realdata!"; }
 my @restriction_levels = split(/,/, $restrictions);
-my $specified_restriction = List::Util::min(@restriction_levels);
+my $rr = Mutmap::check_realdata_restriction($args);
+my $sr = List::Util::min(@restriction_levels);
+print "realdata restriction is $rr\n";
+if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restriction you specified: ".$rr." > ".$sr."\n"; }
 
-if  (! (Mutmap::realdata_exists($args))) { 
-	print "No realdata exists for specified parameters, going to prepare it.."; 
-	$args->{fromfile} = 0;
-	my $mutmap = Mutmap->new($args);
-	$mutmap-> prepare_real_data ({restriction => $specified_restriction,step => $step});
-}
-else {
-	my $rr = Mutmap::check_realdata_restriction($args);
-	if ($rr > $specified_restriction){
-		print "Existing realdata restriction is greater than the minimal restriction you specified: ".$rr." > ".$specified_restriction."\nGoing to overwrite realdata..\n"; 
-		$args->{fromfile} = 0;
-		my $mutmap = Mutmap->new($args);
-		$mutmap-> prepare_real_data ({restriction => $specified_restriction,step => $step});
-	}
-	else {
-		print "Going to use existing realdata with restriction $rr\n";
-	}
-}
+## 25.01 Procedure for obtaining p-values
 
-$mu->record('just before mutmap creation');
-$args->{fromfile} = 1;
-my $mutmap = Mutmap->new($args); # from file
-$mu->record('mutmap created');
-$mutmap-> createCodeversionFile("poisson");
-##
-## 
+print "Fake no $number\n";
+#$args->{tag} = $tag."_fake_".$number;
+my $mutmap = Mutmap->new($args);
+my @groups_and_names = $mutmap-> protein_no_group();
+print "Fake no $number : shuffling\n";
+$mutmap = $mutmap-> shuffle_mutator();
+print "Fake no $number : preparing real_data\n";
+ $mutmap-> prepare_real_data ({restriction => $sr, step => $step});
+$args->{fake} = 1;
+$args->{faketag} = $tag."_fake_".$number;
+print "Fake no $number : creating mutmap from real_data\n";
+$mutmap = Mutmap->new($args); #fake realdata is taken from subfolder
+#$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+#$mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;	
+
 ## Computing gulp sizes and number of concurrent processes
 my $ready = $mutmap-> count_iterations();
 print "Already have $ready iterations (know nothing about their restriction, mind you)\n";
@@ -105,7 +94,7 @@ if ($sim > 0){
 	##
 	my $max_proc_num = int($maxmem/$memusage);
 	print " Max proc num $max_proc_num\n";
-	unless ($max_proc_num > 0) {die "Error: Memory usage is $memusage - more than you specified with masmem parameter\n"};
+	unless ($max_proc_num > 0) {die "Error: Memory usage is $memusage - more than you specified with maxmem parameter\n"};
 	my @iters;
 	my $its_for_proc;
 	if ($sim/$max_proc_num < 1) {
@@ -147,7 +136,6 @@ if ($sim > 0){
 	      sub {
 	      	my $pid = shift;
 	      	print "Starting child processes under process id $pid\n";
-	        $mu->record("Process (pid: $pid) started.\n");
 	      }
 	    );
 	$manager->run_on_finish( 
@@ -155,10 +143,10 @@ if ($sim > 0){
 	         my ( $pid, $exit_code, $signal, $core ) = @_;
 	         if ( $core ) {
 	         	print "Process (pid: $pid) core dumped.\n";
-	            $mu->record("Process (pid: $pid) core dumped.\n");
+
 	         } else {
 	         	print "Process (pid: $pid) exited with code $exit_code and signal $signal.\n";
-	            $mu->record("Process (pid: $pid) exited with code $exit_code and signal $signal.\n");
+
 	         }
 	      }
 	   );
@@ -177,7 +165,6 @@ if ($sim > 0){
 	      $manager->finish;
 	   }
 	$manager->wait_all_children;
-	$mu->dump();
 	##
 }
 ## 25.01 Procedure for obtaining p-values
@@ -203,7 +190,8 @@ sub mycomm {
 		$perlocation = "~/perl5/perlbrew/perls/perl-5.22.1/bin/perl";
 	 	$exports = "export PERL5LIB=/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/.perl/lib/perl5/5.22.1/x86_64-linux:/export/home/popova/.perl/lib/perl5/5.22.1:/export/home/popova/.perl/lib/perl5/x86_64-linux:/export/home/popova/.perl/lib/perl5:/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/workspace/evopoisson:$PERL5LIB; ";
 	}
-	my $command = $exports.$perlocation." iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag --restriction $specified_restriction ";
+	my $command = $exports.$perlocation." iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag --restriction $sr ";
+	$command = $command."--faketag ".$args->{faketag}." ";
 	if($output){$command = $command."--output $output ";}
 	if($input){$command = $command."--input $input ";}
 	if ($verbose){ $command = $command." --verbose ";}
@@ -219,3 +207,17 @@ sub mockcomm {
 	my $command = "sleep 10";
 	return $command;
 }
+
+
+#delete files
+my $path = Mutmap::pathFinder($args);
+my $unreadable = Mutmap::temp_tag();
+my $victim = File::Spec->catdir($path, $unreadable);
+opendir (TEMP, $victim);
+my @files = readdir(TEMP);
+closedir(TEMP);
+foreach my $f(@files){
+	my $filepath = File::Spec->catfile($victim, $f);
+	unlink $filepath or warn "Cannot unlink $filepath: $!\n";
+}
+

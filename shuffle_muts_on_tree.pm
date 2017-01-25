@@ -7,7 +7,7 @@ use List::BinarySearch qw(binsearch_pos);
 use Class::Struct;
 use Math::Random::ISAAC;
 
-my $rng = Math::Random::ISAAC->new(localtime());
+my $rng = Math::Random::ISAAC->new(localtime()); 
 my $MaxTries=20;
 
 struct Strip =>{
@@ -35,21 +35,28 @@ sub strip_tree{
 	my $rtime=$rnode->get_generic('time');
 	die "\nError strip_tree(): time stamps on nodes are expected!" unless defined $rtime;
 	@{$ra_out_strips}=();
+	my $ancnode = $rnode;
+	#print "strip subtree of ".$ancnode->get_name();
+	$rnode = $rnode->get_child(0); #  visit_breadth_first also visits starting node's sister
 	$rnode->visit_breadth_first(
 		-in   => sub{
 			my $node=shift;
-			my $time=$node->get_generic('time');
-			die "\nError strip_tree(): time stamps on nodes are expected!" unless defined $time;
-			$time-=$rtime;
-			my $idx=binsearch_pos {$a<=>$b} $time,@{$ra_time_stamps};
-			if($idx<@{$ra_time_stamps}){
-				$ra_out_strips->[$idx]=Strip->new() unless defined $ra_out_strips->[$idx];
-				push @{$ra_out_strips->[$idx]->nodes()},$node;
-				my $sqr=$ra_out_strips->[$idx]->square();
-				$ra_out_strips->[$idx]->square($sqr+$node->get_branch_length());
+			unless ($node eq $ancnode){ # added 
+				my $time=$node->get_generic('time');
+				die "\nError strip_tree(): time stamps on nodes are expected!" unless defined $time;
+				$time-=$rtime;
+				my $idx=binsearch_pos {$a<=>$b} $time,@{$ra_time_stamps};
+				if($idx<@{$ra_time_stamps}){
+					$ra_out_strips->[$idx]=Strip->new() unless defined $ra_out_strips->[$idx];
+					push @{$ra_out_strips->[$idx]->nodes()},$node;
+					#print " ".$node->get_name();
+					my $sqr=$ra_out_strips->[$idx]->square();
+					$ra_out_strips->[$idx]->square($sqr+$node->get_branch_length());
+				}
 			}
 		}
 	);	
+	#print "\n";
 }
 
 #The function expects a lifetime constrain in terms of a number of strips
@@ -66,7 +73,7 @@ sub shuffle_mutations{
 	my $ii=$MaxTries;
 	my $I=0;
 	while($I<@{$ra_strip_constr}){
-		print "Ancestor site $I\n";
+		#print "Ancestor site $I\n";
 		my $n=$ra_strip_constr->[$I]->number_of_mutations();
 		my $strip_number=$ra_strip_constr->[$I]->lifetime(); #number of strips
 		die "\nError shuffle_mutations(): wrong number of strips!" unless $strip_number>0&&$strip_number<=@{$ra_strips};
@@ -75,12 +82,18 @@ sub shuffle_mutations{
 		my %blocked;
 		if(defined $ra_strip_constr->[$I]->stoppers()){
 			foreach my $node(@{$ra_strip_constr->[$I]->stoppers}){
-				$node->visit_breadth_first(
-					-in   => sub{
-						my $nd=shift;
-						$blocked{$nd->get_name()}=1;
-					}
-				);
+				if ($node ->is_terminal){ #added
+					$blocked{$node->get_name()}=1;
+				}
+				else {
+					my $child = $node->get_child(0); # added: visit_ also visits starting node's sister
+					$child->visit_breadth_first(
+						-in   => sub{
+							my $nd=shift;
+							$blocked{$nd->get_name()}=1;
+						}
+					);
+				}
 			}
 		}
 		my @CDF; #todo
@@ -110,7 +123,7 @@ sub shuffle_mutations{
 			#place mutations on tree branches within a strip
 			next unless defined $nsamples[$i];
 			my $n=$nsamples[$i];
-			print "Trying to place $n mutations in strip $i \n";
+			#print "Trying to place $n mutations in strip $i \n";
 			#make cdf for the current strip
 			my @cdf;
 			$cdf[0]=0;
@@ -121,48 +134,52 @@ sub shuffle_mutations{
 				}
 				$cdf[$j]+=$cdf[$j-1] if $j; #prev $cdf[$j]=$cdf[$j-1]
 			}
-			print "Total strip square is ".$cdf[-1]." (from cdf), ".$ra_strips->[$i]->square()."\n"; ;
 			while($n){
 				last unless $cdf[0]<$cdf[-1];
 				#sample branch in the current strip for the next mutation
 				$_=$rng->rand()*$cdf[-1];
-				my $idx=binsearch_pos {$a<=>$b} $_,@cdf;
+				my $idx=binsearch_pos {$a<=>$b} $_,@cdf; # Find the _lowest_ index of a matching element, or best insert point. Guarantees that we won't pick blocked branch
 				my $node=$ra_strips->[$i]->nodes($idx);
 				my $pnode=$node;
 				#check if the sampled branch is plausible
-				print "Going to check if ".$pnode->get_name()." can be picked\n";
+				#print "Going to check if ".$pnode->get_name()." can be picked\n";
+				#print "Ancestor node is ".$rnode->get_name()."\n";
+				my $prevnode;
 				while($pnode!=$rnode){
-					my $pname=$pnode->get_name();
-					if(exists $blocked{$pname}){
-						$pnode=$rnode unless exists $mutations{$pname};
-						last;
-					}else{
-						$blocked{$pname}=1; 
-						#recalculate @cdf  
-						my ($pstrip_idx,$pidx)=($node2strip{$pname}->[0],$node2strip{$pname}->[1]);
-						if($pstrip_idx==$i){ #$pnode is in the current strip 
-							my $l=$ra_strips->[$i]->nodes($pidx)->get_branch_length(); 
-							for(my $j=$pidx;$j<@{$ra_strips->[$i]->nodes()};$j++){
-								$cdf[$j]-=$l;
+						my $pname=$pnode->get_name();
+						if(exists $blocked{$pname}){
+							$pnode=$rnode unless exists $mutations{$pname};
+							last;
+						}else{
+							$blocked{$pname}=1; 
+							#recalculate @cdf  
+							my ($pstrip_idx,$pidx)=($node2strip{$pname}->[0],$node2strip{$pname}->[1]);
+							if($pstrip_idx==$i){ #$pnode is in the current strip 
+								my $l=$ra_strips->[$i]->nodes($pidx)->get_branch_length(); 
+								for(my $j=$pidx;$j<@{$ra_strips->[$i]->nodes()};$j++){
+									$cdf[$j]-=$l;
+								}
 							}
 						}
-					}
-					$pnode=$node->get_parent;
+						$prevnode = $pnode;
+						$pnode=$pnode->get_parent; #prev $pnode=$node->get_parent
+						
 				}
 				if($pnode==$rnode){
-					print "Yes! Will place mutation at ".$node->get_name()."\n";
+					#print "Yes! Will place mutation at ".$node->get_name()."\n";
 					#mutation could be placed on the sampled branch
 					$mutations{$node->get_name()}=1;
-					push @{$ra_events},$node;
+					push @{$ra_events},$node->get_name();
 					$n--;
 				}#else try again
 			}
 			if($n){
 				#failed to place mutations in the current strip
+				#print "Failed to place mutations! \n";
 				last;
 			}
 		}
-		if($i>-1){
+		if($i>-1){ 
 			#failed to place mutatons
 			@{$ra_events}=();
 			if($ii--==0){ 

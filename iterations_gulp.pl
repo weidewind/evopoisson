@@ -22,6 +22,7 @@ my $memusage;
 my $no_neighbour_changing;
 my $no_leaves;
 my $restriction;
+my $faketag;
 
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
@@ -35,13 +36,14 @@ GetOptions (	'protein=s' => \$protein,
 		'no_neighbour_changing' => \$no_neighbour_changing,
 		'no_leaves' => \$no_leaves,
 		'restriction=i' => \$restriction,
+		'faketag=s' => \$faketag,
 	);
 
 
 ## Procedure for launching a gulp of iterations
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "--subtract_tallest must be either 0 or 1\n";}
 unless (defined $tag){die "There will be several gulp files in one folder, therefore a --tag for each gulp must be specified (and it should be an integer)";}
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, fromfile => 1}; 
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, fromfile => 1, faketag => $faketag}; 
 unless  (Mutmap::realdata_exists($args)) { die "No such realdata!"; }
 print "realdata restriction is ".Mutmap::check_realdata_restriction($args)."\n";
 

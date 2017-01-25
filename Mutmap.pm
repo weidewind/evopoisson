@@ -249,7 +249,7 @@ $| = 1;
 			print "Creating mutmap from realdata $realdatapath\n";
 			my $realdata = lock_retrieve ($realdatapath) or die "Cannot retrieve ".$realdatapath;
 			if ($args->{fake}){
-				unlink $realdatapath or warn "Could not unlink $realdatapath: $!";;
+				unlink $realdatapath or warn "Could not unlink $realdatapath: $!";
 			}
 			
 			#foreach my $ind(1..300){
@@ -771,6 +771,15 @@ sub print_subtree_with_mutations {
 				#print $file "$event\n";
 			}
 		}
+		
+		foreach my $node (@{$self->{static_background_nodes_with_sub}{$ind}}){
+			$sites{$node} = $node."_".$ind."_".$sub->{"Substitution::ancestral_allele"}.
+							  "(".$myCodonTable->translate($sub->{"Substitution::ancestral_allele"}).")->".
+							  $sub->{"Substitution::derived_allele"}.
+							  "(".$myCodonTable->translate($sub->{"Substitution::derived_allele"}).")";
+			$color{$node} = "-3407872";
+		}
+		
 		my $file = $self -> {static_protein}."_sites_".$ind."_".$ancnodename.".tre";
 		my $dir = File::Spec -> catdir($self -> {static_output_base}, "trees", $tag);
 		make_path($dir);
@@ -1086,14 +1095,14 @@ sub iterations_gulp_subtree_shuffling {
 	my @simulated_hists;
 	
 	my $length = $self->mylength();
-	my @sites = (1..$length-1);
+	my @sites = (1..$length); #todo debug (1..$length-1)
 	# subtree_info has to be ready at this point. But that's obvious, since we have realdata,
 	# and that's exactly where we take it from - realdata. 
 	my $rh_constrains = $self->get_constraints($restriction, \@sites); 
 	my $shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains); 
 	for (my $i = 1; $i <= $iterations; $i++){
 		my $rh_out_subtree = shuffle_muts_on_tree::shuffle_mutations_on_tree($shuffler); 
-		# $rh_out_subtree->{$name}->{$site}= массив уходов #todo
+		# $rh_out_subtree->{$name}->{$site}= массив уходов (имен узлов)) #todo
 		my %hash;
 		$self->entrenchment_for_subtrees($rh_out_subtree, $step, $tag, $verbose) #todo
 		# >new iteration string and all the corresponding data  are printed inside this sub:
@@ -1110,10 +1119,10 @@ sub iterations_gulp_subtree_shuffling {
 #		}
 #		push @simulated_hists, \%hash;
 	}
-#	if ($memusage){
-#		my $locker = Memusage->get_locker($self);
-#		$locker->print_memusage();
-#	}
+	if ($memusage){
+		my $locker = Memusage->get_locker($self);
+		$locker->print_memusage();
+	}
 #	my $arref = \@simulated_hists;
 #	my $csvfile = File::Spec->catfile($outdir, temp_tag(), $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
 #	open CSV, ">$csvfile";
@@ -1146,7 +1155,7 @@ sub get_constraints {
 	my $maxbin = $realdata->{"maxbin"};
 	my $obs_hash = get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
-	my %constraints;
+	my $constraints;
 	foreach my $site_node(keys %{$obs_hash}){
 			my ($site, $node_name) = split(/_/, $site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
@@ -1154,10 +1163,10 @@ sub get_constraints {
 					my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
 					my $stoppers = $subtree_info->{$node_name}->{$site}->{"stoppers"}; # array of nodes
 					my $constr = StripConstrains->new(number_of_mutations => $mutnum,lifetime => $maxdepth, stoppers => $stoppers);
-					$constraints{$node_name}{$site} = $constr;  
+					$constraints->{$node_name}{$site} = $constr;  
 				}
 		}
-	return %constraints;
+	return $constraints;
 }	
 
 
@@ -1511,7 +1520,7 @@ sub iterations_maxtag {
 	my $self = shift;
 	my $prot = $self->{static_protein};
 	my $dir = $self->{static_output_base};
-	my $dirname = File::Spec->catdir($dir, $prot); 
+	my $dirname = File::Spec->catdir($dir,  $prot); 
 	make_path ($dirname);
 	opendir(DH, $dirname);
 	my @files = readdir(DH);
@@ -1670,7 +1679,7 @@ sub concat_and_divide_simult {
 				my $simnode;
 				my $simmutnum;
 
-				print "str is now $str\n";
+				#print "str is now $str\n";
 
 				if ($str =~ /^site/){ # no more than a sanity check
 					my @site_array = split(/\s+/, $str);
@@ -1678,7 +1687,7 @@ sub concat_and_divide_simult {
 					$simnode = $site_array[3];
 					$max_depth = $site_array[5];
 					$simmutnum = $site_array[7];	
-					#print "CONC ".$simsite." site,".$simnode." node,".$max_depth." maxdepth\n";
+					print "CONC ".$simsite." site,".$simnode." node,".$max_depth." maxdepth, ".$simmutnum."\n";
 					$str = <GULP>; #5.02
 				}
 				else {print "something failed! wtf in reading iteration gulp\n"};
@@ -1702,25 +1711,28 @@ sub concat_and_divide_simult {
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
 				foreach my $md(@maxdepths){
 					if ($max_depth > $md){
+						print "max_depth $max_depth , md $md\n";
 						foreach my $group_number(0..scalar @groups-1){
 							my $label;
 							if (exists $label_hashes{$md}[$group_number]{"current"}) {$label = $label_hashes{$md}[$group_number]{"current"};}
 							else {$label = 0;}
 							if ($counter_hashes{$md}[$group_number]{$simnode}){ 
 								my $mutnums = $counter_hashes{$md}[$group_number]{$simnode};
+								print " need ".scalar @{$mutnums}." sites for ".$group_names[$group_number]."\n";
 								for (my $i = 0; $i < scalar @{$mutnums}; $i++){
 									my $diff = abs($simmutnum - $mutnums->[$i])/$mutnums->[$i];
+									print "simmutnum $simmutnum need ".$mutnums->[$i]." difference ".$diff."\n";
 									if ($diff <= $mutnum_control){
 										## ! we need bin loop here, not outside!
 										## hash hash hash
-										#print " sum for ".$group_names[$group_number]." was ".$sums{$md}[$group_number]{$label}."\n";
+										print " sum for ".$group_names[$group_number]." was ".$sums{$md}[$group_number]{$label}."\n";
 										#print "CONC "."group number $group_number md $md node name $simnode simmutnum $simmutnum realmutnum".$mutnums->[$i]."\n";
 										foreach my $bindat (@bin_data){
 											$sums{$md}[$group_number]{$label} += $bindat->[1];
 											$hash{$md}[$group_number]{$label}{$bindat->[0]}[1] += $bindat->[2];
 											$hash{$md}[$group_number]{$label}{$bindat->[0]}[0] += $bindat->[1];
 										}
-										#print " sum for ".$group_names[$group_number]." is now ".$sums{$md}[$group_number]{$label}."\n";
+										print " sum for ".$group_names[$group_number]." is now ".$sums{$md}[$group_number]{$label}."\n";
 										#print "before splicing ".scalar @{$mutnums}.", ";
 										splice (@{$mutnums}, $i, 1);
 										#print "after splicing ".scalar @{$mutnums}."\n";
@@ -1728,7 +1740,7 @@ sub concat_and_divide_simult {
 									}
 								}
 								if (scalar @{$mutnums} == 0){
-									#print "CONC no more mutnums for group number $group_number md $md node name $simnode, deleting this node\n";
+									print "CONC no more mutnums for group number $group_number md $md node name $simnode, deleting this node\n";
 									my $older = scalar keys %{$counter_hashes{$md}[$group_number]};
 									#print "had $older , ";
 									delete $counter_hashes{$md}[$group_number]{$simnode};
@@ -1736,7 +1748,7 @@ sub concat_and_divide_simult {
 									#print "now has $newer \n";
 								}
 								if ((scalar keys %{$counter_hashes{$md}[$group_number]}) == 0){
-									#print "Win! sum for label $label $md ".$group_names[$group_number]." is ".$sums{$md}[$group_number]{$label}."\n";
+									print "Win! sum for label $label $md ".$group_names[$group_number]." is ".$sums{$md}[$group_number]{$label}."\n";
 									#print "CONC no more nodes for group number $group_number md $md, starting new collection\n";
 									$label_hashes{$md}[$group_number]{"current"} += 1; # label corresponds to number of full collections (undef, if there is 0, 1, if we got one. But collection with this label is not full!)
 									$counter_hashes{$md}[$group_number] = dclone($group_hashes{$md}[$group_number]);
@@ -1752,10 +1764,10 @@ sub concat_and_divide_simult {
 			
 			# maxbins are different for every iteration. Find maximum and use it.
 			$maxbin = max($maxbin, scalar @bin_data);
-			print "CONC "."maxbin $maxbin\n";	
+			#print "CONC "."maxbin $maxbin\n";	
 			
 			if ($iteration_number>=50 && $iteration_number%50 == 0){
-				printer();
+				printer(); # print to .csv files every 50 iterations, delete printed from memory
 			}
 			
 		}
@@ -3162,8 +3174,8 @@ sub entrenchment_for_subtrees{
 	my $step = shift;
 	my $tag = shift;
 	my $verbose = shift;
-	# $rh_out_subtree->{$name}->{$site}= массив уходов #todo
-	
+	my $restriction = 0;
+	# $rh_out_subtree->{$name}->{$site}= array of exits
 	my $dir = File::Spec->catdir($self->{static_output_base}, $self->{static_protein});
 	make_path($dir);
 	my $filename = File::Spec->catfile($dir, $self->{static_protein}."_for_enrichment_".$tag);
@@ -3171,28 +3183,89 @@ sub entrenchment_for_subtrees{
 	open my $file, ">>$filename" or die "Cannot create $filename\n";
 	my %hist;
 	print $file ">new iteration\n";
+	print ">new iteration\n";
 	foreach my $nodename (keys %{$rh_out_subtree}){
-		my $node = $self->{static_hash_of_nodes}{$nodename};
+		my $node = ${$self->{static_hash_of_nodes}{$nodename}};
 		my %alive =  map {$_ => 1} keys %{$rh_out_subtree->{$nodename}};
 		$node->set_generic("-alive" => \%alive);
-		my $subtree_info;
+		my %subtree_info;
 		my @array;
-		my @args = (undef, $step, $node, $subtree_info); # undef - site_index
-		#unless ($hash_ready) { #visitor_coat cannot be used inside a cycle; we still do not want to mess the hash up, so we check for its existance before this cycle
-			$self->my_visit_depth_first ($node, \@array,\&subtree_info,\&has_no_mutation,\@args,0);
-		#} 
+		my $mutations;
 		foreach my $site (keys %{$rh_out_subtree->{$nodename}}){
-			my $site_node = $site."_".$nodename;
-			print $file $site_node." ".$subtree_info->{$site}{"maxdepth"}." ".$subtree_info->{$site}{"totmuts"}."\n";
-			
+			my %site_muts = map {$_ => 1} @{$rh_out_subtree->{$nodename}{$site}}; #array of nodenames
+			$mutations->{$site} = \%site_muts;
+			#print "ancnode $nodename site $site , exits: ";
+			#foreach my $nname(keys %site_muts){
+			#	print $nname."\t";
+			#}
+			#print "\n";
 		}
 		
+		my @args = (undef, $step, $node, \%subtree_info, $mutations); # undef - site_index
+		#subtree info is fresh and clean
+		$self->my_visit_depth_first ($node, \@array,\&subtree_info,\&has_no_background_mutation,\@args,0);
+		foreach my $site (keys %{$rh_out_subtree->{$nodename}}){
+			my $site_node = $site."_".$nodename;
+			my $exits = scalar @{$rh_out_subtree->{$nodename}{$site}};
+			my $square;
+			foreach my $bin (keys %{$subtree_info{$site}{"hash"}}){
+				$square += $subtree_info{$site}{"hash"}{$bin}[1];
+			}
+			
+		#	print $file $site_node." ".$subtree_info{$site}{"maxdepth"}." total square $square ".$subtree_info{$site}{"totmuts"}." must be $exits \n";
+		
+			my $total_muts;
+			my $total_length;
+			#print "depth ".$static_depth_hash{$site}{$node->get_name()}."\n";
+			#print "maxdepth ".$static_subtree_info{$node->get_name()}{$site}{"maxdepth"}."\n";
+			if ($subtree_info{$site}{"maxdepth"} > $restriction){ #10.10 restriction returns. 
+				foreach my $bin (sort {$a <=> $b} keys %{$subtree_info{$site}{"hash"}}){
+					#print "bin $bin adding ".$static_subtree_info{$node->get_name()}{$site}{"hash"}{$bin}[0]."\n";
+					$total_muts += $subtree_info{$site}{"hash"}{$bin}[0];
+					$total_length += $subtree_info{$site}{"hash"}{$bin}[1];
+				}	
+				#print $node->get_name()." ".$site." TOTALS: $total_muts, $total_length, maxdepth ".$static_subtree_info{$node->get_name()}{$site}{"maxdepth"}."\n";
+				if ($total_length > 0){
+					#print "total muts $total_muts \n";
+					print $file "site $site node $nodename maxdepth ".$subtree_info{$site}{"maxdepth"}." muts ".$total_muts."\n";
+					my $check_local_lengths_sum;
+					my $check_total_obs;
+					my $check_total_exp;
+					foreach my $bin (sort {$a <=> $b} (keys %{$subtree_info{$site}{"hash"}})){
+							my $local_length = $subtree_info{$site}{"hash"}{$bin}[1];
+							$check_local_lengths_sum += $local_length;
+							$hist{$site_node}{$bin}[0] += $subtree_info{$site}{"hash"}{$bin}[0]; #observed
+							$hist{$site_node}{$bin}[1] += $total_muts*$local_length/$total_length; #expected	
+							#print "adding to obs bin $bin ".$static_subtree_info{$node->get_name()}{$site}{"hash"}{$bin}[0]."\n";
+						    if (!$hist{$site_node}{$bin}[0]){
+						    	$hist{$site_node}{$bin}[0] += 0;
+						    }
+						    if (!$hist{$site_node}{$bin}[1]){
+						    	$hist{$site_node}{$bin}[1] += 0;
+						    }
+
+	 						print $file "$bin,".$hist{$site_node}{$bin}[0].",".$hist{$site_node}{$bin}[1]."\n";
+	 						$check_total_obs += $hist{$site_node}{$bin}[0];
+	 						$check_total_exp += $hist{$site_node}{$bin}[1];
+					}
+
+					unless ($total_length == $check_local_lengths_sum){
+						print "local length sumtest failed! total $total_length, local_sum $check_local_lengths_sum\n";
+					}
+					
+					unless ($check_total_obs-$check_total_exp < 0.001 && -$check_total_obs+$check_total_exp < 0.001 ){
+						print "obsexp sumtest failed! total obs $check_total_obs, total exp $check_total_exp total_muts $total_muts site_node $site_node \n";
+					}
+				}
+			}
+		}
+	}
+			
 		# todo delete all "-alive" hashes in this tree! So, we have to traverse the tree twice anyway. 
 		# Nope! we completely reset these hashes with every traversing, so we do not need to delete them
-	}
-	close $file;
-	
-	
+		
+		close $file;
+		
 }
 
 # used by iterations_gulp_subtree_shuffling (entrenchment_for_subtrees)
@@ -3204,9 +3277,7 @@ sub entrenchment_for_subtrees{
 		my $step = $_[2]->[1];
 		my $starting_node = $_[2]->[2];
 		my $subtree_info = $_[2]->[3];
-		#my %alive = %{$_[2]->[4]};
-		my %alive = %{$node->get_parent->get_generic("-alive")};  # a copy of existing hash!
-		my $depth = $_[3] - $starting_node->get_branch_length ;
+		my $mutations = $_[2]->[4];
 		if ($node eq $starting_node){
 			#print " \n equality: ".$starting_node ->get_name."\t".$node ->get_name."\n";
 			return;
@@ -3215,16 +3286,22 @@ sub entrenchment_for_subtrees{
 			#print " \n terminal: ".$starting_node ->get_name."\n";
 			return;
 		}
+		my %alive = %{$node->get_parent->get_generic("-alive")};  # a copy of existing hash! since it's one-dim, it is perfectly ok that it's only a shallow copy 
+		my $depth = $_[3] - $starting_node->get_branch_length ;
  		#print "depth $depth step $step bin ".(bin($depth,$step))."\n";
  		foreach my $site_index(keys %alive){
-		 		if (!($self->has_no_same_type_mutation($_[1], \@{$_[2]}))){ #has_no_same_type_mutation
+ 			#print "$site_index is alive at ".$node->get_name()."!\n";
+		 		if ($mutations->{$site_index}{$node->get_name()}){ #take muts from hash! 
 		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[0] += 1;
 		 			$subtree_info->{$site_index}{"totmuts"} += 1;
 		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2; # 19.09.2016 mutations happen in the middle of a branch; todo
+		 	#		print "subtree_info totmuts for starting_node ".$starting_node->get_name()." node ".$node->get_name()." site $site_index is ".$subtree_info->{$site_index}{"totmuts"}."\n";
 		 			#print "addded to 0\n";
+		 			
 		 			delete $alive{$site_index};
 		 		}
 		 		$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
+		 	#	print "subtree maxdepth for ".$starting_node->get_name()." $site_index is ".$subtree_info->{$site_index}{"maxdepth"}."\n";
 		 		if (!($subtree_info->{$site_index}{"maxdepth"}) || $subtree_info->{$site_index}{"maxdepth"} < $depth){
 		 			$subtree_info->{$site_index}{"maxdepth"} = $depth;
 		 		}
@@ -4029,6 +4106,8 @@ sub visitor_coat {
  		my $site_index = $_[2];
  		if ($self->{static_state} eq "nsyn"){
  			if (compare::is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
+ 				if ($node->get_name() eq "INTNODE2422" && $site_index ==238){
+ 				}
  				return 0;
  			}
  			else {
