@@ -16,7 +16,9 @@ closedir(DH);
 if (scalar @files == 0){
 	die "No files found in $input!\n";
 }
-
+open GROUPS, ">$groupfile" or die "Cannot open $groupfile: $!\n";
+print GROUPS "group\tmaxdepth\titerations\ttype\tepi_enrichment_pvalue\tenv_enrichment_pvalue\tepi_pvalue\tenv_pvalue\n";
+close GROUPS;
 foreach my $filename(sort @files){
 	my $filepath =  File::Spec->catfile($dirname,$filename);
 	next if (-d $$filepath);

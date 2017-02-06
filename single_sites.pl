@@ -20,7 +20,8 @@ my $subtract_tallest = '0';
 my $restrictions = '50,100,150';
 my $verbose;
 my $tag = '';
-my $mutnum_control = 0.2;
+my $mutnum_control = 0;
+
 
 
 GetOptions (	'protein=s' => \$protein,
@@ -46,6 +47,7 @@ my $rr = Mutmap::check_realdata_restriction($args);
 my $sr = List::Util::min(@restriction_levels);
 print "realdata restriction is $rr\n";
 if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restriction you specified: ".$rr." > ".$sr."\n"; }
+
 
 ## 25.01 Procedure for obtaining p-values for every ancestor node (site_node)
 my $mutmap = Mutmap->new($args);

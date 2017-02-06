@@ -530,14 +530,14 @@ sub incidence_matrix {
 	foreach my $ind(1..$length){
 		if ($self->{static_nodes_with_sub}{$ind}){
 			my $debugnum = scalar @{$self->{static_nodes_with_sub}{$ind}};
-			print "news from incidence: numnodes for $ind is $debugnum\n";
+			#print "news from incidence: numnodes for $ind is $debugnum\n";
 		}
 		if ($self->{static_nodes_with_sub}{$ind} && scalar @{$self->{static_nodes_with_sub}{$ind}} > 0){# possibility to have at least 2 mutations after an ancestral one
 			my %site_incidence = %empty_nodes_hash;
 			push @sorted_sites, $ind;
 			#print " added $ind to sorted sites\n";
 			foreach my $node(@{$self->{static_nodes_with_sub}{$ind}}){
-				print "News from incidence_matrix: nnode_name ".$$node->get_name()."\n";
+				#print "News from incidence_matrix: nnode_name ".$$node->get_name()."\n";
 				$site_incidence{$$node->get_name()} = 1;
 			}
 			$incidence_hash{$ind} = \%site_incidence;
@@ -1062,7 +1062,7 @@ sub iterations_gulp{
 	my $verbose = shift;
 	my $memusage = shift;
 	my $restriction = shift;
-	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction);
+	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, 0); # 0 - no lifetime restriction
 }
 
 # new simulation method 11.01.2017 
@@ -1077,6 +1077,7 @@ sub iterations_gulp_subtree_shuffling {
 	my $verbose = shift;
 	my $memusage = shift;
 	my $restriction = shift;
+	my $lifetime = shift; # do we need lifetime restriction for shuffler?
 	
 		
 	if ($verbose){print "Extracting realdata..\n";}	
@@ -1095,10 +1096,10 @@ sub iterations_gulp_subtree_shuffling {
 	my @simulated_hists;
 	
 	my $length = $self->mylength();
-	my @sites = (1..$length); #todo debug (1..$length-1)
+	my @sites = (1..$length); #todo debug (1..$length)
 	# subtree_info has to be ready at this point. But that's obvious, since we have realdata,
 	# and that's exactly where we take it from - realdata. 
-	my $rh_constrains = $self->get_constraints($restriction, \@sites); 
+	my $rh_constrains = $self->get_constraints($lifetime, $restriction, \@sites); 
 	my $shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains); 
 	for (my $i = 1; $i <= $iterations; $i++){
 		my $rh_out_subtree = shuffle_muts_on_tree::shuffle_mutations_on_tree($shuffler); 
@@ -1145,6 +1146,7 @@ sub iterations_gulp_subtree_shuffling {
 
 sub get_constraints {
 	my $self = shift;
+	my $lifetime = shift; # do we need lifetime restriction for shuffler?
 	my $restriction = $_[0];
 	my @group = @{$_[1]};
 	my %group_hash;
@@ -1162,7 +1164,10 @@ sub get_constraints {
 				if ($maxdepth > $restriction && $group_hash{$site}){
 					my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
 					my $stoppers = $subtree_info->{$node_name}->{$site}->{"stoppers"}; # array of nodes
-					my $constr = StripConstrains->new(number_of_mutations => $mutnum,lifetime => $maxdepth, stoppers => $stoppers);
+					my $constr = StripConstrains->new(number_of_mutations => $mutnum, stoppers => $stoppers);
+					if ($lifetime){
+						$constr->lifetime($maxdepth);
+					}
 					$constraints->{$node_name}{$site} = $constr;  
 				}
 		}
@@ -1613,6 +1618,9 @@ sub concat_and_divide_simult {
 	}
 
 	local *printer = sub {
+		print " maxbin was $maxbin ";
+				$maxbin = shift;
+		print "now it is $maxbin\n";		
 				foreach my $md(@maxdepths){ 
 					foreach my $group_number(0..scalar @groups-1){
 							
@@ -1687,7 +1695,7 @@ sub concat_and_divide_simult {
 					$simnode = $site_array[3];
 					$max_depth = $site_array[5];
 					$simmutnum = $site_array[7];	
-					print "CONC ".$simsite." site,".$simnode." node,".$max_depth." maxdepth, ".$simmutnum."\n";
+					#print "CONC ".$simsite." site,".$simnode." node,".$max_depth." maxdepth, ".$simmutnum."\n";
 					$str = <GULP>; #5.02
 				}
 				else {print "something failed! wtf in reading iteration gulp\n"};
@@ -1703,7 +1711,7 @@ sub concat_and_divide_simult {
 					$str = <GULP>;			
 				}
 				unless ($test_obs_summ - $test_exp_summ < 0.0001 && -$test_obs_summ + $test_exp_summ < 0.0001){
-						#print "summtest failed! $simsite $simnode obssum $test_obs_summ, expsum $test_exp_summ\n";
+						print "Error! one site summtest failed! $simsite $simnode obssum $test_obs_summ, expsum $test_exp_summ\n";
 				}
 				#print "read all bins..str is now $str\n";
 				# now $str is site.. or new iteration
@@ -1711,28 +1719,28 @@ sub concat_and_divide_simult {
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
 				foreach my $md(@maxdepths){
 					if ($max_depth > $md){
-						print "max_depth $max_depth , md $md\n";
+						#print "max_depth $max_depth , md $md\n";
 						foreach my $group_number(0..scalar @groups-1){
 							my $label;
 							if (exists $label_hashes{$md}[$group_number]{"current"}) {$label = $label_hashes{$md}[$group_number]{"current"};}
 							else {$label = 0;}
 							if ($counter_hashes{$md}[$group_number]{$simnode}){ 
 								my $mutnums = $counter_hashes{$md}[$group_number]{$simnode};
-								print " need ".scalar @{$mutnums}." sites for ".$group_names[$group_number]."\n";
+								#print " need ".scalar @{$mutnums}." sites for ".$group_names[$group_number]."\n";
 								for (my $i = 0; $i < scalar @{$mutnums}; $i++){
 									my $diff = abs($simmutnum - $mutnums->[$i])/$mutnums->[$i];
 									print "simmutnum $simmutnum need ".$mutnums->[$i]." difference ".$diff."\n";
 									if ($diff <= $mutnum_control){
 										## ! we need bin loop here, not outside!
 										## hash hash hash
-										print " sum for ".$group_names[$group_number]." was ".$sums{$md}[$group_number]{$label}."\n";
+										#print " sum for ".$group_names[$group_number]." was ".$sums{$md}[$group_number]{$label}."\n";
 										#print "CONC "."group number $group_number md $md node name $simnode simmutnum $simmutnum realmutnum".$mutnums->[$i]."\n";
 										foreach my $bindat (@bin_data){
 											$sums{$md}[$group_number]{$label} += $bindat->[1];
 											$hash{$md}[$group_number]{$label}{$bindat->[0]}[1] += $bindat->[2];
 											$hash{$md}[$group_number]{$label}{$bindat->[0]}[0] += $bindat->[1];
 										}
-										print " sum for ".$group_names[$group_number]." is now ".$sums{$md}[$group_number]{$label}."\n";
+										#print " sum for ".$group_names[$group_number]." is now ".$sums{$md}[$group_number]{$label}."\n";
 										#print "before splicing ".scalar @{$mutnums}.", ";
 										splice (@{$mutnums}, $i, 1);
 										#print "after splicing ".scalar @{$mutnums}."\n";
@@ -1740,7 +1748,7 @@ sub concat_and_divide_simult {
 									}
 								}
 								if (scalar @{$mutnums} == 0){
-									print "CONC no more mutnums for group number $group_number md $md node name $simnode, deleting this node\n";
+									#print "CONC no more mutnums for group number $group_number md $md node name $simnode, deleting this node\n";
 									my $older = scalar keys %{$counter_hashes{$md}[$group_number]};
 									#print "had $older , ";
 									delete $counter_hashes{$md}[$group_number]{$simnode};
@@ -1748,7 +1756,7 @@ sub concat_and_divide_simult {
 									#print "now has $newer \n";
 								}
 								if ((scalar keys %{$counter_hashes{$md}[$group_number]}) == 0){
-									print "Win! sum for label $label $md ".$group_names[$group_number]." is ".$sums{$md}[$group_number]{$label}."\n";
+									#print "Win! sum for label $label $md ".$group_names[$group_number]." is ".$sums{$md}[$group_number]{$label}."\n";
 									#print "CONC no more nodes for group number $group_number md $md, starting new collection\n";
 									$label_hashes{$md}[$group_number]{"current"} += 1; # label corresponds to number of full collections (undef, if there is 0, 1, if we got one. But collection with this label is not full!)
 									$counter_hashes{$md}[$group_number] = dclone($group_hashes{$md}[$group_number]);
@@ -1763,11 +1771,12 @@ sub concat_and_divide_simult {
 	# because we iterate through site earlier $str = <GULP>;
 			
 			# maxbins are different for every iteration. Find maximum and use it.
-			$maxbin = max($maxbin, scalar @bin_data);
+			$maxbin = max($maxbin, $bin_data[$#bin_data]->[0]);
+			print " here maxbin is $maxbin\n";
 			#print "CONC "."maxbin $maxbin\n";	
 			
 			if ($iteration_number>=50 && $iteration_number%50 == 0){
-				printer(); # print to .csv files every 50 iterations, delete printed from memory
+				printer($maxbin); # print to .csv files every 50 iterations, delete printed from memory
 			}
 			
 		}
@@ -1775,7 +1784,7 @@ sub concat_and_divide_simult {
 	}
 	
 	## here 
-	printer();
+	printer($maxbin);
 	
 #	close NODECOUNT;
 	
@@ -1912,6 +1921,7 @@ sub concat_and_divide_simult_single_sites {
 					$test_exp_summ = 0;	
 				
 					my @str_array = split(/\s+/, $str);
+					# $str_array[0] is bin number
 					$simsite = $str_array[1]; # careful 
 					$simnode = $str_array[3];
 					$max_depth = $str_array[5];
@@ -1926,19 +1936,24 @@ sub concat_and_divide_simult_single_sites {
 				$test_obs_summ += $str_array[1];
 				$test_exp_summ += $str_array[2];
 				
+				# maxbins are different for every iteration. Find maximum and use it.
+				$maxbin = max($maxbin, $str_array[0]);
+				
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
 				foreach my $md(@maxdepths){
 					if ($max_depth > $md){
 						foreach my $site_node(keys %{$obs_hash}){
 							my ($obssite, $obsnode) = split(/_/, $site_node);
 							if ($obsnode eq $simnode){ # 28.09.2016 
-								if ($norms{$md}{$site_node}){  # checks for maxdepth in realdata
-								#print "group number $group_number md $md node name $node_name\n";
-									
-									$sums{$md}{$site_node}{$simsite} += $str_array[1];
-									$hash{$md}{$site_node}{$simsite}{$str_array[0]}[1] += $str_array[2];
-									$hash{$md}{$site_node}{$simsite}{$str_array[0]}[0] += $str_array[1];
-									
+								if($obssite eq $simsite) { # 30.01.2017 
+									if ($norms{$md}{$site_node}){  # checks for maxdepth in realdata
+									#print "group number $group_number md $md node name $node_name\n";
+										
+										$sums{$md}{$site_node}{$simsite} += $str_array[1]; #obssum 
+										$hash{$md}{$site_node}{$simsite}{$str_array[0]}[1] += $str_array[2];
+										$hash{$md}{$site_node}{$simsite}{$str_array[0]}[0] += $str_array[1];
+										
+									}
 								}
 							}
 						}
@@ -1954,10 +1969,10 @@ sub concat_and_divide_simult_single_sites {
 			
 			## parsed all information about this iteration 
 
-			# maxbins are different for every iteration. Find maximum and use it.
+			
 
-			$maxbin = max($maxbin, $str_array[0]);
-#print "maxbin $maxbin, iteration number $iteration_number\n";	
+			
+print " maxbin $maxbin, iteration number $iteration_number\n";	
 #print "sum50 $sum50 sum100 $sum100 sum150 $sum150 norm 50 $norm50 norm 100 $norm100 norm 150 $norm150\n";		
 			
 			foreach my $md(@maxdepths){ 
@@ -1966,7 +1981,7 @@ sub concat_and_divide_simult_single_sites {
 						#print "maxdepth $md group number $group_number \n";
 						my $diff = abs($sums{$md}{$site_node}{$simsite} - $norms{$md}{$site_node})/$norms{$md}{$site_node};
 						print "$site_node obssum ".$norms{$md}{$site_node}." simsum ".$sums{$md}{$site_node}{$simsite}."diff $diff \n";
-						if ($sums{$md}{$site_node}{$simsite} == 0 || ($mutnum_control && $diff > $mutnum_control)){
+						if ($sums{$md}{$site_node}{$simsite} == 0 || (defined($mutnum_control) && $diff > $mutnum_control)){
 							foreach my $bin(1..$maxbin){
 								$hash{$md}{$site_node}{$simsite}{$bin}[0] = "NA";
 								$hash{$md}{$site_node}{$simsite}{$bin}[1] = "NA";
@@ -2193,9 +2208,8 @@ sub count_pvalues{
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 		#	if (compare::is_neighbour_changing($self->$static_subs_on_node{$node_name}{$site}, 1) == 1) # fisk
 			if ($maxdepth > $restriction && $group_hash{$site}){ #15.02 moved here
-			foreach my $bin(keys %{$obs_hash->{$site_node}}){
-				$maxbin = max($bin, $maxbin);
-				#if ($maxdepth > $restriction && $group_hash{$site}){ #15.02 moved from here
+				foreach my $bin(keys %{$obs_hash->{$site_node}}){
+					$maxbin = max($bin, $maxbin);
 					$norm_restricted += $obs_hash->{$site_node}->{$bin}->[0];
 					$obs_hash_restricted{$site_node}{$bin}[0] = $obs_hash->{$site_node}->{$bin}->[0];
 					$obs_hash_restricted{$site_node}{$bin}[1] = $obs_hash->{$site_node}->{$bin}->[1];
@@ -2242,6 +2256,14 @@ sub count_pvalues{
 				$flat_exp_hash{$bin} += $obs_hash_restricted{$node}{$bin}[1]; 
 			}
 		}
+		
+		my $test_obs_summ = sum(hist_to_array(\%flat_obs_hash));
+		my $test_exp_summ = sum(hist_to_array(\%flat_exp_hash));
+		print ("  data  obs sum $test_obs_summ exp summ $test_exp_summ \n");
+		unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
+			print "Error! data hist sum test for all failed! \n";
+		}
+		
 		#print " computing hist emdian \n"	;
 		my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
 		my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
@@ -2259,7 +2281,7 @@ sub count_pvalues{
 		my $pval_env_for_mean;
 	
 	
-		#print "going  read input file\n";	
+		#print "going to read input file\n";	
 		
 		if ($obs_mean ne "NaN"){
 		
@@ -2297,7 +2319,12 @@ sub count_pvalues{
 			}
 			
 			
-			
+			my $test_obs_summ = sum(hist_to_array(\%boot_obs_hash));
+			my $test_exp_summ = sum(hist_to_array(\%boot_exp_hash));
+			print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
+			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
+				print "Error! boot hist sum test for all failed! \n";
+			}
 			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
 			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash,$step);
 			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
@@ -2415,6 +2442,14 @@ sub count_pvalues{
 					$flat_exp_hash{$bin} += $obs_hash_restricted{$node}{$bin}[1];
 				}
 			}
+			
+			my $test_obs_summ = sum(hist_to_array(\%flat_obs_hash));
+			my $test_exp_summ = sum(hist_to_array(\%flat_exp_hash));
+			print ("  data obs sum $test_obs_summ exp summ $test_exp_summ \n");
+			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
+				print "Error! data hist sum test for ".$group_names[$group_number]." failed! \n";
+			}
+			
 			#print  computing hist emdian \n"	;
 			my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
 			my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
@@ -2478,6 +2513,13 @@ sub count_pvalues{
 				#	$i++;
 				#	$boot_exp_hash{$bin} = $splitter[$i];
 				#}
+				
+				my $test_obs_summ = sum(hist_to_array(\%boot_obs_hash));
+				my $test_exp_summ = sum(hist_to_array(\%boot_exp_hash));
+				print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
+				unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
+					print "Error! boot hist sum test for group ".$group_names[$group_number]."failed! \n";
+				}
 				
 				my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
 				my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
@@ -2549,6 +2591,14 @@ sub count_pvalues{
 					$complement_flat_exp_hash{$bin} += $complement_obs_hash_restricted{$node}{$bin}[1];
 				}
 			}
+			
+			my $test_obs_summ = sum(hist_to_array(\%complement_flat_obs_hash));
+			my $test_exp_summ = sum(hist_to_array(\%complement_flat_exp_hash));
+			print (" data obs sum $test_obs_summ exp summ $test_exp_summ \n");
+			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
+				print "Error! data hist sum test for complement of ".$group_names[$group_number]." failed! \n";
+			}
+			
 			#print " compung hist emdian \n"	;
 			my $complement_obs_median = hist_median_for_hash(\%complement_flat_obs_hash, $step);
 			my $complement_exp_median = hist_median_for_hash(\%complement_flat_exp_hash, $step);
@@ -2611,6 +2661,14 @@ sub count_pvalues{
 				#	$boot_exp_hash{$bin} = $splitter[$i];
 				#}
 				
+				
+				my $test_obs_summ = sum(hist_to_array(\%boot_obs_hash));
+				my $test_exp_summ = sum(hist_to_array(\%boot_exp_hash));
+				print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
+				unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
+					print "Error! boot hist sum test for complement ".$group_names[$group_number]." failed! \n";
+				}
+				
 				my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
 				my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
 				my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
@@ -2665,7 +2723,7 @@ sub count_pvalues{
 				if (scalar @{$array_gbo_minus_gbe[$j]}  != scalar @{$array_cbo_minus_cbe[$j]}){
 					print "itertest failed! number of iterations in group array for $j bin is ".scalar @{$array_gbo_minus_gbe[$j]}.", in complement array  ".scalar @{$array_cbo_minus_cbe[$j]}."\n";
 					print "Now you can start worrying\n";
-					print "It's ok, if you mix iterations and don't print NAs in .csv. I'll just compute the difference between all full arrays\n";
+					print "But it's ok, if you mix iterations and don't print NAs in .csv. I'll just compute the difference between all full arrays\n";
 					my $number_of_iterations = min(scalar @{$array_gbo_minus_gbe[$j]}, scalar @{$array_cbo_minus_cbe[$j]});
 					foreach my $iteration(0..($number_of_iterations-1)){
 						push @{$array_diffdiff[$j]}, $array_gbo_minus_gbe[$j][$iteration] - $array_cbo_minus_cbe[$j][$iteration];
@@ -2808,7 +2866,7 @@ sub count_single_site_pvalues{
 	my $realdata =  $self -> {realdata};
 	my $maxbin = $realdata->{"maxbin"}; 
 	my $step = $realdata->{"step"}; #bin size
-	unless (defined $step) {die "Oh no, bin size in realdata is not defined. Won't proceed with simulations.\n";}
+	unless (defined $step) {die "Oh no, bin size in realdata is not defined. Won't proceed with counting pvalues.\n";}
 	#print "before cycle\n";
 	
 	my $obs_hash = get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
@@ -2839,15 +2897,19 @@ sub count_single_site_pvalues{
 	
 		my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_single_sites");
 		open my $outputfile, ">$file" or die "Cannot create $file";
+		{ my $ofh = select $outputfile;
+	 		 $| = 1;
+	  		select $ofh;
+		}
 
-
-		foreach my $site_node (keys %obs_hash_restricted){
+		foreach my $site_node (sort (keys %obs_hash_restricted)){
 			my %flat_obs_hash;
 			my %flat_exp_hash;
 			foreach my $bin(1..$maxbin){
 				$flat_obs_hash{$bin} += $obs_hash_restricted{$site_node}{$bin}[0]; 
 				$flat_exp_hash{$bin} += $obs_hash_restricted{$site_node}{$bin}[1]; 
 			}
+			
 			my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
 			my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
 			my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step); # 18.03 - added the same statistics based on histogram mean (instead of median)
@@ -2910,7 +2972,13 @@ sub count_single_site_pvalues{
 			for (my $bin10 = 0; $bin10 < scalar @diff_10bin_array; $bin10++){
 				push @{$array_obs_minus_exp[$bin10]}, $diff_10bin_array[$bin10];
 			}
+			print ("iteration ".$iteration."\n");
+			my $test_obs_summ = sum(hist_to_array(\%boot_obs_hash));
+			my $test_exp_summ = sum(hist_to_array(\%boot_exp_hash));
 			
+			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
+				print "Error! boot hist sum test for $site_node failed! \n";
+			}
 			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
 			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
 			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
@@ -2931,16 +2999,16 @@ sub count_single_site_pvalues{
 			}
 			$iteration++;
 		}
-		
-		if ($iteration > 0) {
-			for (my $j = 0; $j < scalar @hist_obs; $j++){
-				my $mean_obs = $hist_obs[$j]/$iteration;
-				my $mean_exp = $hist_exp[$j]/$iteration;
-				my $stat_obs = Statistics::Descriptive::Full->new();
-				$stat_obs->add_data(\@{$array_obs_minus_exp[$j]});
-				print $outputfile "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
-			}
-		}
+	# fisa debugging	
+	#	if ($iteration > 0) {
+	#		for (my $j = 0; $j < scalar @hist_obs; $j++){
+	#			my $mean_obs = $hist_obs[$j]/$iteration;
+	#			my $mean_exp = $hist_exp[$j]/$iteration;
+	#			my $stat_obs = Statistics::Descriptive::Full->new();
+	#			$stat_obs->add_data(\@{$array_obs_minus_exp[$j]});
+	#			print $outputfile "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
+	#		}
+	#	}
 	
 		close CSVFILE;
 		
@@ -3203,7 +3271,7 @@ sub entrenchment_for_subtrees{
 		
 		my @args = (undef, $step, $node, \%subtree_info, $mutations); # undef - site_index
 		#subtree info is fresh and clean
-		$self->my_visit_depth_first ($node, \@array,\&subtree_info,\&has_no_background_mutation,\@args,0);
+		$self->my_visit_depth_first ($node, \@array,\&subtree_info,\&no_check,\@args,0);
 		foreach my $site (keys %{$rh_out_subtree->{$nodename}}){
 			my $site_node = $site."_".$nodename;
 			my $exits = scalar @{$rh_out_subtree->{$nodename}{$site}};
@@ -3227,7 +3295,7 @@ sub entrenchment_for_subtrees{
 				#print $node->get_name()." ".$site." TOTALS: $total_muts, $total_length, maxdepth ".$static_subtree_info{$node->get_name()}{$site}{"maxdepth"}."\n";
 				if ($total_length > 0){
 					#print "total muts $total_muts \n";
-					print $file "site $site node $nodename maxdepth ".$subtree_info{$site}{"maxdepth"}." muts ".$total_muts."\n";
+					print $file "site $site node $nodename maxdepth ".$subtree_info{$site}{"maxdepth"}." muts ".$total_muts." total_length ".$total_length."\n";
 					my $check_local_lengths_sum;
 					my $check_total_obs;
 					my $check_total_exp;
@@ -3291,13 +3359,16 @@ sub entrenchment_for_subtrees{
  		#print "depth $depth step $step bin ".(bin($depth,$step))."\n";
  		foreach my $site_index(keys %alive){
  			#print "$site_index is alive at ".$node->get_name()."!\n";
+ 				if (!($self->has_no_background_mutation($node, $site_index))){
+ 					delete $alive{$site_index};
+ 					next;
+ 				}
 		 		if ($mutations->{$site_index}{$node->get_name()}){ #take muts from hash! 
 		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[0] += 1;
 		 			$subtree_info->{$site_index}{"totmuts"} += 1;
 		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2; # 19.09.2016 mutations happen in the middle of a branch; todo
 		 	#		print "subtree_info totmuts for starting_node ".$starting_node->get_name()." node ".$node->get_name()." site $site_index is ".$subtree_info->{$site_index}{"totmuts"}."\n";
 		 			#print "addded to 0\n";
-		 			
 		 			delete $alive{$site_index};
 		 		}
 		 		$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
@@ -3338,9 +3409,9 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 	my @args = ( $step, $root);
 	$self->visitor_coat ($root, \@array,\&entrenchment_visitor,\&no_check,\@args,0);
 	my $debugnum = scalar keys %{$self ->{static_nodes_with_sub}};
-	print "News from depth..2: static_nodes_with_sub contains $debugnum keys\n";
+	#print "News from depth..2: static_nodes_with_sub contains $debugnum keys\n";
 	my $debugnum = scalar keys %{$self ->{static_subtree_info}};
-	print 	"News from depth..2: static_subtree_info contains $debugnum keys (nodes)\n";
+	#print 	"News from depth..2: static_subtree_info contains $debugnum keys (nodes)\n";
 	foreach my $ind (@group){
 		foreach my $nod(@{$self ->{static_nodes_with_sub}{$ind}}){
 			print "nod is ".$nod." ref(nod) is ".ref($nod)."\n";
@@ -4106,8 +4177,6 @@ sub visitor_coat {
  		my $site_index = $_[2];
  		if ($self->{static_state} eq "nsyn"){
  			if (compare::is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
- 				if ($node->get_name() eq "INTNODE2422" && $site_index ==238){
- 				}
  				return 0;
  			}
  			else {

@@ -8,7 +8,7 @@ use Class::Struct;
 use Math::Random::ISAAC;
 
 my $rng = Math::Random::ISAAC->new(localtime()); 
-my $MaxTries=20;
+my $MaxTries=100;
 
 struct Strip =>{
 	nodes => '@',
@@ -46,16 +46,20 @@ sub strip_tree{
 				die "\nError strip_tree(): time stamps on nodes are expected!" unless defined $time;
 				$time-=$rtime;
 				my $idx=binsearch_pos {$a<=>$b} $time,@{$ra_time_stamps};
-				if($idx<@{$ra_time_stamps}){
+				if($idx<@{$ra_time_stamps}){ # fisa: no limits!
 					$ra_out_strips->[$idx]=Strip->new() unless defined $ra_out_strips->[$idx];
 					push @{$ra_out_strips->[$idx]->nodes()},$node;
 					#print " ".$node->get_name();
 					my $sqr=$ra_out_strips->[$idx]->square();
 					$ra_out_strips->[$idx]->square($sqr+$node->get_branch_length());
 				}
+				else {
+					print "idx $idx is out of bounds: ".scalar @{$ra_time_stamps}."\n";
+				}
 			}
 		}
 	);	
+	
 	#print "\n";
 }
 
@@ -76,7 +80,7 @@ sub shuffle_mutations{
 		#print "Ancestor site $I\n";
 		my $n=$ra_strip_constr->[$I]->number_of_mutations();
 		my $strip_number=$ra_strip_constr->[$I]->lifetime(); #number of strips
-		die "\nError shuffle_mutations(): wrong number of strips!" unless $strip_number>0&&$strip_number<=@{$ra_strips};
+		die "\nError shuffle_mutations(): wrong number of strips!" unless ($strip_number>0 && $strip_number<=@{$ra_strips});
 		my $ra_events=$ra_out_event_nodes->[-1];
 		my @nsamples;
 		my %blocked;
@@ -146,7 +150,9 @@ sub shuffle_mutations{
 				#print "Ancestor node is ".$rnode->get_name()."\n";
 				my $prevnode;
 				while($pnode!=$rnode){
+					
 						my $pname=$pnode->get_name();
+						#print " $pname ,";
 						if(exists $blocked{$pname}){
 							$pnode=$rnode unless exists $mutations{$pname};
 							last;
@@ -165,6 +171,7 @@ sub shuffle_mutations{
 						$pnode=$pnode->get_parent; #prev $pnode=$node->get_parent
 						
 				}
+				#print "\n";
 				if($pnode==$rnode){
 					#print "Yes! Will place mutation at ".$node->get_name()."\n";
 					#mutation could be placed on the sampled branch
@@ -230,7 +237,7 @@ sub prepare_shuffler{
 	my %timestamps;
 	foreach my $node($tree->get_nodes){ # prev: @{$tree->get_internals}
 		my $name=$node->get_name();
-		$timestamps{$name}=[];
+		$timestamps{$name}=[]; # sorted array of unique unlimited distances from ancestor to tips of its subtree (fisa)
 	}
 	$tree->visit_depth_first(
 		-in   => sub{
@@ -264,20 +271,20 @@ sub prepare_shuffler{
 			my $max_life_time=0;
 			my @ts=@{$timestamps{$name}};
 			#trunkate time stamp array by the maximal life time over all sites on the branch
-			my $n=keys %{$rh_constrains->{$name}}; #number of sites on a branch
-			foreach my $site(keys %{$rh_constrains->{$name}}){
-				my $strc=$rh_constrains->{$name}->{$site};
-				if(defined $strc->lifetime()){
-					my $l=$strc->lifetime();
-					$max_life_time=$l if $max_life_time<$l;
-					$n--;
-				}
-			}
-			$max_life_time=0 if $n; 
-			if($max_life_time){
-				my $idx=binsearch_pos {$a<=>$b} $max_life_time,@ts;
-				$#ts=$idx unless $idx>$#ts;
-			}
+		#	my $n=keys %{$rh_constrains->{$name}}; #number of sites on a branch  # fisa: no limits!
+		#	foreach my $site(keys %{$rh_constrains->{$name}}){
+		#		my $strc=$rh_constrains->{$name}->{$site};
+		#		if(defined $strc->lifetime()){
+		#			my $l=$strc->lifetime();
+		#			$max_life_time=$l if $max_life_time<$l;
+		#			$n--;
+		#		}
+		#	}
+		#	$max_life_time=0 if $n; 
+		#	if($max_life_time){
+		#		my $idx=binsearch_pos {$a<=>$b} $max_life_time,@ts;
+		#		$#ts=$idx unless $idx>$#ts;
+		#	}
 			my @strips;
 			strip_tree($node,\@ts,\@strips);
 			my @strip_constrs;
@@ -330,6 +337,7 @@ sub shuffle_mutations_on_tree {
 		my $name=$node->get_name();
 		if(defined $rh_constrains->{$name}){
 			my $strips = $strips_hash->{$name};
+
 			my $strip_constrs = $strip_constrs_hash->{$name};
 			my @sites = @{$sites_hash->{$name}};
 			$rh_out_subtree->{$name}={}; # why?

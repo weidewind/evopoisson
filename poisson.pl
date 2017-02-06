@@ -33,6 +33,7 @@ my $no_neighbour_changing;
 my $no_leaves;
 my $switch;
 my $mutnum_control = 0.2;
+my $fake;
 
 
 GetOptions (	'protein=s' => \$protein,
@@ -50,6 +51,7 @@ GetOptions (	'protein=s' => \$protein,
 		'no_leaves' => \$no_leaves,
 		'switch' =>\$switch,
 		'mutnum_control=s' => \$mutnum_control,
+		'fake' => \$fake,
 	);
 
 $| = 1;
@@ -61,11 +63,11 @@ my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state 
 ## Checking if appropriate realdata exists, initializing
 my @restriction_levels = split(/,/, $restrictions);
 my $specified_restriction = List::Util::min(@restriction_levels);
-
+my $mutmap;
 if  (! (Mutmap::realdata_exists($args))) { 
 	print "No realdata exists for specified parameters, going to prepare it.."; 
 	$args->{fromfile} = 0;
-	my $mutmap = Mutmap->new($args);
+	$mutmap = Mutmap->new($args);
 	$mutmap-> prepare_real_data ({restriction => $specified_restriction,step => $step});
 }
 else {
@@ -73,13 +75,21 @@ else {
 	if ($rr > $specified_restriction){
 		print "Existing realdata restriction is greater than the minimal restriction you specified: ".$rr." > ".$specified_restriction."\nGoing to overwrite realdata..\n"; 
 		$args->{fromfile} = 0;
-		my $mutmap = Mutmap->new($args);
+		$mutmap = Mutmap->new($args);
 		$mutmap-> prepare_real_data ({restriction => $specified_restriction,step => $step});
 	}
 	else {
 		print "Going to use existing realdata with restriction $rr\n";
+		$mutmap = Mutmap->new($args);
 	}
 }
+
+if ($fake){
+	$mutmap = $mutmap-> shuffle_mutator();
+	print "Fake : preparing real_data\n";
+	$mutmap-> prepare_real_data ({restriction => $specified_restriction, step => $step});
+}
+
 
 $mu->record('just before mutmap creation');
 $args->{fromfile} = 1;
