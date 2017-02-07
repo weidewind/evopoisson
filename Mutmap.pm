@@ -1062,7 +1062,7 @@ sub iterations_gulp{
 	my $verbose = shift;
 	my $memusage = shift;
 	my $restriction = shift;
-	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, 0); # 0 - no lifetime restriction
+	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, 1); # 0 - no lifetime restriction
 }
 
 # new simulation method 11.01.2017 
@@ -1105,7 +1105,7 @@ sub iterations_gulp_subtree_shuffling {
 		my $rh_out_subtree = shuffle_muts_on_tree::shuffle_mutations_on_tree($shuffler); 
 		# $rh_out_subtree->{$name}->{$site}= массив уходов (имен узлов)) #todo
 		my %hash;
-		$self->entrenchment_for_subtrees($rh_out_subtree, $step, $tag, $verbose) #todo
+		$self->entrenchment_for_subtrees($rh_out_subtree, $step, $tag, $verbose, $lifetime) #todo
 		# >new iteration string and all the corresponding data  are printed inside this sub:
 		# we used to launch visitor_coat in this sub (depth_groups_entrenchment_optimized_selection_alldepths) and take subtree_info from self. 
 		# But now we have no tree - only a set of overlapping subtrees which cannot be converted into a tree.
@@ -3242,6 +3242,7 @@ sub entrenchment_for_subtrees{
 	my $step = shift;
 	my $tag = shift;
 	my $verbose = shift;
+	my $lifetime = shift;
 	my $restriction = 0;
 	# $rh_out_subtree->{$name}->{$site}= array of exits
 	my $dir = File::Spec->catdir($self->{static_output_base}, $self->{static_protein});
@@ -3269,7 +3270,7 @@ sub entrenchment_for_subtrees{
 			#print "\n";
 		}
 		
-		my @args = (undef, $step, $node, \%subtree_info, $mutations); # undef - site_index
+		my @args = (undef, $step, $node, \%subtree_info, $mutations, $lifetime); # undef - site_index
 		#subtree info is fresh and clean
 		$self->my_visit_depth_first ($node, \@array,\&subtree_info,\&no_check,\@args,0);
 		foreach my $site (keys %{$rh_out_subtree->{$nodename}}){
@@ -3279,9 +3280,17 @@ sub entrenchment_for_subtrees{
 			foreach my $bin (keys %{$subtree_info{$site}{"hash"}}){
 				$square += $subtree_info{$site}{"hash"}{$bin}[1];
 			}
-			
-		#	print $file $site_node." ".$subtree_info{$site}{"maxdepth"}." total square $square ".$subtree_info{$site}{"totmuts"}." must be $exits \n";
-		
+			if ($exits != $subtree_info{$site}{"totmuts"}){
+				print "Error! for $site $nodename entrenchment found ".$subtree_info{$site}{"totmuts"}.", and shuffler planted $exits \n";
+				foreach my $ex (@{$rh_out_subtree->{$nodename}{$site}}){
+					print " ex ".$ex." depth ".$self->{static_distance_hash}{$nodename}{$ex}."\n";
+				}
+			}
+			print " for $site $nodename data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
+			if($self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"} < $subtree_info{$site}{"maxdepth"}){
+				"Error! $site $nodename went out of bounds: data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
+			}
+			print  $site_node." ".$subtree_info{$site}{"maxdepth"}." total square $square ".$subtree_info{$site}{"totmuts"}." must be $exits \n";
 			my $total_muts;
 			my $total_length;
 			#print "depth ".$static_depth_hash{$site}{$node->get_name()}."\n";
@@ -3318,11 +3327,11 @@ sub entrenchment_for_subtrees{
 					}
 
 					unless ($total_length == $check_local_lengths_sum){
-						print "local length sumtest failed! total $total_length, local_sum $check_local_lengths_sum\n";
+						print "Error! local length sumtest failed! total $total_length, local_sum $check_local_lengths_sum\n";
 					}
 					
 					unless ($check_total_obs-$check_total_exp < 0.001 && -$check_total_obs+$check_total_exp < 0.001 ){
-						print "obsexp sumtest failed! total obs $check_total_obs, total exp $check_total_exp total_muts $total_muts site_node $site_node \n";
+						print "Error! obsexp sumtest failed! total obs $check_total_obs, total exp $check_total_exp total_muts $total_muts site_node $site_node \n";
 					}
 				}
 			}
@@ -3346,6 +3355,7 @@ sub entrenchment_for_subtrees{
 		my $starting_node = $_[2]->[2];
 		my $subtree_info = $_[2]->[3];
 		my $mutations = $_[2]->[4];
+		my $lifetime = $_[2]->[5];
 		if ($node eq $starting_node){
 			#print " \n equality: ".$starting_node ->get_name."\t".$node ->get_name."\n";
 			return;
@@ -3360,11 +3370,18 @@ sub entrenchment_for_subtrees{
  		foreach my $site_index(keys %alive){
  			#print "$site_index is alive at ".$node->get_name()."!\n";
  				if (!($self->has_no_background_mutation($node, $site_index))){
+ 					#print "deleting $site_index ".$starting_node->get_name()."from alive: background mutation found at ".$node->get_name()."\n";
+ 					delete $alive{$site_index};
+ 					next;
+ 				}
+ 				if ($lifetime && $self->{realdata}{subtree_info}{$starting_node->get_name()}{$site_index}{"maxdepth"} < $depth){
+ 					#print "deleting $site_index from alive: allowed depth is ".$self->{realdata}{subtree_info}{$starting_node->get_name()}{$site_index}{"maxdepth"}.", node ".$node->get_name()."depth is $depth\n";
  					delete $alive{$site_index};
  					next;
  				}
 		 		if ($mutations->{$site_index}{$node->get_name()}){ #take muts from hash! 
 		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[0] += 1;
+		 			#print "Found a mutation at $site_index ".$node->get_name()."\n";
 		 			$subtree_info->{$site_index}{"totmuts"} += 1;
 		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2; # 19.09.2016 mutations happen in the middle of a branch; todo
 		 	#		print "subtree_info totmuts for starting_node ".$starting_node->get_name()." node ".$node->get_name()." site $site_index is ".$subtree_info->{$site_index}{"totmuts"}."\n";

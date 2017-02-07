@@ -54,7 +54,7 @@ sub strip_tree{
 					$ra_out_strips->[$idx]->square($sqr+$node->get_branch_length());
 				}
 				else {
-					print "idx $idx is out of bounds: ".scalar @{$ra_time_stamps}."\n";
+					#print "Warning: idx $idx is out of bounds (error, if there is no lifetime limits): ".scalar @{$ra_time_stamps}."\n";
 				}
 			}
 		}
@@ -77,7 +77,7 @@ sub shuffle_mutations{
 	my $ii=$MaxTries;
 	my $I=0;
 	while($I<@{$ra_strip_constr}){
-		#print "Ancestor site $I\n";
+		print "Ancestor site $I\n";
 		my $n=$ra_strip_constr->[$I]->number_of_mutations();
 		my $strip_number=$ra_strip_constr->[$I]->lifetime(); #number of strips
 		die "\nError shuffle_mutations(): wrong number of strips!" unless ($strip_number>0 && $strip_number<=@{$ra_strips});
@@ -85,11 +85,9 @@ sub shuffle_mutations{
 		my @nsamples;
 		my %blocked;
 		if(defined $ra_strip_constr->[$I]->stoppers()){
-			foreach my $node(@{$ra_strip_constr->[$I]->stoppers}){
-				if ($node ->is_terminal){ #added
-					$blocked{$node->get_name()}=1;
-				}
-				else {
+			foreach my $node(@{$ra_strip_constr->[$I]->stoppers}){ 
+				$blocked{$node->get_name()}=1;
+				if (!($node ->is_terminal)) { #added
 					my $child = $node->get_child(0); # added: visit_ also visits starting node's sister
 					$child->visit_breadth_first(
 						-in   => sub{
@@ -154,10 +152,13 @@ sub shuffle_mutations{
 						my $pname=$pnode->get_name();
 						#print " $pname ,";
 						if(exists $blocked{$pname}){
-							$pnode=$rnode unless exists $mutations{$pname};
-							last;
+							#print "blocked node $pname on the road! mutation on it? ".$mutations{$pname}."\n";
+							#$pnode=$rnode unless exists $mutations{$pname};  # prev
+							#last;  # prev
+							if (exists $mutations{$pname}) {last;} # added
 						}else{
 							$blocked{$pname}=1; 
+							#print "blocking $pname ";
 							#recalculate @cdf  
 							my ($pstrip_idx,$pidx)=($node2strip{$pname}->[0],$node2strip{$pname}->[1]);
 							if($pstrip_idx==$i){ #$pnode is in the current strip 
@@ -271,20 +272,20 @@ sub prepare_shuffler{
 			my $max_life_time=0;
 			my @ts=@{$timestamps{$name}};
 			#trunkate time stamp array by the maximal life time over all sites on the branch
-		#	my $n=keys %{$rh_constrains->{$name}}; #number of sites on a branch  # fisa: no limits!
-		#	foreach my $site(keys %{$rh_constrains->{$name}}){
-		#		my $strc=$rh_constrains->{$name}->{$site};
-		#		if(defined $strc->lifetime()){
-		#			my $l=$strc->lifetime();
-		#			$max_life_time=$l if $max_life_time<$l;
-		#			$n--;
-		#		}
-		#	}
-		#	$max_life_time=0 if $n; 
-		#	if($max_life_time){
-		#		my $idx=binsearch_pos {$a<=>$b} $max_life_time,@ts;
-		#		$#ts=$idx unless $idx>$#ts;
-		#	}
+			my $n=keys %{$rh_constrains->{$name}}; #number of sites on a branch  # fisa: no limits!
+			foreach my $site(keys %{$rh_constrains->{$name}}){
+				my $strc=$rh_constrains->{$name}->{$site};
+				if(defined $strc->lifetime()){
+					my $l=$strc->lifetime();
+					$max_life_time=$l if $max_life_time<$l;
+					$n--;
+				}
+			}
+			$max_life_time=0 if $n; 
+			if($max_life_time){
+				my $idx=binsearch_pos {$a<=>$b} $max_life_time,@ts;
+				$#ts=$idx unless $idx>$#ts;
+			}
 			my @strips;
 			strip_tree($node,\@ts,\@strips);
 			my @strip_constrs;
