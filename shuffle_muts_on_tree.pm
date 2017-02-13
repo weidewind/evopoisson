@@ -233,7 +233,7 @@ sub shuffle_mutations{
 			@{$ra_events}=();
 			if($ii--==0){ 
 				#no more attempts allowed
-				print "Could not place mutations for ".$rnode->get_name()."\n";
+				print "Could not place ".$nsamples[$i]." mutations for ".$rnode->get_name()."\n";
 				$ra_out_event_nodes->[-1]=undef;
 				$i=-1;
 			}
