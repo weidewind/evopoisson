@@ -929,7 +929,7 @@ sub mydebugclone {
 sub get_hashes {
 	my $self = shift;
 	my %res_hash;
-	print ("what must be a hashref is a ".ref($self->{static_nodes_with_sub})."\n");
+	#print ("what must be a hashref is a ".ref($self->{static_nodes_with_sub})."\n");
 	foreach my $ind(keys $self->{static_nodes_with_sub}){
 		my %x_hash;
 		my %y_hash;
@@ -1062,7 +1062,7 @@ sub iterations_gulp{
 	my $verbose = shift;
 	my $memusage = shift;
 	my $restriction = shift;
-	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, 1); # 0 - no lifetime restriction
+	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, 0, 1); # 0 - no lifetime restriction, 1 - one strip
 }
 
 # new simulation method 11.01.2017 
@@ -1078,6 +1078,7 @@ sub iterations_gulp_subtree_shuffling {
 	my $memusage = shift;
 	my $restriction = shift;
 	my $lifetime = shift; # do we need lifetime restriction for shuffler?
+	my $onestrip = shift;
 	
 		
 	if ($verbose){print "Extracting realdata..\n";}	
@@ -1100,7 +1101,7 @@ sub iterations_gulp_subtree_shuffling {
 	# subtree_info has to be ready at this point. But that's obvious, since we have realdata,
 	# and that's exactly where we take it from - realdata. 
 	my $rh_constrains = $self->get_constraints($lifetime, $restriction, \@sites); 
-	my $shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains); 
+	my $shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains, $onestrip); 
 	for (my $i = 1; $i <= $iterations; $i++){
 		my $rh_out_subtree = shuffle_muts_on_tree::shuffle_mutations_on_tree($shuffler); 
 		# $rh_out_subtree->{$name}->{$site}= массив уходов (имен узлов)) #todo
@@ -1158,12 +1159,25 @@ sub get_constraints {
 	my $obs_hash = get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	my $constraints;
+	
+	# all bkgr mutations, that would be stoppers for any ancestor node
+	my %all_stoppers;
+	my @nodes = $self->{static_tree}->get_nodes;
+	foreach my $site_index(@group){
+		foreach my $node(@nodes){
+			if (!($self->has_no_background_mutation($node, $site_index))){
+				push @{$all_stoppers{$site_index}}, $node;
+			}
+		}
+	}
+
 	foreach my $site_node(keys %{$obs_hash}){
 			my ($site, $node_name) = split(/_/, $site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 				if ($maxdepth > $restriction && $group_hash{$site}){
 					my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
-					my $stoppers = $subtree_info->{$node_name}->{$site}->{"stoppers"}; # array of nodes
+					#my $stoppers = $subtree_info->{$node_name}->{$site}->{"stoppers"}; # array of nodes (false: only those stoppers that are visible in realdata go here)
+					my $stoppers = $all_stoppers{$site};
 					my $constr = StripConstrains->new(number_of_mutations => $mutnum, stoppers => $stoppers);
 					if ($lifetime){
 						$constr->lifetime($maxdepth);
@@ -1729,7 +1743,7 @@ sub concat_and_divide_simult {
 								#print " need ".scalar @{$mutnums}." sites for ".$group_names[$group_number]."\n";
 								for (my $i = 0; $i < scalar @{$mutnums}; $i++){
 									my $diff = abs($simmutnum - $mutnums->[$i])/$mutnums->[$i];
-									print "simmutnum $simmutnum need ".$mutnums->[$i]." difference ".$diff."\n";
+									#print "simmutnum $simmutnum need ".$mutnums->[$i]." difference ".$diff."\n";
 									if ($diff <= $mutnum_control){
 										## ! we need bin loop here, not outside!
 										## hash hash hash
@@ -2259,7 +2273,7 @@ sub count_pvalues{
 		
 		my $test_obs_summ = sum(hist_to_array(\%flat_obs_hash));
 		my $test_exp_summ = sum(hist_to_array(\%flat_exp_hash));
-		print ("  data  obs sum $test_obs_summ exp summ $test_exp_summ \n");
+		#print ("  data  obs sum $test_obs_summ exp summ $test_exp_summ \n");
 		unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 			print "Error! data hist sum test for all failed! \n";
 		}
@@ -2321,7 +2335,7 @@ sub count_pvalues{
 			
 			my $test_obs_summ = sum(hist_to_array(\%boot_obs_hash));
 			my $test_exp_summ = sum(hist_to_array(\%boot_exp_hash));
-			print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
+			#print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
 			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 				print "Error! boot hist sum test for all failed! \n";
 			}
@@ -2445,7 +2459,7 @@ sub count_pvalues{
 			
 			my $test_obs_summ = sum(hist_to_array(\%flat_obs_hash));
 			my $test_exp_summ = sum(hist_to_array(\%flat_exp_hash));
-			print ("  data obs sum $test_obs_summ exp summ $test_exp_summ \n");
+			#print ("  data obs sum $test_obs_summ exp summ $test_exp_summ \n");
 			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 				print "Error! data hist sum test for ".$group_names[$group_number]." failed! \n";
 			}
@@ -2516,7 +2530,7 @@ sub count_pvalues{
 				
 				my $test_obs_summ = sum(hist_to_array(\%boot_obs_hash));
 				my $test_exp_summ = sum(hist_to_array(\%boot_exp_hash));
-				print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
+				#print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
 				unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 					print "Error! boot hist sum test for group ".$group_names[$group_number]."failed! \n";
 				}
@@ -2594,7 +2608,7 @@ sub count_pvalues{
 			
 			my $test_obs_summ = sum(hist_to_array(\%complement_flat_obs_hash));
 			my $test_exp_summ = sum(hist_to_array(\%complement_flat_exp_hash));
-			print (" data obs sum $test_obs_summ exp summ $test_exp_summ \n");
+			#print (" data obs sum $test_obs_summ exp summ $test_exp_summ \n");
 			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 				print "Error! data hist sum test for complement of ".$group_names[$group_number]." failed! \n";
 			}
@@ -2664,7 +2678,7 @@ sub count_pvalues{
 				
 				my $test_obs_summ = sum(hist_to_array(\%boot_obs_hash));
 				my $test_exp_summ = sum(hist_to_array(\%boot_exp_hash));
-				print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
+				#print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
 				unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 					print "Error! boot hist sum test for complement ".$group_names[$group_number]." failed! \n";
 				}
@@ -3286,11 +3300,11 @@ sub entrenchment_for_subtrees{
 					print " ex ".$ex." depth ".$self->{static_distance_hash}{$nodename}{$ex}."\n";
 				}
 			}
-			print " for $site $nodename data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
+			#print " for $site $nodename data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
 			if($self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"} < $subtree_info{$site}{"maxdepth"}){
 				"Error! $site $nodename went out of bounds: data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
 			}
-			print  $site_node." ".$subtree_info{$site}{"maxdepth"}." total square $square ".$subtree_info{$site}{"totmuts"}." must be $exits \n";
+			#print  $site_node." ".$subtree_info{$site}{"maxdepth"}." total square $square ".$subtree_info{$site}{"totmuts"}." must be $exits \n";
 			my $total_muts;
 			my $total_length;
 			#print "depth ".$static_depth_hash{$site}{$node->get_name()}."\n";
@@ -3370,18 +3384,18 @@ sub entrenchment_for_subtrees{
  		foreach my $site_index(keys %alive){
  			#print "$site_index is alive at ".$node->get_name()."!\n";
  				if (!($self->has_no_background_mutation($node, $site_index))){
- 					#print "deleting $site_index ".$starting_node->get_name()."from alive: background mutation found at ".$node->get_name()."\n";
+ 				#	print "deleting $site_index ".$starting_node->get_name()."from alive: background mutation found at ".$node->get_name()."\n";
  					delete $alive{$site_index};
  					next;
  				}
  				if ($lifetime && $self->{realdata}{subtree_info}{$starting_node->get_name()}{$site_index}{"maxdepth"} < $depth){
- 					#print "deleting $site_index from alive: allowed depth is ".$self->{realdata}{subtree_info}{$starting_node->get_name()}{$site_index}{"maxdepth"}.", node ".$node->get_name()."depth is $depth\n";
+ 				#	print "deleting $site_index from alive: allowed depth is ".$self->{realdata}{subtree_info}{$starting_node->get_name()}{$site_index}{"maxdepth"}.", node ".$node->get_name()."depth is $depth\n";
  					delete $alive{$site_index};
  					next;
  				}
 		 		if ($mutations->{$site_index}{$node->get_name()}){ #take muts from hash! 
 		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[0] += 1;
-		 			#print "Found a mutation at $site_index ".$node->get_name()."\n";
+		 		#	print "Found a mutation at $site_index ".$node->get_name()."\n";
 		 			$subtree_info->{$site_index}{"totmuts"} += 1;
 		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2; # 19.09.2016 mutations happen in the middle of a branch; todo
 		 	#		print "subtree_info totmuts for starting_node ".$starting_node->get_name()." node ".$node->get_name()." site $site_index is ".$subtree_info->{$site_index}{"totmuts"}."\n";
@@ -3431,24 +3445,22 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 	#print 	"News from depth..2: static_subtree_info contains $debugnum keys (nodes)\n";
 	foreach my $ind (@group){
 		foreach my $nod(@{$self ->{static_nodes_with_sub}{$ind}}){
-			print "nod is ".$nod." ref(nod) is ".ref($nod)."\n";
+			#print "nod is ".$nod." ref(nod) is ".ref($nod)."\n";
 			my $node;
 			if(ref($nod) eq "REF"){
 				$node = ${$nod};
 			}
 			else {$node = $nod;}
 			my $site_node = $ind."_".$node->get_name();
-			print "site_node $site_node \n";
+			#print "site_node $site_node \n";
 			my $total_muts;
 			my $total_length;
 	#print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
-			print " maxdepth is ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}. " and restriction is $restriction\n";
+			#print " maxdepth is ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}. " and restriction is $restriction\n";
 			if ($self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"} > $restriction){
-				print "will try it\n";
 				my %subtract_hash;
 				
 				if ($self ->{static_subtract_tallest}){
-					print "just checking ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth_node"}."\n";
 					my $tallest_tip = ${$self ->{static_hash_of_nodes}{$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth_node"}}};	
 					my @path_to_tallest_tip = @{$tallest_tip->get_ancestors()};	
 					my $index_of_ancestor_node;
@@ -3472,10 +3484,10 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 						$total_length -= $subtract_hash{$bin};
 					}
 				}	
-				print $node->get_name()." ".$ind." TOTALS: $total_muts, $total_length, maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n";
+			#	print $node->get_name()." ".$ind." TOTALS: $total_muts, $total_length, maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n";
 				#if ($total_length > 0 && $total_muts/$total_length < 0.005){
 				if ($total_length > 0 && $total_muts > 0){ # 21.10 added total_muts > 0
-				print "total muts $total_muts \n";
+			#	print "total muts $total_muts \n";
 			#	print "site $ind node ".$node->get_name()." maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n"; # commented out 16.09
 					foreach my $bin (sort {$a <=> $b} (keys %{$self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}})){
 						#if ($total_length > 0 && $static_subtree_info{$node->get_name()}{$ind}{"hash"}{$bin}[1] > 0){ #there are some internal nodes with 0-length terminal daughter branches

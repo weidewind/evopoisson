@@ -63,6 +63,41 @@ sub strip_tree{
 	#print "\n";
 }
 
+#This function partitions tree into nonoverlapping strips
+sub one_strip{
+	my ($rnode,$ra_time_stamps,$ra_out_strips)=@_;
+	my $rtime=$rnode->get_generic('time');
+	die "\nError strip_tree(): time stamps on nodes are expected!" unless defined $rtime;
+	@{$ra_out_strips}=();
+	my $ancnode = $rnode;
+	#print "strip subtree of ".$ancnode->get_name();
+	$rnode = $rnode->get_child(0); #  visit_breadth_first also visits starting node's sister
+	$rnode->visit_breadth_first(
+		-in   => sub{
+			my $node=shift;
+			unless ($node eq $ancnode){ # added 
+				my $time=$node->get_generic('time');
+				die "\nError strip_tree(): time stamps on nodes are expected!" unless defined $time;
+				$time-=$rtime;
+				my $idx=binsearch_pos {$a<=>$b} $time,@{$ra_time_stamps};
+				if($idx<@{$ra_time_stamps}){ # fisa: no limits!
+					$ra_out_strips->[0]=Strip->new() unless defined $ra_out_strips->[0];
+					push @{$ra_out_strips->[0]->nodes()},$node;
+					#print " ".$node->get_name();
+					my $sqr=$ra_out_strips->[0]->square();
+					$ra_out_strips->[0]->square($sqr+$node->get_branch_length());
+				}
+				else {
+					print "Warning: idx $idx is out of bounds (error, if there is no lifetime limits): ".scalar @{$ra_time_stamps}."\n";
+				}
+			}
+		}
+	);	
+	
+	#print "\n";
+}
+
+
 #The function expects a lifetime constrain in terms of a number of strips
 #Number of strips is required!
 sub shuffle_mutations{
@@ -77,9 +112,10 @@ sub shuffle_mutations{
 	my $ii=$MaxTries;
 	my $I=0;
 	while($I<@{$ra_strip_constr}){
-		print "Ancestor site $I\n";
+		#print "Ancestor site $I\n";
 		my $n=$ra_strip_constr->[$I]->number_of_mutations();
 		my $strip_number=$ra_strip_constr->[$I]->lifetime(); #number of strips
+		#print " strip_number $strip_number ra_strips ".scalar @{$ra_strips}."\n";
 		die "\nError shuffle_mutations(): wrong number of strips!" unless ($strip_number>0 && $strip_number<=@{$ra_strips});
 		my $ra_events=$ra_out_event_nodes->[-1];
 		my @nsamples;
@@ -87,12 +123,14 @@ sub shuffle_mutations{
 		if(defined $ra_strip_constr->[$I]->stoppers()){
 			foreach my $node(@{$ra_strip_constr->[$I]->stoppers}){ 
 				$blocked{$node->get_name()}=1;
+				#print " already blocked for ".$rnode->get_name()." : ".$node->get_name()."\n";
 				if (!($node ->is_terminal)) { #added
 					my $child = $node->get_child(0); # added: visit_ also visits starting node's sister
 					$child->visit_breadth_first(
 						-in   => sub{
 							my $nd=shift;
 							$blocked{$nd->get_name()}=1;
+							#print " already blocked for ".$rnode->get_name()." : ".$nd->get_name()."\n";
 						}
 					);
 				}
@@ -143,6 +181,9 @@ sub shuffle_mutations{
 				my $idx=binsearch_pos {$a<=>$b} $_,@cdf; # Find the _lowest_ index of a matching element, or best insert point. Guarantees that we won't pick blocked branch
 				my $node=$ra_strips->[$i]->nodes($idx);
 				my $pnode=$node;
+				if (exists $blocked{$node->get_name()}){
+					print  "Error! blocked branch ".$node->get_name()." was sampled; something is wrong with your cdf\n";
+				}
 				#check if the sampled branch is plausible
 				#print "Going to check if ".$pnode->get_name()." can be picked\n";
 				#print "Ancestor node is ".$rnode->get_name()."\n";
@@ -214,7 +255,7 @@ sub shuffle_mutations{
 #Shuffler
 sub prepare_shuffler{
 	#my ($tree_,$rh_constrains,$rh_out_subtree)=@_;
-	my ($tree,$rh_constrains)=@_;
+	my ($tree,$rh_constrains, $onestrip)=@_;
 	my $shuffler=Shuffler->new();
 	#%{$rh_out_subtree}=();
 	#if a setting of attributes on tree nodes is not a problem than cloning may be omitted
@@ -287,7 +328,10 @@ sub prepare_shuffler{
 				$#ts=$idx unless $idx>$#ts;
 			}
 			my @strips;
-			strip_tree($node,\@ts,\@strips);
+			if($onestrip){
+				one_strip($node,\@ts,\@strips);
+			}
+			else {strip_tree($node,\@ts,\@strips);}
 			my @strip_constrs;
 			my @sites;
 			foreach my $site(keys %{$rh_constrains->{$name}}){
@@ -296,15 +340,22 @@ sub prepare_shuffler{
 				$strc->number_of_mutations($rh_constrains->{$name}->{$site}->number_of_mutations);
 				$strc->stoppers($rh_constrains->{$name}->{$site}->stoppers);
 				#express a lifetime as a number of strips
-				$max_life_time=0;
-				if(defined $rh_constrains->{$name}->{$site}->lifetime()){
-					$max_life_time=$rh_constrains->{$name}->{$site}->lifetime();
+				if($onestrip){
+					$strc->lifetime(1);
 				}
-				my $n=@ts; #maximal number of strips
-				if($max_life_time){
-					$n=binsearch_pos {$a<=>$b} $max_life_time,@ts;
+				else {
+					$max_life_time=0;
+					if(defined $rh_constrains->{$name}->{$site}->lifetime()){
+						$max_life_time=$rh_constrains->{$name}->{$site}->lifetime();
+					}
+					my $n=@ts; #maximal number of strips
+					print " number of strips is $n \n";
+					if($max_life_time){
+						$n=binsearch_pos {$a<=>$b} $max_life_time,@ts;
+					}
+					print " lifetime in strips is $n \n";
+					$strc->lifetime($n);
 				}
-				$strc->lifetime($n);
 				push @strip_constrs,$strc;
 			};
 			$strips_hash{$name} = \@strips;

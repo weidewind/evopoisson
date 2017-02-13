@@ -16,9 +16,17 @@ closedir(DH);
 if (scalar @files == 0){
 	die "No files found in $input!\n";
 }
-open GROUPS, ">$groupfile" or die "Cannot open $groupfile: $!\n";
-print GROUPS "group\tmaxdepth\titerations\ttype\tepi_enrichment_pvalue\tenv_enrichment_pvalue\tepi_pvalue\tenv_pvalue\n";
-close GROUPS;
+foreach my $filename(sort @files){
+	my $filepath =  File::Spec->catfile($dirname,$filename);
+	next if (-d $$filepath);
+	next unless ($filename =~ /(.*)_gulpselector_vector_boot_median_test_([0-9]+)_(.*)/);
+	my $prot = $1;
+	my $groupfile = File::Spec->catfile($dirname, $prot."_groups");
+	open GROUPS, ">$groupfile" or die "Cannot open $groupfile: $!\n";
+	print GROUPS "group\tmaxdepth\titerations\ttype\tepi_enrichment_pvalue\tenv_enrichment_pvalue\tepi_pvalue\tenv_pvalue\n";
+	close GROUPS;
+}	
+
 foreach my $filename(sort @files){
 	my $filepath =  File::Spec->catfile($dirname,$filename);
 	next if (-d $$filepath);
