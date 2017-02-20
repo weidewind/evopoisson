@@ -121,7 +121,8 @@ sub shuffle_mutations{
 		my @nsamples;
 		my %blocked;
 		if(defined $ra_strip_constr->[$I]->stoppers()){
-			foreach my $node(@{$ra_strip_constr->[$I]->stoppers}){ 
+			NODE: foreach my $node(@{$ra_strip_constr->[$I]->stoppers}){ 
+				next if ($node->get_name() eq $rnode->get_name()); # ignore stopper if it is on the same branch (may happen in fake samples)
 				$blocked{$node->get_name()}=1;
 				#print " already blocked for ".$rnode->get_name()." : ".$node->get_name()."\n";
 				if (!($node ->is_terminal)) { #added
@@ -129,6 +130,7 @@ sub shuffle_mutations{
 					$child->visit_breadth_first(
 						-in   => sub{
 							my $nd=shift;
+							next NODE if ($nd->get_name() eq $rnode->get_name()); # ignore stopper if it is higher than the ancestor branch
 							$blocked{$nd->get_name()}=1;
 							#print " already blocked for ".$rnode->get_name()." : ".$nd->get_name()."\n";
 						}
@@ -149,7 +151,10 @@ sub shuffle_mutations{
 				$node2strip{$node->get_name()}=[($i,$j)];
 			}
 		}
-		
+		if (! $CDF[-1]) {
+			print "Error! total square for ".$rnode->get_name()." is ".$CDF[-1]."\n";
+		}
+	
 		my %mutations;
 		#seed mutations across strips
 		while($n--){

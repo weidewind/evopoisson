@@ -42,6 +42,7 @@ use observation_vector qw(make_observation_vector shuffle_obsv);
 use compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing get_synmuts);
 #use TreeUtils::Phylo::PhyloUtils qw(remove_zero_branches);
 use shuffle_muts_on_tree qw(shuffle_mutations_on_tree prepare_shuffler StripConstrains Shuffler);
+use shuffle_muts_on_tree_exp qw(shuffle_mutations_on_tree Constrains);
 use PhyloUtils qw(remove_zero_branches);
 use Groups;
 use Memusage;
@@ -1062,7 +1063,7 @@ sub iterations_gulp{
 	my $verbose = shift;
 	my $memusage = shift;
 	my $restriction = shift;
-	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, 0, 1); # 0 - no lifetime restriction, 1 - one strip
+	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, 0, 0, "exp"); # 0 - no lifetime restriction, 1 - one strip, "exp" or "strip" shuffler
 }
 
 # new simulation method 11.01.2017 
@@ -1079,6 +1080,7 @@ sub iterations_gulp_subtree_shuffling {
 	my $restriction = shift;
 	my $lifetime = shift; # do we need lifetime restriction for shuffler?
 	my $onestrip = shift;
+	my $shufflertype = shift;
 	
 		
 	if ($verbose){print "Extracting realdata..\n";}	
@@ -1100,13 +1102,42 @@ sub iterations_gulp_subtree_shuffling {
 	my @sites = (1..$length); #todo debug (1..$length)
 	# subtree_info has to be ready at this point. But that's obvious, since we have realdata,
 	# and that's exactly where we take it from - realdata. 
-	my $rh_constrains = $self->get_constraints($lifetime, $restriction, \@sites); 
-	my $shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains, $onestrip); 
+	
+	my $rh_constrains;
+	my $shuffler;
+	if ($shufflertype eq "strip"){
+		$rh_constrains = $self->get_strip_constraints($lifetime, $restriction, \@sites); 
+		$shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains, $onestrip);
+	} 
+	elsif ($shufflertype eq "exp"){
+		$rh_constrains = $self->get_constraints($restriction, \@sites); 
+	}
+	else {
+		die "Unknown shuffler type\n";
+	} 
 	for (my $i = 1; $i <= $iterations; $i++){
-		my $rh_out_subtree = shuffle_muts_on_tree::shuffle_mutations_on_tree($shuffler); 
+		my $rh_out_subtree;
+		if ($shufflertype eq "strip"){
+			$rh_out_subtree = shuffle_muts_on_tree::shuffle_mutations_on_tree($shuffler); 
+		}
+		elsif ($shufflertype eq "exp"){
+			print "Going to shuffle..\n";
+			$rh_out_subtree = shuffle_muts_on_tree_exp::shuffle_mutations_on_tree($self->{static_tree}, $rh_constrains); 
+		}
 		# $rh_out_subtree->{$name}->{$site}= массив уходов (имен узлов)) #todo
 		my %hash;
-		$self->entrenchment_for_subtrees($rh_out_subtree, $step, $tag, $verbose, $lifetime) #todo
+		print " finished shuffling\n";
+		foreach my $name (keys %{$rh_out_subtree} ){
+			print $name."\n";
+			foreach my $site (keys %{$rh_out_subtree->{$name}}){
+				print $site."\t";
+				foreach my $nn (@{$rh_out_subtree->{$name}{$site}}){
+					print "$nn"."\t";
+				}
+				print "\n";
+			}
+		}
+		$self->entrenchment_for_subtrees($rh_out_subtree, $step, $tag, $verbose, $lifetime) 
 		# >new iteration string and all the corresponding data  are printed inside this sub:
 		# we used to launch visitor_coat in this sub (depth_groups_entrenchment_optimized_selection_alldepths) and take subtree_info from self. 
 		# But now we have no tree - only a set of overlapping subtrees which cannot be converted into a tree.
@@ -1145,7 +1176,7 @@ sub iterations_gulp_subtree_shuffling {
 }
 
 
-sub get_constraints {
+sub get_strip_constraints {
 	my $self = shift;
 	my $lifetime = shift; # do we need lifetime restriction for shuffler?
 	my $restriction = $_[0];
@@ -1188,6 +1219,51 @@ sub get_constraints {
 	return $constraints;
 }	
 
+
+
+sub get_constraints {
+	my $self = shift;
+	my $restriction = $_[0];
+	my @group = @{$_[1]};
+	my %group_hash;
+	foreach my $site(@group){
+		$group_hash{$site} = 1;
+	}
+	my $realdata = $self->{realdata};
+	my $obs_hash = get_obshash($realdata, $restriction);
+	my $subtree_info = $realdata->{"subtree_info"};
+	my $constraints;
+	
+	# all bkgr mutations, that would be stoppers for any ancestor node
+	my %all_stoppers;
+	my @nodes = $self->{static_tree}->get_nodes;
+	foreach my $site_index(@group){
+		foreach my $node(@nodes){
+			if (!($self->has_no_background_mutation($node, $site_index))){
+				push @{$all_stoppers{$site_index}}, $node;
+			}
+		}
+	}
+
+	foreach my $site_node(keys %{$obs_hash}){
+			my ($site, $node_name) = split(/_/, $site_node);
+			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
+				if ($maxdepth > $restriction && $group_hash{$site}){
+					my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
+					my $totlen;
+					foreach my $bin (keys %{$subtree_info->{$node_name}->{$site}->{"hash"}}){
+						$totlen += $subtree_info->{$node_name}{$site}{"hash"}{$bin}[1];
+					}
+					my $hazard = $mutnum/$totlen;
+					print "hazard for $site $node_name is $hazard\n";
+					my $stoppers = $all_stoppers{$site};
+					my $constr = Constrains->new(number_of_mutations => $mutnum, stoppers => $stoppers, hazard => $hazard);
+					$constraints->{$node_name}{$site} = $constr;  
+					print "constraints hazard for $site $node_name ".$constraints->{$node_name}{$site}->hazard()."\n";
+				}
+		}
+	return $constraints;
+}	
 
 
 # 5.11 for entrenchment_bootstrap_full_selection_vector

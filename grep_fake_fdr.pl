@@ -51,7 +51,7 @@ foreach my $di(sort @dirs){
 		}
 		close COUNT;
 		foreach my $filename(sort @files){
-			print "$filename found\n";
+			#print "$filename found\n";
 			my $filepath =  File::Spec->catfile($dipath,$filename);
 			next if (-d $filepath);
 			next unless ($filename =~ /(.*)_gulpselector_vector_boot_median_test_([0-9]+)_(.*)/);
