@@ -2449,8 +2449,13 @@ sub count_pvalues{
 		close CSVFILE;
 		print $outputfile "Number of iterations: $iteration\n";
 		print $outputfile "- pvalue_epistasis  pvalue_environment\n";
-		print $outputfile "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
-		print $outputfile "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
+		if (! $iteration){
+			print "Error! no valid iterations produced.\n";
+		}
+		else {
+			print $outputfile "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
+			print $outputfile "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
+		}
 		$self->printFooter($outputfile);
 		close $outputfile;	
 		
@@ -2932,9 +2937,14 @@ sub count_pvalues{
 				}
 			}
 			print $outputfile "Number of iterations: ".$updated_iteration_number."\n"; # and not $iteration. changed at 26.09.2016 
-			print $outputfile "- pvalue_epistasis_enrichment pvalue_environment_enrichment pvalue_epistasis pvalue_environment\n";
-			print $outputfile "median_stat ".($pval_epi_enrichment/$updated_iteration_number)." ".($pval_env_enrichment/$updated_iteration_number)." ".($pval_epi/$updated_iteration_number)." ".($pval_env/$updated_iteration_number)."\n";
-			print $outputfile "mean_stat ".($pval_epi_enrichment_for_mean/$updated_iteration_number)." ".($pval_env_enrichment_for_mean/$updated_iteration_number)." ".($pval_epi_for_mean/$updated_iteration_number)." ".($pval_env_for_mean/$updated_iteration_number)."\n";
+			if (! $updated_iteration_number){
+				print "Error! no valid iterations produced.\n";
+			}
+			else {
+				print $outputfile "- pvalue_epistasis_enrichment pvalue_environment_enrichment pvalue_epistasis pvalue_environment\n";
+				print $outputfile "median_stat ".($pval_epi_enrichment/$updated_iteration_number)." ".($pval_env_enrichment/$updated_iteration_number)." ".($pval_epi/$updated_iteration_number)." ".($pval_env/$updated_iteration_number)."\n";
+				print $outputfile "mean_stat ".($pval_epi_enrichment_for_mean/$updated_iteration_number)." ".($pval_env_enrichment_for_mean/$updated_iteration_number)." ".($pval_epi_for_mean/$updated_iteration_number)." ".($pval_env_for_mean/$updated_iteration_number)."\n";
+			}
 			$self->printFooter($outputfile);
 			close $outputfile;	
 			
