@@ -1063,7 +1063,7 @@ sub iterations_gulp{
 	my $verbose = shift;
 	my $memusage = shift;
 	my $restriction = shift;
-	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, 0, 0, "exp"); # 0 - no lifetime restriction, 1 - one strip, "exp" or "strip" shuffler
+	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, 0, 0, "exp", "debug"); # 0 - no lifetime restriction, 1 - one strip, "exp" or "strip" shuffler, "debug" - mock shuffler
 }
 
 # new simulation method 11.01.2017 
@@ -1081,6 +1081,7 @@ sub iterations_gulp_subtree_shuffling {
 	my $lifetime = shift; # do we need lifetime restriction for shuffler?
 	my $onestrip = shift;
 	my $shufflertype = shift;
+	my $debugmode = shift;
 	
 		
 	if ($verbose){print "Extracting realdata..\n";}	
@@ -1117,13 +1118,26 @@ sub iterations_gulp_subtree_shuffling {
 	} 
 	for (my $i = 1; $i <= $iterations; $i++){
 		my $rh_out_subtree;
-		if ($shufflertype eq "strip"){
-			$rh_out_subtree = shuffle_muts_on_tree::shuffle_mutations_on_tree($shuffler); 
+		if ($debugmode eq "debug"){
+			#$constraints->{$node_name}{$site} = $constr;  
+			foreach my $node_name (keys %{$rh_constrains}){
+				foreach my $site (keys %{$rh_constrains->{$node_name}}){
+					foreach my $n (@{$self->{static_nodes_with_sub}{$site}}){
+						push @{$rh_out_subtree->{$node_name}{$site}}, $$n->get_name; # all nodes with sub (including those before the ancestor and after stooppers), so it will produce errors when it gets into entrenchment_for_subtrees sub 
+					}
+				}
+			}
 		}
-		elsif ($shufflertype eq "exp"){
-			print "Going to shuffle..\n";
-			$rh_out_subtree = shuffle_muts_on_tree_exp::shuffle_mutations_on_tree($self->{static_tree}, $rh_constrains); 
+		else {
+			if ($shufflertype eq "strip"){
+				$rh_out_subtree = shuffle_muts_on_tree::shuffle_mutations_on_tree($shuffler); 
+			}
+			elsif ($shufflertype eq "exp"){
+				print "Going to shuffle..\n";
+				$rh_out_subtree = shuffle_muts_on_tree_exp::shuffle_mutations_on_tree($self->{static_tree}, $rh_constrains); 
+			}
 		}
+		
 		# $rh_out_subtree->{$name}->{$site}= массив уходов (имен узлов)) #todo
 		my %hash;
 		print " finished shuffling\n";
@@ -3388,19 +3402,37 @@ sub entrenchment_for_subtrees{
 			}
 			#print " for $site $nodename data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
 			if($self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"} < $subtree_info{$site}{"maxdepth"}){
-				"Error! $site $nodename went out of bounds: data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
+				print "Error! $site $nodename went out of bounds: data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
+			}
+			if($self->{realdata}{subtree_info}{$nodename}{$site}{"totmuts"} != $subtree_info{$site}{"totmuts"}){
+				print "Debugmode-only totmut error: $site $nodename realdata totmuts ".$self->{realdata}{subtree_info}{$nodename}{$site}{"totmuts"}." and subtree_info totmuts is ".$subtree_info{$site}{"totmuts"}."\n";
+			}
+			my $realdata_totmuts;
+			my $realdata_totlen;
+			foreach my $bin (keys %{$self->{realdata}{subtree_info}{$nodename}{$site}{"hash"}}){
+				$realdata_totmuts += $self->{realdata}{subtree_info}{$nodename}{$site}{"hash"}{$bin}[0];
+				$realdata_totlen += $self->{realdata}{subtree_info}{$nodename}{$site}{"hash"}{$bin}[1];
 			}
 			#print  $site_node." ".$subtree_info{$site}{"maxdepth"}." total square $square ".$subtree_info{$site}{"totmuts"}." must be $exits \n";
 			my $total_muts;
 			my $total_length;
+			foreach my $bin (sort {$a <=> $b} keys %{$subtree_info{$site}{"hash"}}){
+				#print "bin $bin adding ".$static_subtree_info{$node->get_name()}{$site}{"hash"}{$bin}[0]."\n";
+				$total_muts += $subtree_info{$site}{"hash"}{$bin}[0];
+				$total_length += $subtree_info{$site}{"hash"}{$bin}[1];
+			}	
+			if ($total_muts != $subtree_info{$site}{"totmuts"}){
+				print "Error! total_muts $total_muts is not equal to subtree_info total_muts ".$subtree_info{$site}{"totmuts"}."\n";
+			}
+			if ($total_length != $realdata_totlen){
+				print "Debugmode-only length error: $site $nodename total_length $total_length is not equal to realdata_totlen $realdata_totlen \n";
+			}
+		
+			
 			#print "depth ".$static_depth_hash{$site}{$node->get_name()}."\n";
 			#print "maxdepth ".$static_subtree_info{$node->get_name()}{$site}{"maxdepth"}."\n";
 			if ($subtree_info{$site}{"maxdepth"} > $restriction){ #10.10 restriction returns. 
-				foreach my $bin (sort {$a <=> $b} keys %{$subtree_info{$site}{"hash"}}){
-					#print "bin $bin adding ".$static_subtree_info{$node->get_name()}{$site}{"hash"}{$bin}[0]."\n";
-					$total_muts += $subtree_info{$site}{"hash"}{$bin}[0];
-					$total_length += $subtree_info{$site}{"hash"}{$bin}[1];
-				}	
+
 				#print $node->get_name()." ".$site." TOTALS: $total_muts, $total_length, maxdepth ".$static_subtree_info{$node->get_name()}{$site}{"maxdepth"}."\n";
 				if ($total_length > 0){
 					#print "total muts $total_muts \n";
@@ -3471,6 +3503,13 @@ sub entrenchment_for_subtrees{
  			#print "$site_index is alive at ".$node->get_name()."!\n";
  				if (!($self->has_no_background_mutation($node, $site_index))){
  				#	print "deleting $site_index ".$starting_node->get_name()."from alive: background mutation found at ".$node->get_name()."\n";
+ 					my $found;
+ 					foreach my $nname (@{$self->{realdata}{subtree_info}{$starting_node->get_name()}{$site_index}{"stoppers"}}){
+ 						if ($node->get_name() eq $nname){$found = 1;}
+ 					}
+ 					unless ($found){
+ 						print "Error! ".$node->get_name()." is not in realdata stoppers list for ".$starting_node->get_name()." $site_index \n";
+ 					}
  					delete $alive{$site_index};
  					next;
  				}
@@ -4388,14 +4427,27 @@ sub visitor_coat {
 		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation node for this node, key is a site number
 		
 		if (%closest_ancestors){
+			## pasted here 27.02.2017
+			my @ancestors = keys %closest_ancestors;	
+			foreach my $site_index(@ancestors){
+				if (!($self->has_no_background_mutation($node, $site_index))){
+					## copy-pasted at 27.02.2017 (now we do not add branches with bkgr mutations to square (or maxdepth))
+					my $anc_node = $closest_ancestors{$site_index};
+					push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"stoppers"}}, $node;
+					##
+					delete $closest_ancestors{$site_index};
+				}
+			}	
+			##
 			foreach my $site_index(keys %closest_ancestors){ 
 				my $anc_node = $closest_ancestors{$site_index};
 				my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()};
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
 			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
-				if (!($self->has_no_background_mutation($node, $site_index))){
-					push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"stoppers"}}, $node;
-				}
+				# commented out at 27.02.2017 and copy-pasted higher
+				#if (!($self->has_no_background_mutation($node, $site_index))){
+				#	push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"stoppers"}}, $node;
+				#}
 				my $current_maxdepth = $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"};
 				if ($current_maxdepth < $depth){
 						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"} = $depth;
@@ -4405,14 +4457,10 @@ sub visitor_coat {
 				}					
 			}
 			
-			my @ancestors = keys %closest_ancestors;	
-			foreach my $site_index(@ancestors){
-				if (!($self->has_no_background_mutation($node, $site_index))){
-					delete $closest_ancestors{$site_index};
-				}
-			}	
+			## deleted from here 27.02.2017
 		}
 		
+		# for nodes with mutations
 		foreach my $site_index(keys %{$self->{static_subs_on_node}{$node->get_name()}}){
 			
 			if ($closest_ancestors{$site_index}){
