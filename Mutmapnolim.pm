@@ -6,7 +6,7 @@
 
 
  # magic - ctrlf for magic constants
-package Mutmap;
+package Mutmapnolim;
 
 use strict;
 use Bio::Phylo::IO;
@@ -81,10 +81,7 @@ $| = 1;
 	}
 	
 	
-	struct Mutation => {
-		site_index => '$',
-		node => '$',
-	};
+
 	
 	
 	sub maxpath_tag{
@@ -174,6 +171,7 @@ $| = 1;
 		print $outputStream "## mutnum_control ".$self->{static_mutnum_control}."\n";
 		print $outputStream "## omit neighbour-changing mutations (only for 'reversals', ancestor n-ch muts are not skipped. Only valid for syn state)? 1 if true ".$self->{static_no_neighbour_changing}."\n";
 		print $outputStream "## omit mutations on terminal branches? 1 if true ".$self->{static_no_leaves}."\n";
+		print $outputStream "## include halves of branches after mutations? 1 if true ".$self->{static_include_tips}."\n";
 		print $outputStream "## output_base ".$self->{static_output_base}."\n";
 		if ($self->{realdata}){
 			print $outputStream "## realdata restriction ".get_realdata_restriction($self->{realdata})."\n";
@@ -279,6 +277,7 @@ $| = 1;
 				static_no_neighbour_changing =>$realdata->{no_neighbour_changing}, 
 				static_mutnum_control => $args->{mutnum_control}, 
 				static_no_leaves =>$realdata->{no_leaves},
+				static_include_tips =>$realdata->{include_tips},
 				static_alignment_length => $realdata->{alignment_length}, 
 				static_hash_of_nodes => $realdata->{hash_of_nodes}, 
 				static_distance_hash => $realdata->{distance_hash},
@@ -338,6 +337,7 @@ $| = 1;
 				static_no_neighbour_changing =>  $args->{no_neighbour_changing},
 				static_mutnum_control => $args->{mutnum_control}, 
 				static_no_leaves =>$args->{no_leaves},
+				static_include_tips =>$args->{include_tips},
 				static_tree => $static_tree,
 				static_treefile => $treefile,
 				static_fasta => { %static_fasta },
@@ -1539,6 +1539,7 @@ sub prepare_real_data {
 		no_neighbour_changing => $self -> {static_no_neighbour_changing},
 		mutnum_control => $self -> {static_mutnum_control},
 		no_leaves => $self -> {static_no_leaves},
+		include_tips => $self -> {static_include_tips},
 		"obs_hash".$restriction => \%restricted_obs_hash,
 	);
 	
@@ -2131,7 +2132,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 				
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
 				foreach my $md(@maxdepths){
-					if ($max_depth > $md){
+				#	if ($max_depth > $md){
 						foreach my $group_number(0..scalar @groups-1){
 							my $label;
 							if (exists $label_hashes{$md}[$group_number]{"current"}) {$label = $label_hashes{$md}[$group_number]{"current"};}
@@ -2173,7 +2174,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 							}
 							
 						}
-					}
+				#	}
 				}
 
 				
@@ -2332,7 +2333,7 @@ sub concat_and_divide_simult_single_sites {
 				
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
 				foreach my $md(@maxdepths){
-					if ($max_depth > $md){
+				#	if ($max_depth > $md){
 						foreach my $site_node(keys %{$obs_hash}){
 							my ($obssite, $obsnode) = split(/_/, $site_node);
 							if ($obsnode eq $simnode){ # 28.09.2016 
@@ -2348,7 +2349,7 @@ sub concat_and_divide_simult_single_sites {
 								}
 							}
 						}
-					}
+			#		}
 				}
 
 				
@@ -3834,6 +3835,9 @@ sub entrenchment_for_subtrees{
 		 			$subtree_info->{$site_index}{"totmuts"} += 1;
 		 		#	$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2; # 19.09.2016 mutations happen in the middle of a branch; commented out at 27.02.2017
 		 			$subtree_info->{$site_index}{"hash"}{bin($depth-($node->get_branch_length)/2,$step)}[1] += ($node->get_branch_length)/2; # added at 27.02.2017
+		 			if ($self->{static_include_tips}) {
+		 				$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] += ($node->get_branch_length)/2; # added at 21.03.2017
+		 			}
 		 	#		print "subtree_info totmuts for starting_node ".$starting_node->get_name()." node ".$node->get_name()." site $site_index is ".$subtree_info->{$site_index}{"totmuts"}."\n";
 		 			#print "addded to 0\n";
 		 			delete $alive{$site_index};
@@ -4750,6 +4754,7 @@ sub visitor_coat {
  		my $subtract_tallest = $self->{static_subtract_tallest};
  		my $no_neighbour_changing = $self->{static_no_neighbour_changing};
  		my $no_leaves = $self->{static_no_leaves};
+ 		my $include_tips =  $self->{static_include_tips};
 		if (!$node->is_root){
 		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation node for this node, key is a site number
 		
@@ -4804,6 +4809,9 @@ sub visitor_coat {
 				}
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += ($node->get_branch_length)/2; # #19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] -= $node->get_branch_length; #19.09.2016 we added this length before, but shouldn't have done it
+				if ($include_tips){
+					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] += ($node->get_branch_length)/2; #21.03.2017 
+				}			
 			#	print "mutation! anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				
 			}

@@ -27,7 +27,7 @@ sub shuffle_mutations {
 	while($I<@{$ra_strip_constr}){
 		my $n=$ra_strip_constr->[$I]->number_of_mutations();
 		my $lambda=$ra_strip_constr->[$I]->hazard(); #number of strips
-		print "-----------------------ancestor is ".$rnode->get_name."site $I, want $n mutations here \n";
+		#print "-----------------------ancestor is ".$rnode->get_name."site $I, want $n mutations here \n";
 		#print " lambda for ".$rnode->get_name." anc site $I is $lambda\n";
 		my $ra_events=$ra_out_event_nodes->[-1];
 		my @nsamples;

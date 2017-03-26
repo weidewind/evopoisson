@@ -1,16 +1,8 @@
 #!/bin/bash
 
-foldername="exp_shuffler"
-for i in {0..5}
-do
-		for number in {1..10}
-		do
-			it=$((number+10*i))
-				out="${foldername}/${it}_fake"
-				perl poisson.pl -p h1 --state nsyn --simnumber 100 --mutnum_control 0 --fake --maxmem 8000000 --output $out >>output/fakeslog_${foldername} &
-		done
-		wait
-		
+foldername="fake_exp_shuffler_after_middle_debugging"
+for i in {0..3}
+do	
 		for number in {1..10}
 		do
 			it=$((number+10*i))
@@ -22,7 +14,7 @@ done
 
 
 
-for i in {0..5}
+for i in {0..3}
 do
 		for number in {1..10}
 		do
@@ -33,7 +25,6 @@ do
 		done
 		wait
 done
-	
-perl grep_fake_fdr.pl -i output/${foldername}
+
 perl  metagrep_newsim_stats.pl -i output/${foldername}
 exit 0

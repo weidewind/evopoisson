@@ -5,8 +5,12 @@ use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 
 my $input;
+my $state = "nsyn";
+my $no_neighbour_changing;
 GetOptions (	
 		'input=s' =>\$input,
+		'state=s' =>\$state,
+		'no_neighbour_changing' =>\$no_neighbour_changing,
 	);
 
 my $dirname = File::Spec->catdir(getcwd(), $input); 
@@ -28,20 +32,25 @@ foreach my $di(sort @dirs){
 	my $dipath =  File::Spec->catdir($dirname,$di);
 	if (-d $dipath && $di =~ /([0-9]+)_fake/){
 		my $fakeno = $1;
-		print "fake dir found: $di \n";
-		$dipath =  File::Spec->catdir($dipath,"nsyn","maxpath_not_subtracted");
+		$dipath =  File::Spec->catdir($dipath,$state,"maxpath_not_subtracted");
+		if ($no_neighbour_changing){
+			$dipath =  File::Spec->catdir($dipath,"no_neighbour_changing");
+		}
+		print "fake dir found: $dipath \n";
 		opendir(DH, $dipath);
 		my @files = readdir(DH);
 		closedir(DH);
 		if (scalar @files == 0){
-			die "No files found in $input!\n";
+			warn "No files found in $dipath!\n";
+			next;
 		}
 		
 		foreach my $filename(sort @files){
-			print "$filename found\n";
+
 			my $filepath =  File::Spec->catfile($dipath,$filename);
 			next if (-d $filepath);
 			if ($filename =~ /(.*)_sim_sites_with_stats/){
+				print "$filename found\n";
 				open FILE, "<$filepath" or die "Cannot open $filepath: $!\n"; 
 				my $str =  <FILE>; 
 				while(<FILE>){
@@ -51,6 +60,7 @@ foreach my $di(sort @dirs){
 				
 			}
 			if ($filename =~ /[a-z][0-9]_sites_with_stats/){
+				print "$filename found\n";
 				open FILE, "<$filepath" or die "Cannot open $filepath: $!\n";  
 				my $str =  <FILE>; 
 				while(<FILE>){

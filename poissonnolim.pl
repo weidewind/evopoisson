@@ -3,7 +3,7 @@
 use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); # adds working directory to @INC
-use Mutmap;
+use Mutmapnolim;
 use Getopt::Long;
 use File::Path qw(make_path remove_tree);
 use Groups;
@@ -31,6 +31,7 @@ my $no_groups;
 my $verbose;
 my $no_neighbour_changing;
 my $no_leaves;
+my $include_tips;
 my $switch;
 my $mutnum_control = 0.2;
 my $fake;
@@ -55,6 +56,7 @@ GetOptions (
 		'verbose'  => \$verbose,
 		'no_neighbour_changing' => \$no_neighbour_changing,
 		'no_leaves' => \$no_leaves,
+		'include_tips' => \$include_tips,
 		'switch' =>\$switch,
 		'mutnum_control=s' => \$mutnum_control,
 		'fake' => \$fake,
@@ -68,29 +70,29 @@ $| = 1;
 
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest,  no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, mutnum_control => $mutnum_control, fromfile => 1}; 
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest,  no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, include_tips => $include_tips,  mutnum_control => $mutnum_control, fromfile => 1}; 
 
 ## Checking if appropriate realdata exists, initializing
 my @restriction_levels = split(/,/, $restrictions);
 my $specified_restriction = List::Util::min(@restriction_levels);
 my $mutmap;
-if  (! (Mutmap::realdata_exists($args))) { 
+if  (! (Mutmapnolim::realdata_exists($args))) { 
 	print "No realdata exists for specified parameters, going to prepare it.."; 
 	$args->{fromfile} = 0;
-	$mutmap = Mutmap->new($args);
+	$mutmap = Mutmapnolim->new($args);
 	$mutmap-> prepare_real_data ({restriction => $specified_restriction,step => $step});
 }
 else {
-	my $rr = Mutmap::check_realdata_restriction($args);
+	my $rr = Mutmapnolim::check_realdata_restriction($args);
 	if ($rr > $specified_restriction){
 		print "Existing realdata restriction is greater than the minimal restriction you specified: ".$rr." > ".$specified_restriction."\nGoing to overwrite realdata..\n"; 
 		$args->{fromfile} = 0;
-		$mutmap = Mutmap->new($args);
+		$mutmap = Mutmapnolim->new($args);
 		$mutmap-> prepare_real_data ({restriction => $specified_restriction,step => $step});
 	}
 	else {
 		print "Going to use existing realdata with restriction $rr\n";
-		$mutmap = Mutmap->new($args);
+		$mutmap = Mutmapnolim->new($args);
 	}
 }
 
@@ -103,7 +105,7 @@ if ($fake){
 
 $mu->record('just before mutmap creation');
 $args->{fromfile} = 1;
-my $mutmap = Mutmap->new($args); # from file
+my $mutmap = Mutmapnolim->new($args); # from file
 $mu->record('mutmap created');
 $mutmap-> createCodeversionFile("poisson");
 ##
@@ -229,6 +231,7 @@ sub mycomm {
 	if ($verbose){ $command = $command." --verbose ";}
 	if ($memusage){ $command = $command." --memusage ";}
 	if ($no_leaves){ $command = $command." --no_leaves ";}
+	if ($include_tips) {$command = $command." --include_tips ";}
 	if ($no_neighbour_changing){ $command = $command." --no_neighbour_changing ";}
 	if ($lifetime_restr) { $command = $command." --lifetime_restr ";}
 	if ($onestrip) { $command = $command." --onestrip ";}

@@ -236,7 +236,7 @@ sub is_neighbour_changing {
 		$answer = 1;
 	}
 	else {
-		if ($full == 1){
+		if ($full == 1){ # no_neighbour_changing option, prohibits quantitive change (not only qualitative)
 			foreach my $k (keys %anc_neighbours){
 				if (!$der_neighbours{$k} || $der_neighbours{$k} ne $anc_neighbours{$k}){
 					$answer = 1;

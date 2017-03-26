@@ -55,12 +55,13 @@ print GROUPS "site_node,mutations,maxlength,pvalue_epistasis(median),pvalue_epis
 my $simsitesfile = File::Spec->catfile($dirname, $prot."_sim_sites_with_stats");
 open SIMS, ">$simsitesfile" or die "Cannot open $simsitesfile: $!\n";
 print SIMS "site_node,maxdepth,mutnum,totlen,bootobsmed,bootexpmed,bootobsmean,bootexpmean,\n";
+print "printing to $sitesfile and $simsitesfile\n";
 my $obss;
 my @simstats;
 while(<FILE>){
 	if ($_ =~ /^[\s\t]*observed.*median/){
 		my $obsmedian = (split(/:/, $_))[1]; 
-		print "obsmedian ".$obsmedian."\n";
+		#print "obsmedian ".$obsmedian."\n";
 		$obsmedian =~ s/[\s\t]+//g;
 		#print $obsmedian."\n";
 		$obss = $obss.$obsmedian.",";
@@ -88,7 +89,7 @@ while(<FILE>){
 		$_ = <FILE>;
 		my $bootobsmean = (split(/\s/, $_))[4];
 		my $bootexpmean = (split(/\s/, $_))[8];
-		print $bootobsmed."\t".$bootexpmed."\t".$bootobsmean."\t".$bootexpmean."\n";
+		#print $bootobsmed."\t".$bootexpmed."\t".$bootobsmean."\t".$bootexpmean."\n";
 		push @simstats, [$bootobsmed, $bootexpmed, $bootobsmean, $bootexpmean];
 	}
 
@@ -103,10 +104,10 @@ while(<FILE>){
 		$obss = "";
 	}
 	if ($_ =~ /^>(.*)/){
-		print $_;
+		#print $_;
 		#site_node	mutations	maxlength	pvalue_epistasis(median)	pvalue_epistasis(mean)	pvalue_environment(median) iterations
 		my @args = split(/[\s+]/, $1); 
-		print $1;
+		#print $1;
 		foreach my $arg(@args){
 			if ($arg ne ""){
 				print GROUPS $arg.",";

@@ -5,8 +5,12 @@ use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 
 my $input;
+my $state = "nsyn";
+my $no_neighbour_changing;
 GetOptions (	
 		'input=s' =>\$input,
+		'state=s' =>\$state,
+		'no_neighbour_changing' =>\$no_neighbour_changing,
 	);
 
 my $dirname = File::Spec->catdir(getcwd(), $input); 
@@ -24,13 +28,18 @@ foreach my $di(sort @dirs){
 	my $dipath =  File::Spec->catdir($dirname,$di);
 	if (-d $dipath && $di =~ /([0-9]+)_fake/){
 		my $fakeno = $1;
-		print "fake dir found: $di \n";
-		$dipath =  File::Spec->catdir($dipath,"nsyn","maxpath_not_subtracted");
+		
+		$dipath =  File::Spec->catdir($dipath,$state,"maxpath_not_subtracted");
+		if ($no_neighbour_changing){
+			$dipath =  File::Spec->catdir($dipath,"no_neighbour_changing");
+		}
 		opendir(DH, $dipath);
+		print "fake dir found: $dipath \n";
 		my @files = readdir(DH);
 		closedir(DH);
 		if (scalar @files == 0){
-			die "No files found in $input!\n";
+			warn "No files found in $dipath!\n";
+			next;
 		}
 		
 		
@@ -58,7 +67,9 @@ foreach my $di(sort @dirs){
 			my $prot = $1;
 			my $depth = $2;
 			my $ending = $3;
-			print "Going to open $filepath \n";
+			if ($ending =~ /(all)$/){
+				print "Going to open $filepath \n";
+			}
 			open FILE, "<$filepath" or die "Cannot open $filepath: $!\n";
 			if ($ending =~ /(.*)_complement$/ || $ending =~ /(all)$/){
 				my $group = $1;

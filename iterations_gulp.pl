@@ -24,6 +24,11 @@ my $no_leaves;
 my $restriction;
 my $faketag;
 
+my $lifetime_restr;
+my $onestrip;
+my $shuffler_type = "exp";
+my $debugmode;
+
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
 		'input=s' => \$input,
@@ -37,6 +42,10 @@ GetOptions (	'protein=s' => \$protein,
 		'no_leaves' => \$no_leaves,
 		'restriction=i' => \$restriction,
 		'faketag=s' => \$faketag,
+		'lifetime_restr' => \$lifetime_restr,
+		'onestrip' => \$onestrip,
+		'shuffler_type=s' => \$shuffler_type,
+		'debugmode' => \$debugmode,
 	);
 
 
@@ -50,7 +59,7 @@ print "realdata restriction is ".Mutmap::check_realdata_restriction($args)."\n";
 if ($verbose) { print "Starting gulp $tag of $iterations iterations for protein $protein..\n"; }
 ## for launching iterations you need a mutmap produced from realdata, therefore fromfile => true
 my $mutmap = Mutmap->new($args);
-$mutmap-> iterations_gulp ($iterations, $tag, $verbose, $memusage, $restriction);
+$mutmap-> iterations_gulp ($iterations, $tag, $verbose, $memusage, $restriction, $lifetime_restr, $onestrip, $shuffler_type, $debugmode);
 if ($verbose) { print "Finished gulp $tag of $iterations iterations for protein $protein\n"; }
 ###
 
