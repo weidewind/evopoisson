@@ -933,16 +933,18 @@ sub get_hashes {
 	my $self = shift;
 	my %res_hash;
 	#print ("what must be a hashref is a ".ref($self->{static_nodes_with_sub})."\n");
+	my @nodes = $self->{static_tree}->get_nodes;
 	foreach my $ind(keys $self->{static_nodes_with_sub}){
 		my %x_hash;
 		my %y_hash;
-		foreach my $node($self->{static_tree}->get_nodes){
-			$x_hash{$node->get_name()} = $node->get_branch_length;
-			if ($self->{static_subs_on_node}{$node->get_name()}{$ind}){
-				$y_hash{$node->get_name()} = 1;			
+		foreach my $node(@nodes){
+			my $nname = $node->get_name();
+			$x_hash{$nname} = $node->get_branch_length;
+			if ($self->{static_subs_on_node}{$nname}{$ind}){
+				$y_hash{$nname} = 1;			
 			}
 			else {
-				$y_hash{$node->get_name()} = 0;
+				$y_hash{$nname} = 0;
 			}
 		}
 		$res_hash{$ind}{"x"} = \%x_hash;
@@ -1069,7 +1071,8 @@ sub iterations_gulp{
 	my $onestrip = shift;
 	my $shuffler_type = shift;
 	my $debugmode = shift;
-	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, $lifetime_restr, $onestrip, $shuffler_type, $debugmode); # 0 - no lifetime restriction, 1 - one strip, "exp" or "strip" shuffler, "debug" - mock shuffler
+	my $poisson = shift;
+	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, $lifetime_restr, $onestrip, $shuffler_type, $debugmode, $poisson); # 0 - no lifetime restriction, 1 - one strip, "exp" or "strip" shuffler, "debug" - mock shuffler
 }
 
 # new simulation method 11.01.2017 
@@ -1088,7 +1091,7 @@ sub iterations_gulp_subtree_shuffling {
 	my $onestrip = shift;
 	my $shufflertype = shift;
 	my $debugmode = shift;
-	
+	my $poisson = shift;
 		
 	if ($verbose){print "Extracting realdata..\n";}	
 	my $realdata = $self->{realdata};
@@ -1140,7 +1143,7 @@ sub iterations_gulp_subtree_shuffling {
 			}
 			elsif ($shufflertype eq "exp"){
 				print "Going to shuffle..\n";
-				$rh_out_subtree = shuffle_muts_on_tree_exp::shuffle_mutations_on_tree($self->{static_tree}, $rh_constrains); 
+				$rh_out_subtree = shuffle_muts_on_tree_exp::shuffle_mutations_on_tree($self->{static_tree}, $rh_constrains, $poisson); 
 			}
 		}
 		
@@ -3699,7 +3702,7 @@ sub entrenchment_for_subtrees{
 				$square += $subtree_info{$site}{"hash"}{$bin}[1];
 			}
 			if ($exits != $subtree_info{$site}{"totmuts"}){
-				print "Error! for $site $nodename entrenchment found ".$subtree_info{$site}{"totmuts"}.", and shuffler planted $exits \n";
+				print "Error! for $site $nodename entrenchment found ".$subtree_info{$site}{"totmuts"}.", and shuffler planted $exits (not an error in debugmode, because in that case exits comprise all mutations in site (including those before ancestor and after stoppers)\n";
 				foreach my $ex (@{$rh_out_subtree->{$nodename}{$site}}){
 					print " ex ".$ex." depth ".$self->{static_distance_hash}{$nodename}{$ex}."\n";
 				}
@@ -3801,8 +3804,11 @@ sub entrenchment_for_subtrees{
 			return;
 		}
 		my %alive = %{$node->get_parent->get_generic("-alive")};  # a copy of existing hash! since it's one-dim, it is perfectly ok that it's only a shallow copy 
+		my $nname = $node->get_name();
+		my $nlength = $node->get_branch_length;
+		my $startnname = $starting_node->get_name();
 		my $depth = $_[3] - $starting_node->get_branch_length ;
-		if ($depth != $self->{static_distance_hash}{$starting_node->get_name()}{$node->get_name()}){
+		if ($depth != $self->{static_distance_hash}{$startnname}{$nname}){
 			print "Error! depth is strange\n";
 		}
 			
@@ -3812,38 +3818,38 @@ sub entrenchment_for_subtrees{
  				if (!($self->has_no_background_mutation($node, $site_index))){
  				#	print "deleting $site_index ".$starting_node->get_name()."from alive: background mutation found at ".$node->get_name()."\n";
  					my $found;
- 					foreach my $stopper (@{$self->{realdata}{subtree_info}{$starting_node->get_name()}{$site_index}{"stoppers"}}){
- 						if ($node->get_name() eq $stopper->get_name()){
- 							print "Found stopper ".$stopper->get_name()." at $site_index ".$starting_node->get_name()."\n";
+ 					foreach my $stopper (@{$self->{realdata}{subtree_info}{$startnname}{$site_index}{"stoppers"}}){
+ 						if ($nname eq $stopper->get_name()){
+ 							print "Found stopper ".$stopper->get_name()." at $site_index ".$startnname."\n";
  							$found = 1;
  						}
  					}
  					unless ($found){
- 						print "not_an_error_Iguess: ".$node->get_name()." is not in realdata stoppers list for ".$starting_node->get_name()." $site_index (in simulation we may pass a foreground mutation and see some previously hidden stoppers) \n";
+ 						print "not_an_error_Iguess: ".$nname." is not in realdata stoppers list for ".$startnname." $site_index (in simulation we may pass a foreground mutation and see some previously hidden stoppers) \n";
  					}
  					delete $alive{$site_index};
  					next;
  				}
- 				if ($lifetime && $self->{realdata}{subtree_info}{$starting_node->get_name()}{$site_index}{"maxdepth"} < $depth){
+ 				if ($lifetime && $self->{realdata}{subtree_info}{$startnname}{$site_index}{"maxdepth"} < $depth){
  				#	print "deleting $site_index from alive: allowed depth is ".$self->{realdata}{subtree_info}{$starting_node->get_name()}{$site_index}{"maxdepth"}.", node ".$node->get_name()."depth is $depth\n";
  					delete $alive{$site_index};
  					next;
  				}
-		 		if ($mutations->{$site_index}{$node->get_name()}){ #take muts from hash! 
-		 			$subtree_info->{$site_index}{"hash"}{bin($depth-($node->get_branch_length)/2,$step)}[0] += 1; # changed at 27.02.2017 (-halfbranch)
+		 		if ($mutations->{$site_index}{$nname}){ #take muts from hash! 
+		 			$subtree_info->{$site_index}{"hash"}{bin($depth-$nlength/2,$step)}[0] += 1; # changed at 27.02.2017 (-halfbranch)
 		 		#	print "Found a mutation at $site_index ".$node->get_name()."\n";
 		 			$subtree_info->{$site_index}{"totmuts"} += 1;
 		 		#	$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2; # 19.09.2016 mutations happen in the middle of a branch; commented out at 27.02.2017
-		 			$subtree_info->{$site_index}{"hash"}{bin($depth-($node->get_branch_length)/2,$step)}[1] += ($node->get_branch_length)/2; # added at 27.02.2017
+		 			$subtree_info->{$site_index}{"hash"}{bin($depth-$nlength/2,$step)}[1] += $nlength/2; # added at 27.02.2017
 		 			if ($self->{static_include_tips}) {
-		 				$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] += ($node->get_branch_length)/2; # added at 21.03.2017
+		 				$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] += $nlength/2; # added at 21.03.2017
 		 			}
 		 	#		print "subtree_info totmuts for starting_node ".$starting_node->get_name()." node ".$node->get_name()." site $site_index is ".$subtree_info->{$site_index}{"totmuts"}."\n";
 		 			#print "addded to 0\n";
 		 			delete $alive{$site_index};
 		 		}
 		 		else { # added at 27.02.2017 - now branch length is added to depth bin if there is no mutation on it
-		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
+		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] += $nlength;
 		 		}		 	
 		 		#	print "subtree maxdepth for ".$starting_node->get_name()." $site_index is ".$subtree_info->{$site_index}{"maxdepth"}."\n";
 		 		if (!($subtree_info->{$site_index}{"maxdepth"}) || $subtree_info->{$site_index}{"maxdepth"} < $depth){
@@ -4756,6 +4762,8 @@ sub visitor_coat {
  		my $no_leaves = $self->{static_no_leaves};
  		my $include_tips =  $self->{static_include_tips};
 		if (!$node->is_root){
+		my $nname = $node->get_name();
+		my $nlength = $node->get_branch_length;
 		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation node for this node, key is a site number
 		
 		if (%closest_ancestors){
@@ -4773,18 +4781,19 @@ sub visitor_coat {
 			##
 			foreach my $site_index(keys %closest_ancestors){ 
 				my $anc_node = $closest_ancestors{$site_index};
-				my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()};
-				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
+				my $ancname = $anc_node->get_name();
+				my $depth = $self->{static_distance_hash}{$ancname}{$nname};
+				$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($depth,$step)}[1] += $nlength;
 			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				# commented out at 27.02.2017 and copy-pasted higher
 				#if (!($self->has_no_background_mutation($node, $site_index))){
 				#	push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"stoppers"}}, $node;
 				#}
-				my $current_maxdepth = $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"};
+				my $current_maxdepth = $self->{static_subtree_info}{$ancname}{$site_index}{"maxdepth"};
 				if ($current_maxdepth < $depth){
-						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"} = $depth;
+						$self->{static_subtree_info}{$ancname}{$site_index}{"maxdepth"} = $depth;
 						if ($subtract_tallest){
-							$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth_node"} = $node->get_name();
+							$self->{static_subtree_info}{$ancname}{$site_index}{"maxdepth_node"} = $nname;
 						}
 				}					
 			}
@@ -4793,24 +4802,25 @@ sub visitor_coat {
 		}
 		
 		# for nodes with mutations
-		foreach my $site_index(keys %{$self->{static_subs_on_node}{$node->get_name()}}){
+		foreach my $site_index(keys %{$self->{static_subs_on_node}{$nname}}){
 			
 			if ($closest_ancestors{$site_index}){
 				my $anc_node = $closest_ancestors{$site_index};
-				my $halfdepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()} - ($node->get_branch_length)/2; #19.09.2016 
-				my $fulldepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()}; #19.09.2016 
+				my $ancname = $anc_node->get_name();
+				my $halfdepth = $self->{static_distance_hash}{$ancname}{$nname} - ($nlength)/2; #19.09.2016 
+				my $fulldepth = $self->{static_distance_hash}{$ancname}{$nname}; #19.09.2016 
 			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
 			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
-				if (!$no_neighbour_changing || ($no_neighbour_changing && ! compare::is_neighbour_changing($self->{static_subs_on_node}{$node->get_name()}{$site_index}, 1))){
+				if (!$no_neighbour_changing || ($no_neighbour_changing && ! compare::is_neighbour_changing($self->{static_subs_on_node}{$nname}{$site_index}, 1))){
 					if (!$no_leaves || ($no_leaves && !($node->is_terminal()))){
-						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[0] += 1; #19.09.2016 
-						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"totmuts"} += 1; #21.12.2016
+						$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($halfdepth,$step)}[0] += 1; #19.09.2016 
+						$self->{static_subtree_info}{$ancname}{$site_index}{"totmuts"} += 1; #21.12.2016
 					}
 				}
-				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += ($node->get_branch_length)/2; # #19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
-				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] -= $node->get_branch_length; #19.09.2016 we added this length before, but shouldn't have done it
+				$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += ($nlength)/2; # #19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
+				$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] -= $nlength; #19.09.2016 we added this length before, but shouldn't have done it
 				if ($include_tips){
-					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] += ($node->get_branch_length)/2; #21.03.2017 
+					$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] += ($nlength)/2; #21.03.2017 
 				}			
 			#	print "mutation! anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				

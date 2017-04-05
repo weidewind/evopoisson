@@ -19,7 +19,7 @@ struct Constrains =>{
 #The function expects a lifetime constrain in terms of a number of strips
 #Number of strips is required!
 sub shuffle_mutations {
-	my ($rnode,$ra_strip_constr,$ra_out_event_nodes)=@_;
+	my ($rnode,$ra_strip_constr,$ra_out_event_nodes, $poisson)=@_;
 	@{$ra_out_event_nodes}=();
 	push @{$ra_out_event_nodes},[];
 	my $ii=$MaxTries;
@@ -63,7 +63,7 @@ sub shuffle_mutations {
 		push @stack,$rnode unless exists $blocked{$rnode->get_name};
 		my $t0=$rnode->get_generic('time');
 		#while($head<@stack){
-			while(@stack){
+		while(@stack){
 			#my $node=$stack[$head++];
 			my $node= pop @stack;
 			if($node!=$rnode && !$blocked{$node->get_name}){
@@ -73,7 +73,13 @@ sub shuffle_mutations {
 				#$t=$node->get_generic('time')-$t0;
 				#$p-=exp(-$lambda*$t);
 				my $t=$node->get_generic('time')-$pnode->get_generic('time');
-				my $p=1-exp(-$lambda*$t);
+				my $p;
+				if($poisson){
+					$p=$lambda*$t;
+				}
+				else {
+					$p=1-exp(-$lambda*$t);
+				}
 				$_=$rng->rand();
 				if($_<=$p){ 
 					push @{$ra_events},$node->get_name;
@@ -122,7 +128,7 @@ sub shuffle_mutations {
 #output args:
 #hash{node_name}{site_index} = [], ref on array with nodes carrying mutations 
 sub shuffle_mutations_on_tree{
-	my ($tree,$rh_constrains)=@_;
+	my ($tree,$rh_constrains, $poisson)=@_;
 	my $rh_out_subtree;
 #	print "Went inside shuffler\n";
 	#if a setting of attributes on tree nodes is not a problem than cloning may be omitted
@@ -158,7 +164,7 @@ sub shuffle_mutations_on_tree{
 			};
 			my @tmp; 
 			#print " just about to shuffle muts on tree for node $name\n";
-			shuffle_mutations($node,\@strip_constrs,\@tmp);
+			shuffle_mutations($node,\@strip_constrs,\@tmp, $poisson);
 			for(my $i=0;$i<@sites;$i++){
 				my $site=$sites[$i];
 				if(defined $tmp[$i]){

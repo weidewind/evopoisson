@@ -40,6 +40,7 @@ my $lifetime_restr;
 my $onestrip;
 my $shuffler_type = "exp";
 my $debugmode;
+my $poisson; # exp shuffler is poisson not exp :)
 
 
 GetOptions (	
@@ -64,6 +65,7 @@ GetOptions (
 		'onestrip' => \$onestrip,
 		'shuffler_type=s' => \$shuffler_type,
 		'debugmode' => \$debugmode,
+		'distrpoisson' =>\$poisson,
 	);
 
 $| = 1;
@@ -194,6 +196,7 @@ if ($sim > 0){
 	## Launching a series of new iteration_gulps if needed 
 
 	foreach my $command (@commands) {
+		  sleep(3); # because new server somehow managed to launch 5 procs with the same seed) 
 	      $manager->start and next;
 	      system( $command );
 	      $manager->finish;
@@ -236,6 +239,7 @@ sub mycomm {
 	if ($lifetime_restr) { $command = $command." --lifetime_restr ";}
 	if ($onestrip) { $command = $command." --onestrip ";}
 	if ($debugmode) { $command = $command." --debugmode ";}
+	if ($poisson) { $command = $command." --distrpoisson ";}
 	if ($shuffler_type ne "strip" && $onestrip){print "onestrip option is ignored (only meaningful for strip shuffler_type)";}
 	return $command;
 	
