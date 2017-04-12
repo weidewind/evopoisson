@@ -32,6 +32,7 @@ my $verbose;
 my $no_neighbour_changing;
 my $no_leaves;
 my $include_tips;
+my $skip_stoppers;
 my $switch;
 my $mutnum_control = 0.2;
 my $fake;
@@ -58,6 +59,7 @@ GetOptions (
 		'no_neighbour_changing' => \$no_neighbour_changing,
 		'no_leaves' => \$no_leaves,
 		'include_tips' => \$include_tips,
+		'skip_stoppers' => \$skip_stoppers,
 		'switch' =>\$switch,
 		'mutnum_control=s' => \$mutnum_control,
 		'fake' => \$fake,
@@ -72,7 +74,7 @@ $| = 1;
 
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest,  no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, include_tips => $include_tips,  mutnum_control => $mutnum_control, fromfile => 1}; 
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest,  no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, include_tips => $include_tips, skip_stoppers => $skip_stoppers, mutnum_control => $mutnum_control, fromfile => 1}; 
 
 ## Checking if appropriate realdata exists, initializing
 my @restriction_levels = split(/,/, $restrictions);
@@ -196,7 +198,7 @@ if ($sim > 0){
 	## Launching a series of new iteration_gulps if needed 
 
 	foreach my $command (@commands) {
-		  sleep(3); # because new server somehow managed to launch 5 procs with the same seed) 
+		  sleep(3); # because the new server somehow managed to launch 5 procs with the same seed ) 
 	      $manager->start and next;
 	      system( $command );
 	      $manager->finish;
@@ -235,6 +237,7 @@ sub mycomm {
 	if ($memusage){ $command = $command." --memusage ";}
 	if ($no_leaves){ $command = $command." --no_leaves ";}
 	if ($include_tips) {$command = $command." --include_tips ";}
+	if ($skip_stoppers) {$command = $command." --skip_stoppers ";}
 	if ($no_neighbour_changing){ $command = $command." --no_neighbour_changing ";}
 	if ($lifetime_restr) { $command = $command." --lifetime_restr ";}
 	if ($onestrip) { $command = $command." --onestrip ";}

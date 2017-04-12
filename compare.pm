@@ -5,10 +5,12 @@ use vars qw(@ISA @EXPORT $VERSION);
 use Exporter;
 $VERSION = 1.00; # Or higher
 @ISA = qw(Exporter);
-@EXPORT = qw(get_synmuts count_substitutions nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing); # Symbols to autoexport (:DEFAULT tag)
+@EXPORT = qw(new get_synmuts count_substitutions nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing); # Symbols to autoexport (:DEFAULT tag)
 
 use Bio::Tools::CodonTable;
 use Class::Struct;
+use Carp;
+use Devel::StackTrace;
 
 struct Substitution => {
 	position => '$',
@@ -16,27 +18,38 @@ struct Substitution => {
 	derived_allele => '$'
 };
 
-my $myCodonTable;
-my %possible_subs;
-my %neighbour_hash;
 
-sub get_codon_table{
-	if (!$myCodonTable){
-		$myCodonTable = Bio::Tools::CodonTable->new();
-	}
-	return $myCodonTable
-}
 
-sub get_possible_subs {
-	if (!%possible_subs){
-		%possible_subs = (
+
+sub new {
+	my $class = shift;
+	my $codon_table = Bio::Tools::CodonTable->new();
+	my %possible_subs = (
 			A => ['T', 'C', 'G'],
 			T => ['A', 'C', 'G'],
 			G => ['T', 'C', 'A'],
 			C => ['T', 'A', 'G']
 		);
-	}
-	return %possible_subs;
+	my %neighbour_hash = ();
+	my $self;
+	$self = { 
+				codon_table => $codon_table,
+				possible_subs => { %possible_subs },
+				neighbour_hash => { %neighbour_hash }
+	};
+	bless $self, $class;
+	return $self;
+}
+
+
+sub get_codon_table{
+	my $self = shift;
+	return $self->{codon_table};
+}
+
+sub get_possible_subs {
+	my $self = shift;
+	return $self->{possible_subs};
 }
 
 
@@ -214,22 +227,21 @@ sub syn_substitutions{
 
 # tells if synonimous substitution changes the range of one-symbol neighbours
 sub is_neighbour_changing {
+	my $self = shift;
 	my $subst = $_[0];
 	my $full = $_[1];
 	if (!$full){
 		$full = 0;
 	}
-	
-	my $existing_answer = $neighbour_hash{$subst->{"Substitution::ancestral_allele"}}->{$subst->{"Substitution::derived_allele"}}->{$full};
-	if ($existing_answer){
-		return $existing_answer
+	if (exists $self->{neighbour_hash}{$subst->{"Substitution::ancestral_allele"}}{$subst->{"Substitution::derived_allele"}}{$full}){
+		return $self->{neighbour_hash}{$subst->{"Substitution::ancestral_allele"}}{$subst->{"Substitution::derived_allele"}}{$full};
 	}
 	else {
 	
-	my $codonTable = get_codon_table();
+	my $codonTable = $self->{codon_table};
 	
-	my %anc_neighbours = get_neighbours($subst->{"Substitution::ancestral_allele"});
-	my %der_neighbours = get_neighbours($subst->{"Substitution::derived_allele"});
+	my %anc_neighbours = $self->get_neighbours($subst->{"Substitution::ancestral_allele"});
+	my %der_neighbours = $self->get_neighbours($subst->{"Substitution::derived_allele"});
 	
 	my $answer = 0;
 	if (length(keys %anc_neighbours) != length(keys %der_neighbours)){
@@ -252,7 +264,7 @@ sub is_neighbour_changing {
 		}
 	}
 	
-	$neighbour_hash{$subst->{"Substitution::ancestral_allele"}}->{$subst->{"Substitution::derived_allele"}}->{$full} = $answer;
+	$self->{neighbour_hash}{$subst->{"Substitution::ancestral_allele"}}{$subst->{"Substitution::derived_allele"}}{$full} = $answer;
 	return $answer;
 	}
 
@@ -277,13 +289,14 @@ sub test_is_neighbour_changing{
 
 # returns a hash: key - amino acid, which can be reached in one step, value - number of paths leading to that amino acid
 sub get_neighbours {
+	my $self = shift;
 	my $codon = $_[0];
 	my %neighbours;
-	my $codonTable = get_codon_table();
-	my $possible_subs = get_possible_subs();
+	my $codonTable = $self->{codon_table};
+	my $possible_subs = $self->{possible_subs};
 	for (my $i = 0; $i < 3; $i++){
 		my $str = $codon;
-		foreach my $letter (@{$possible_subs{substr($codon, $i, 1)}}){
+		foreach my $letter (@{$possible_subs->{substr($codon, $i, 1)}}){
 			substr($str, $i, 1) = $letter;
 			$neighbours{$codonTable->translate($str)}++;
 		}
@@ -292,13 +305,14 @@ sub get_neighbours {
 }
 
 sub get_synmuts {
+	my $self = shift;
 	my $codon = $_[0];
 	my $synmuts;
-	my $codonTable = get_codon_table();
-	my $possible_subs = get_possible_subs();
+	my $codonTable = $self->{codon_table};
+	my $possible_subs = $self->{possible_subs};
 	for (my $i = 0; $i < 3; $i++){
 		my $str = $codon;
-		foreach my $letter (@{$possible_subs{substr($codon, $i, 1)}}){
+		foreach my $letter (@{$possible_subs->{substr($codon, $i, 1)}}){
 			substr($str, $i, 1) = $letter;
 			if ($codonTable->translate($str) eq $codonTable->translate($codon)){
 				my $type = muttype($letter, substr($codon, $i, 1));

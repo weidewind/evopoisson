@@ -3,7 +3,7 @@
 use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); # adds working directory to @INC
-use Mutmap;
+use Mutmapnolim;
 use Getopt::Long;
 use Getopt::ArgvFile;
 use Groups;
@@ -55,12 +55,12 @@ GetOptions (	'protein=s' => \$protein,
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "--subtract_tallest must be either 0 or 1\n";}
 unless (defined $tag){die "There will be several gulp files in one folder, therefore a --tag for each gulp must be specified (and it should be an integer)";}
 my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, fromfile => 1, faketag => $faketag}; 
-unless  (Mutmap::realdata_exists($args)) { die "No such realdata!"; }
-print "realdata restriction is ".Mutmap::check_realdata_restriction($args)."\n";
+unless  (Mutmapnolim::realdata_exists($args)) { die "No such realdata!"; }
+print "realdata restriction is ".Mutmapnolim::check_realdata_restriction($args)."\n";
 
 if ($verbose) { print "Starting gulp $tag of $iterations iterations for protein $protein..\n"; }
 ## for launching iterations you need a mutmap produced from realdata, therefore fromfile => true
-my $mutmap = Mutmap->new($args);
+my $mutmap = Mutmapnolim->new($args);
 $mutmap-> iterations_gulp ($iterations, $tag, $verbose, $memusage, $restriction, $lifetime_restr, $onestrip, $shuffler_type, $debugmode, $poisson);
 if ($verbose) { print "Finished gulp $tag of $iterations iterations for protein $protein\n"; }
 ###

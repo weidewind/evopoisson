@@ -41,7 +41,7 @@ use Storable qw(dclone);
 #use DnaUtilities::observation_vector qw(make_observation_vector shuffle_obsv);
 use observation_vector qw(make_observation_vector shuffle_obsv);
 #use DnaUtilities::compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing);
-use compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing get_synmuts);
+use compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons get_synmuts new);
 #use TreeUtils::Phylo::PhyloUtils qw(remove_zero_branches);
 use shuffle_muts_on_tree qw(shuffle_mutations_on_tree prepare_shuffler StripConstrains Shuffler);
 use shuffle_muts_on_tree_exp qw(shuffle_mutations_on_tree Constrains);
@@ -172,6 +172,7 @@ $| = 1;
 		print $outputStream "## omit neighbour-changing mutations (only for 'reversals', ancestor n-ch muts are not skipped. Only valid for syn state)? 1 if true ".$self->{static_no_neighbour_changing}."\n";
 		print $outputStream "## omit mutations on terminal branches? 1 if true ".$self->{static_no_leaves}."\n";
 		print $outputStream "## include halves of branches after mutations? 1 if true ".$self->{static_include_tips}."\n";
+		print $outputStream "## skip stoppers (neighbour-changing background mutations are ignored (i.e. not used for subtree pruning))? Only valid for nsyn state. 1 if true ".$self->{static_skip_stoppers}."\n";
 		print $outputStream "## output_base ".$self->{static_output_base}."\n";
 		if ($self->{realdata}){
 			print $outputStream "## realdata restriction ".get_realdata_restriction($self->{realdata})."\n";
@@ -278,6 +279,7 @@ $| = 1;
 				static_mutnum_control => $args->{mutnum_control}, 
 				static_no_leaves =>$realdata->{no_leaves},
 				static_include_tips =>$realdata->{include_tips},
+				static_skip_stoppers =>$realdata->{skip_stoppers},
 				static_alignment_length => $realdata->{alignment_length}, 
 				static_hash_of_nodes => $realdata->{hash_of_nodes}, 
 				static_distance_hash => $realdata->{distance_hash},
@@ -286,6 +288,7 @@ $| = 1;
 				static_nodes_with_sub => $realdata->{static_nodes_with_sub}, #
 				static_background_subs_on_node => $realdata->{bkg_subs_on_node},
 				static_background_nodes_with_sub => $realdata->{bkg_nodes_with_sub},
+				static_comparator => compare->new(),
 				realdata => $realdata,
 			};
 			
@@ -338,6 +341,7 @@ $| = 1;
 				static_mutnum_control => $args->{mutnum_control}, 
 				static_no_leaves =>$args->{no_leaves},
 				static_include_tips =>$args->{include_tips},
+				static_skip_stoppers =>$args->{skip_stoppers},
 				static_tree => $static_tree,
 				static_treefile => $treefile,
 				static_fasta => { %static_fasta },
@@ -347,6 +351,7 @@ $| = 1;
 				static_nodes_with_sub => $mutmaps[1],
 				static_background_subs_on_node => $bkg_mutmaps[0],
 				static_background_nodes_with_sub => $bkg_mutmaps[1],
+				static_comparator => compare->new(),
 			};
 ## static_hash_of_nodes been here
 			foreach my $node(@nodes){
@@ -1219,7 +1224,8 @@ sub get_strip_constraints {
 	my @nodes = $self->{static_tree}->get_nodes;
 	foreach my $site_index(@group){
 		foreach my $node(@nodes){
-			if (!($self->has_no_background_mutation($node, $site_index))){
+			my $nname = $node->get_name;
+			if (!($self->has_no_background_mutation($nname, $site_index))){
 				push @{$all_stoppers{$site_index}}, $node;
 			}
 		}
@@ -1262,7 +1268,8 @@ sub get_constraints {
 	my @nodes = $self->{static_tree}->get_nodes;
 	foreach my $site_index(@group){
 		foreach my $node(@nodes){
-			if (!($self->has_no_background_mutation($node, $site_index))){
+			my $nname = $node->get_name;
+			if (!($self->has_no_background_mutation($nname, $site_index))){
 				push @{$all_stoppers{$site_index}}, $node;
 			}
 		}
@@ -1543,6 +1550,7 @@ sub prepare_real_data {
 		mutnum_control => $self -> {static_mutnum_control},
 		no_leaves => $self -> {static_no_leaves},
 		include_tips => $self -> {static_include_tips},
+		skip_stoppers => $self -> {static_skip_stoppers},
 		"obs_hash".$restriction => \%restricted_obs_hash,
 	);
 	
@@ -3815,7 +3823,7 @@ sub entrenchment_for_subtrees{
  		#print "depth $depth step $step bin ".(bin($depth,$step))."\n";
  		foreach my $site_index(keys %alive){
  			#print "$site_index is alive at ".$node->get_name()."!\n";
- 				if (!($self->has_no_background_mutation($node, $site_index))){
+ 				if (!($self->has_no_background_mutation($nname, $site_index))){
  				#	print "deleting $site_index ".$starting_node->get_name()."from alive: background mutation found at ".$node->get_name()."\n";
  					my $found;
  					foreach my $stopper (@{$self->{realdata}{subtree_info}{$startnname}{$site_index}{"stoppers"}}){
@@ -4027,9 +4035,10 @@ sub synmut_types {
 	#unless (@group) {
 	my @group = (1..$self->mylength());
 	#}
-		my %closest_ancestors;
+	my %closest_ancestors;
 	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
 	my @args = ( 0.5, $root);
+	my $comparator = compare::new();
 	$self->visitor_coat ($root, \@array,\&synresearch_visitor,\&no_check,\@args,0);
 	foreach my $ind (@group){
 			foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
@@ -4037,7 +4046,7 @@ sub synmut_types {
 			if (!$node->is_terminal){
 				my $anc = $self->{static_subs_on_node}{$node->get_name()}{$ind}->{"Substitution::derived_allele"};
 			#	print "anc $anc\n";
-				my $synmuts = compare::get_synmuts($anc);
+				my $synmuts = $comparator->get_synmuts($anc);
 				my $numtypes = (scalar keys %{$synmuts->{"ts"}}) + (scalar keys %{$synmuts->{"tv"}});
 				# todo create all possible syn types
 				if ($numtypes > 1){
@@ -4635,7 +4644,8 @@ sub visitor_coat {
  		my $node = $_[1];
  		my $site_index = $_[2]->[0];
  		my $starting_node = $_[2]->[2];
- 		
+ 		my $comparator = $self->{static_comparator};
+
  		if ($node eq $starting_node){
  			return 1;
  		}
@@ -4644,7 +4654,7 @@ sub visitor_coat {
  		}
  		
  		if ($self->{static_state} eq "nsyn"){
- 			if (compare::is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
+ 			if ($comparator->is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
  				return 0;
  			}
  			else {
@@ -4660,25 +4670,31 @@ sub visitor_coat {
  			}
  		}
  	}  
- 	
+ 
  	
  	sub has_no_background_mutation {
  		my $self = $_[0];
- 		my $node = $_[1];
+ 		my $nodename = $_[1];
  		my $site_index = $_[2];
+ 		my $comparator = $self->{static_comparator};
  		if ($self->{static_state} eq "nsyn"){
- 			if (compare::is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
- 				return 0;
+ 			if ($self->{static_skip_stoppers}){
+ 				return 1;
  			}
  			else {
- 				return 1;
+ 				if ($comparator->is_neighbour_changing(${$self->{static_background_subs_on_node}{$nodename}}{$site_index}, 1) == 1){
+ 					return 0;
+ 				}
+ 				else {
+ 					return 1;
+ 				}
  			}
  		}
  		else {
- 			if (${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}){
+ 			if (${$self->{static_background_subs_on_node}{$nodename}}{$site_index}){
  				return 0;
  			}
- 			elsif ($self->{static_no_neighbour_changing} && compare::is_neighbour_changing(${$self->{static_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){ # added at 10.01.2017
+ 			elsif ($self->{static_no_neighbour_changing} && $comparator->is_neighbour_changing(${$self->{static_subs_on_node}{$nodename}}{$site_index}, 1) == 1){ # added at 10.01.2017
  				return 0;
  			}
  			else {
@@ -4765,12 +4781,12 @@ sub visitor_coat {
 		my $nname = $node->get_name();
 		my $nlength = $node->get_branch_length;
 		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation node for this node, key is a site number
-		
+		my $comparator = $self->{static_comparator};
 		if (%closest_ancestors){
 			## pasted here 27.02.2017
 			my @ancestors = keys %closest_ancestors;	
 			foreach my $site_index(@ancestors){
-				if (!($self->has_no_background_mutation($node, $site_index))){
+				if (!($self->has_no_background_mutation($nname, $site_index))){
 					## copy-pasted at 27.02.2017 (now we do not add branches with bkgr mutations to square (or maxdepth))
 					my $anc_node = $closest_ancestors{$site_index};
 					push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"stoppers"}}, $node;
@@ -4811,7 +4827,7 @@ sub visitor_coat {
 				my $fulldepth = $self->{static_distance_hash}{$ancname}{$nname}; #19.09.2016 
 			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
 			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
-				if (!$no_neighbour_changing || ($no_neighbour_changing && ! compare::is_neighbour_changing($self->{static_subs_on_node}{$nname}{$site_index}, 1))){
+				if (!$no_neighbour_changing || ($no_neighbour_changing && ! $comparator->is_neighbour_changing($self->{static_subs_on_node}{$nname}{$site_index}, 1))){
 					if (!$no_leaves || ($no_leaves && !($node->is_terminal()))){
 						$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($halfdepth,$step)}[0] += 1; #19.09.2016 
 						$self->{static_subtree_info}{$ancname}{$site_index}{"totmuts"} += 1; #21.12.2016
@@ -4842,33 +4858,34 @@ sub visitor_coat {
  		my $subtract_tallest = $self->{static_subtract_tallest};
  		my $no_neighbour_changing = $self->{static_no_neighbour_changing};
  		my $no_leaves = $self->{static_no_leaves};
+ 		my $comparator = $self->{static_comparator};
 		if (!$node->is_root){
 		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation node for this node, key is a site number
-		
+		my $nname = $node->get_name();
 		if (%closest_ancestors){
 			foreach my $site_index(keys %closest_ancestors){ 
 				my $anc_node = $closest_ancestors{$site_index};
-				my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()};
+				my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$nname};
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
 			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				my $current_maxdepth = $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"};
 				if ($current_maxdepth < $depth){
 						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"} = $depth;
 						if ($subtract_tallest){
-							$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth_node"} = $node->get_name();
+							$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth_node"} = $nname;
 						}
 				}					
 			}
 			
 			my @ancestors = keys %closest_ancestors;	
 			foreach my $site_index(@ancestors){
-				if (!($self->has_no_background_mutation($node, $site_index))){
+				if (!($self->has_no_background_mutation($nname, $site_index))){
 					delete $closest_ancestors{$site_index};
 				}
 			}	
 		}
 		
-		foreach my $site_index(keys %{$self->{static_subs_on_node}{$node->get_name()}}){
+		foreach my $site_index(keys %{$self->{static_subs_on_node}{$nname}}){
 			
 			if ($closest_ancestors{$site_index}){
 				my $anc_node = $closest_ancestors{$site_index};
@@ -4876,10 +4893,10 @@ sub visitor_coat {
 				#my $fulldepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()}; #19.09.2016 
 			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
 			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
-				if (!$no_neighbour_changing || ($no_neighbour_changing && ! compare::is_neighbour_changing($self->{static_subs_on_node}{$node->get_name()}{$site_index}, 1))){
+				if (!$no_neighbour_changing || ($no_neighbour_changing && ! $comparator->is_neighbour_changing($self->{static_subs_on_node}{$nname}{$site_index}, 1))){
 					if (!$no_leaves || ($no_leaves && !($node->is_terminal()))){
-						push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"synresearch"}}, $self->{static_subs_on_node}{$node->get_name()}{ $site_index}; 
-						push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"list"}}, $node->get_name();
+						push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"synresearch"}}, $self->{static_subs_on_node}{$nname}{ $site_index}; 
+						push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"list"}}, $nname;
 					}
 				}
 			#	$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += ($node->get_branch_length)/2; # #19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
@@ -4902,27 +4919,27 @@ sub visitor_coat {
 
 		if (!$node->is_root){
 			my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")};
-			
+			my $nname = $node->get_name();
 			if (%closest_ancestors){
 				foreach my $site_index(keys %closest_ancestors){ 
 					my $anc_node = $closest_ancestors{$site_index};
-					my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()};
-					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"lrt"}{$node->get_name()}[1] = $depth-($node->get_branch_length); #23.03 t_branch_start
-					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"lrt"}{$node->get_name()}[2] = $depth; #23.03 t_branch_end					
+					my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$nname};
+					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"lrt"}{$nname}[1] = $depth-($node->get_branch_length); #23.03 t_branch_start
+					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"lrt"}{$nname}[2] = $depth; #23.03 t_branch_end					
 				}
 				
 				my @ancestors = keys %closest_ancestors;	
 				foreach my $site_index(@ancestors){
-					if (!($self->has_no_background_mutation($node, $site_index))){
+					if (!($self->has_no_background_mutation($nname, $site_index))){
 						delete $closest_ancestors{$site_index};
 					}
 				}	
 			}
 			
-			foreach my $site_index(keys %{$self->{static_subs_on_node}{$node->get_name()}}){
+			foreach my $site_index(keys %{$self->{static_subs_on_node}{$nname}}){
 				if ($closest_ancestors{$site_index}){
 					my $anc_node = $closest_ancestors{$site_index};
-					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"lrt"}{$node->get_name()}[0] = 1;
+					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"lrt"}{$nname}[0] = 1;
 				}
 				$closest_ancestors{$site_index} = $node;
 			}
