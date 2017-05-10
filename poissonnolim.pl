@@ -240,6 +240,7 @@ sub mycomm {
 	if ($no_leaves){ $command = $command." --no_leaves ";}
 	if ($include_tips) {$command = $command." --include_tips ";}
 	if ($skip_stoppers) {$command = $command." --skip_stoppers ";}
+	if ($syn_lengths) {$command = $command." --syn_lengths ";}
 	if ($no_neighbour_changing){ $command = $command." --no_neighbour_changing ";}
 	if ($lifetime_restr) { $command = $command." --lifetime_restr ";}
 	if ($onestrip) { $command = $command." --onestrip ";}
