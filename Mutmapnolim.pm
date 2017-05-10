@@ -362,6 +362,7 @@ $| = 1;
 				static_no_leaves =>$args->{no_leaves},
 				static_include_tips =>$args->{include_tips},
 				static_skip_stoppers =>$args->{skip_stoppers},
+				static_syn_lengths  =>$args->{syn_lengths},
 				static_tree => $static_tree,
 				static_treefile => $treefile,
 				static_fasta => { %static_fasta },
