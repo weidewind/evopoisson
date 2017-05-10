@@ -551,7 +551,7 @@ sub print_tree_with_syn_lengths {
 }
 
 
-print_syn_lenths_tree{
+sub print_syn_lenths_tree{
 	my $tree = shift;
 	my $map = shift;
 	my $output = shift;
@@ -561,7 +561,7 @@ print_syn_lenths_tree{
 		$node -> set_branch_length(scalar keys %{$map->{$node->get_name}});
 	}
 	my $string = $tree->get_root->to_newick('-nodelabels' => 1);
-	open FILE, ">$treefile" or die $!;
+	open FILE, ">$output" or die $!;
 	print FILE $string;
 	close FILE;
 }
