@@ -528,7 +528,7 @@ sub synmutmap {
 sub print_tree_with_syn_lengths_static {
 	my $args = shift;
 	$args->{syn_lengths} = 0;
-	$mutmap = Mutmapnolim->new($args);
+	my $mutmap = Mutmapnolim->new($args);
 	$mutmap->print_tree_with_syn_lengths();
 }
 
@@ -546,7 +546,7 @@ sub print_tree_with_syn_lengths {
 	else {
 		$map = $self->{static_subs_on_node};
 	}
-	my $treefile = File::Spec->catfile($self->{static_input_base}, syn_lengths_tag(1}), $self->{static_protein}.".l.r.newick");
+	my $treefile = File::Spec->catfile($self->{static_input_base}, syn_lengths_tag(1), $self->{static_protein}.".l.r.newick");
 	print_syn_lenths_tree ($tree, $map, $treefile);
 }
 
