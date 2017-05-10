@@ -4634,6 +4634,7 @@ sub visitor_coat {
  		}
  		
  		if ($self->{static_state} eq "nsyn"){
+ 			print ref()
  			if (compare::is_neighbour_changing(${$self->{static_background_subs_on_node}{$node->get_name()}}{$site_index}, 1) == 1){
  				return 0;
  			}

@@ -161,6 +161,17 @@ $| = 1;
 		
 		return $tag;
 	}
+	
+	sub syn_lengths_tag {
+		my $syn_lengths = shift;
+		if ($syn_lengths){
+			return "syn_lengths";
+		}
+		else {
+			return '';
+		}
+	}
+	
 
 	sub printFooter {
 		my $self = shift;
@@ -173,6 +184,7 @@ $| = 1;
 		print $outputStream "## omit mutations on terminal branches? 1 if true ".$self->{static_no_leaves}."\n";
 		print $outputStream "## include halves of branches after mutations? 1 if true ".$self->{static_include_tips}."\n";
 		print $outputStream "## skip stoppers (neighbour-changing background mutations are ignored (i.e. not used for subtree pruning))? Only valid for nsyn state. 1 if true ".$self->{static_skip_stoppers}."\n";
+		print $outputStream "## compute branch lengths in syn substs? 1 if true ".$self->{static_syn_lengths}."\n";
 		print $outputStream "## output_base ".$self->{static_output_base}."\n";
 		if ($self->{realdata}){
 			print $outputStream "## realdata restriction ".get_realdata_restriction($self->{realdata})."\n";
@@ -182,7 +194,7 @@ $| = 1;
 	
 	sub pathFinder {
 		my $args = shift;	
-		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest}), neighbour_tag($args->{no_neighbour_changing}), leaves_tag($args->{no_leaves})); 
+		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest}), neighbour_tag($args->{no_neighbour_changing}), syn_lengths_tag($args->{syn_lengths}), leaves_tag($args->{no_leaves})); 
 		return $output_base;
 
 	}
@@ -217,7 +229,7 @@ $| = 1;
 	
 	sub dataFinder {
 		my $args = shift;	
-		my $input_base = File::Spec->catdir(getcwd(), "data", $args->{bigdatatag});
+		my $input_base = File::Spec->catdir(getcwd(), "data", $args->{bigdatatag}, syn_lengths_tag($args->{syn_lengths}));
 		return $input_base;
 	}
 
@@ -236,6 +248,7 @@ $| = 1;
 		my $output_base = pathFinder ($args);
 		my $input_base = dataFinder ($args);
 		my $treefile = File::Spec->catfile($input_base, $args->{protein}.".l.r.newick");
+		if ($args->{syn_lengths} && !(-e $treefile)) {print_tree_with_syn_lengths_static($args);}
 		my $static_tree = parse_tree($treefile)  or die "No tree at $treefile";
 		my $self;
 		make_path($output_base);
@@ -280,6 +293,7 @@ $| = 1;
 				static_no_leaves =>$realdata->{no_leaves},
 				static_include_tips =>$realdata->{include_tips},
 				static_skip_stoppers =>$realdata->{skip_stoppers},
+				static_syn_lengths  =>$realdata->{syn_lengths},
 				static_alignment_length => $realdata->{alignment_length}, 
 				static_hash_of_nodes => $realdata->{hash_of_nodes}, 
 				static_distance_hash => $realdata->{distance_hash},
@@ -328,7 +342,7 @@ $| = 1;
 			else {
 				die "only syn or nsyn can be used as the second argument; unknown ".$args->{state}." was used instead";
 			}
-			
+
 			# static_hash_of_nodes is here now
 
 			$self = {
@@ -353,6 +367,9 @@ $| = 1;
 				static_background_nodes_with_sub => $bkg_mutmaps[1],
 				static_comparator => compare->new(),
 			};
+			if ($args->{syn_lengths}){
+				$self->convert_tree_lengths();
+			}
 ## static_hash_of_nodes been here
 			foreach my $node(@nodes){
 				#if ($node->is_root()) {next;}
@@ -506,6 +523,65 @@ sub synmutmap {
 	}
 
 	return (\%subs_on_node, \%nodes_with_sub);
+}
+
+sub print_tree_with_syn_lengths_static {
+	my $args = shift;
+	$args->{syn_lengths} = 0;
+	$mutmap = Mutmapnolim->new($args);
+	$mutmap->print_tree_with_syn_lengths();
+}
+
+sub print_tree_with_syn_lengths {
+	my $self = shift;
+	if ($self->{static_syn_lengths}){
+		print "Already printed\n";
+		return;
+	}
+	my $tree = clone($self->{static_tree});
+	my $map;
+	if ($self->{static_state} eq "nsyn"){
+		$map = $self->{static_background_subs_on_node};
+	}
+	else {
+		$map = $self->{static_subs_on_node};
+	}
+	my $treefile = File::Spec->catfile($self->{static_input_base}, syn_lengths_tag(1}), $self->{static_protein}.".l.r.newick");
+	print_syn_lenths_tree ($tree, $map, $treefile);
+}
+
+
+print_syn_lenths_tree{
+	my $tree = shift;
+	my $map = shift;
+	my $output = shift;
+	
+	my @nodes =  $tree-> get_nodes;
+	foreach my $node (@nodes){
+		$node -> set_branch_length(scalar keys %{$map->{$node->get_name}});
+	}
+	my $string = $tree->get_root->to_newick('-nodelabels' => 1);
+	open FILE, ">$treefile" or die $!;
+	print FILE $string;
+	close FILE;
+}
+
+
+
+sub convert_tree_lengths {
+	my $self = shift;
+	my $tree = $self->{static_tree};
+	my $map;
+	if ($self->{static_state} eq "nsyn"){
+		$map = $self->{static_background_subs_on_node};
+	}
+	else {
+		$map = $self->{static_subs_on_node};
+	}
+	my @nodes =  $tree-> get_nodes;
+	foreach my $node (@nodes){
+		$node -> set_branch_length(scalar keys %{$map->{$node->get_name}});
+	}
 }
 
 sub mylength {
@@ -1044,14 +1120,74 @@ sub shuffle_sanity_check {
 
 sub shuffle_mutator {
 	my $self = shift;
-	my %obs_vectors = $self->get_observation_vectors(); # created only once, reused afterwards
-	my %shuffled_obs_vectors = shuffle_observation_vectors(\%obs_vectors);
-	$self->{obs_vectors} = \%shuffled_obs_vectors;
-	my @mock_mutmaps = $self->read_observation_vectors(\%shuffled_obs_vectors); 
+	my $restriction = shift;
+	my @sites = @{$_[0]};
+	my $poisson = $_[1];
+	my $continue = $_[2];
+	my $mutator_type = $self->{static_mutator_type};
+	my @mock_mutmaps; 
+	if ($mutator_type == "sim"){
+		my $rh_tree_constrains = $self->get_tree_constraints($restriction, \@sites);
+		my $rh_out_tree = shuffle_muts_on_tree_exp::shuffle_mutations_on_tree($self->{static_tree}, $rh_tree_constrains, $poisson, $continue); #$continue - same type mutations do not block lines (there can be any number of mutations on one line)  
+		@mock_mutmaps = $self->read_shuffled_tree($rh_out_tree);
+	}
+	else {
+		my %obs_vectors = $self->get_observation_vectors(); # created only once, reused afterwards
+		my %shuffled_obs_vectors = shuffle_observation_vectors(\%obs_vectors);
+		$self->{obs_vectors} = \%shuffled_obs_vectors;
+		@mock_mutmaps = $self->read_observation_vectors(\%shuffled_obs_vectors); 
+	}
 	$self->{static_subs_on_node} = $mock_mutmaps[0];
 	$self->{static_nodes_with_sub} = $mock_mutmaps[1];
 	return $self; 
 }
+
+sub read_shuffled_tree {
+	my $self = shift;
+	my $rh_out_tree = shift; # $rh_out_tree->{root}->{$site}= массив уходов (имен узлов))
+	my %subs_on_node;
+	my %nodes_with_sub;
+	my $rootname = $self->{static_tree}->get_root->get_name;
+	
+	foreach my $ind(keys %{$rh_out_tree->{$rootname}}){
+		foreach my $nodename(@{$rh_out_tree->{$rootname}{$ind}}){
+			my $p=Substitution->new();
+			$p->position($ind);
+			$p->ancestral_allele("ATG");
+			$p->derived_allele("ATG");
+			$subs_on_node{$nodename}{$ind} = $p;
+			if (! exists $nodes_with_sub{$ind}){
+					$nodes_with_sub{$ind} = ();
+			}			
+			push (@{$nodes_with_sub{$ind}}, \${$self->{static_hash_of_nodes}{$nodename}});
+		}
+	}
+	
+	return (\%subs_on_node, \%nodes_with_sub);
+}
+
+sub get_tree_constraints {
+	my $self = shift;
+	my $restriction = $_[0];
+	my @group = @{$_[1]};
+	my %group_hash;
+	foreach my $site(@group){ $group_hash{$site} = 1; }
+	my $subtree_info = $self->{"static_subtree_info"};
+	my $constraints;
+	
+	my $rootname = $self->{static_tree}->get_root->get_name;
+	my @nodes = $self->{static_tree}->get_nodes;
+	my $totlen;
+	foreach my $node (@nodes){ $totlen += $node->get_branch_length; }
+	foreach my $site (keys %{$self->{static_nodes_with_sub}}){
+		my $mutnum = scalar @{$self->{static_nodes_with_sub}{$site}};
+		my $hazard = $mutnum/$totlen;
+		my $constr = Constrains->new(number_of_mutations => $mutnum, hazard => $hazard);
+		$constraints->{$rootname}{$site} = $constr; 
+		print "constraints hazard for $site ".$constraints->{$rootname}{$site}->hazard()."\n"; 
+	}
+	return $constraints;
+}	
 
 sub FDR_all {
 	my $self = shift;
@@ -1551,6 +1687,7 @@ sub prepare_real_data {
 		no_leaves => $self -> {static_no_leaves},
 		include_tips => $self -> {static_include_tips},
 		skip_stoppers => $self -> {static_skip_stoppers},
+		syn_lengths => $self -> {static_syn_lengths},
 		"obs_hash".$restriction => \%restricted_obs_hash,
 	);
 	

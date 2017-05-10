@@ -42,6 +42,7 @@ my $onestrip;
 my $shuffler_type = "exp";
 my $debugmode;
 my $poisson; # exp shuffler is poisson not exp :)
+my $syn_lengths;
 
 
 GetOptions (	
@@ -68,13 +69,14 @@ GetOptions (
 		'shuffler_type=s' => \$shuffler_type,
 		'debugmode' => \$debugmode,
 		'distrpoisson' =>\$poisson,
+		'syn_lengths' => \$syn_lengths,
 	);
 
 $| = 1;
 
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest,  no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, include_tips => $include_tips, skip_stoppers => $skip_stoppers, mutnum_control => $mutnum_control, fromfile => 1}; 
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest,  no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, include_tips => $include_tips, skip_stoppers => $skip_stoppers, distrpoisson => $poisson, syn_lengths => $syn_lengths, mutnum_control => $mutnum_control, fromfile => 1}; 
 
 ## Checking if appropriate realdata exists, initializing
 my @restriction_levels = split(/,/, $restrictions);
