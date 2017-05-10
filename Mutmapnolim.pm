@@ -321,7 +321,13 @@ $| = 1;
 			
 		}
 		else {
-			my @arr = parse_fasta(File::Spec->catfile($input_base, $args->{protein}.".all.fa"));
+			my $fastafile = File::Spec->catfile($input_base, $args->{protein}.".all.fa");
+			if ($args->{syn_lengths} && !(-e $fastafile)){
+				my $copyargs = {%{$args}};
+				delete $copyargs->{syn_lengths} ;
+				$fastafile = File::Spec->catfile(dataFinder($copyargs), $args->{protein}.".all.fa");
+			}
+			my @arr = parse_fasta($fastafile);
 			my %fasta = %{$arr[0]};
 			my $alignment_length = $arr[1];
 			my $static_protein  = $args->{protein};
@@ -367,9 +373,7 @@ $| = 1;
 				static_background_nodes_with_sub => $bkg_mutmaps[1],
 				static_comparator => compare->new(),
 			};
-			if ($args->{syn_lengths}){
-				$self->convert_tree_lengths();
-			}
+
 ## static_hash_of_nodes been here
 			foreach my $node(@nodes){
 				#if ($node->is_root()) {next;}
@@ -547,7 +551,7 @@ sub print_tree_with_syn_lengths {
 		$map = $self->{static_subs_on_node};
 	}
 	my $outputdir = File::Spec->catdir($self->{static_input_base}, syn_lengths_tag(1));
-	make_path($outputdir)
+	make_path($outputdir);
 	my $treefile = File::Spec->catfile($outputdir, $self->{static_protein}.".l.r.newick");
 	print_syn_lenths_tree ($tree, $map, $treefile);
 }
@@ -570,21 +574,6 @@ sub print_syn_lenths_tree{
 
 
 
-sub convert_tree_lengths {
-	my $self = shift;
-	my $tree = $self->{static_tree};
-	my $map;
-	if ($self->{static_state} eq "nsyn"){
-		$map = $self->{static_background_subs_on_node};
-	}
-	else {
-		$map = $self->{static_subs_on_node};
-	}
-	my @nodes =  $tree-> get_nodes;
-	foreach my $node (@nodes){
-		$node -> set_branch_length(scalar keys %{$map->{$node->get_name}});
-	}
-}
 
 sub mylength {
 	my $self = shift;	

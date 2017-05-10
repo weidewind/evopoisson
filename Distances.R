@@ -1,11 +1,12 @@
 #!/usr/bin/env Rscript
+libloc = file.path("~", "R","library", fsep = .Platform$file.sep)
 list.of.packages <- c("ape", "optparse")
-new.packages <- setdiff(list.of.packages, installed.packages()[,"Package"])
-if(length(new.packages)) install.packages(new.packages, repos='http://cran.us.r-project.org')
+new.packages <- setdiff(list.of.packages, installed.packages(lib.loc = libloc)[,"Package"])
+if(length(new.packages)) install.packages(new.packages, repos='http://cran.us.r-project.org', lib = libloc)
 #install.packages("ape")
 #install.packages("optparse")
-library(ape)
-library(optparse)
+library(ape, lib.loc = libloc)
+library(optparse, lib.loc = libloc)
 
 
 option_list = list(
