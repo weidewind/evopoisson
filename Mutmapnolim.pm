@@ -546,7 +546,9 @@ sub print_tree_with_syn_lengths {
 	else {
 		$map = $self->{static_subs_on_node};
 	}
-	my $treefile = File::Spec->catfile($self->{static_input_base}, syn_lengths_tag(1), $self->{static_protein}.".l.r.newick");
+	my $outputdir = File::Spec->catdir($self->{static_input_base}, syn_lengths_tag(1));
+	make_path($outputdir)
+	my $treefile = File::Spec->catfile($outputdir, $self->{static_protein}.".l.r.newick");
 	print_syn_lenths_tree ($tree, $map, $treefile);
 }
 
