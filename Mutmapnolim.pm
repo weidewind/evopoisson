@@ -1177,7 +1177,7 @@ sub get_tree_constraints {
 		my $hazard = $mutnum/$totlen;
 		my $constr = Constrains->new(number_of_mutations => $mutnum, hazard => $hazard);
 		$constraints->{$rootname}{$site} = $constr; 
-		print "constraints hazard for $site ".$constraints->{$rootname}{$site}->hazard()."\n"; 
+		#print "constraints hazard for $site ".$constraints->{$rootname}{$site}->hazard()."\n"; 
 	}
 	return $constraints;
 }	
@@ -1414,11 +1414,11 @@ sub get_constraints {
 						$totlen += $subtree_info->{$node_name}{$site}{"hash"}{$bin}[1];
 					}
 					my $hazard = $mutnum/$totlen;
-					print "hazard for $site $node_name is $hazard\n";
+					#print "hazard for $site $node_name is $hazard\n";
 					my $stoppers = $all_stoppers{$site};
 					my $constr = Constrains->new(number_of_mutations => $mutnum, stoppers => $stoppers, hazard => $hazard);
 					$constraints->{$node_name}{$site} = $constr;  
-					print "constraints hazard for $site $node_name ".$constraints->{$node_name}{$site}->hazard()."\n";
+					#print "constraints hazard for $site $node_name ".$constraints->{$node_name}{$site}->hazard()."\n";
 				}
 		}
 	return $constraints;
@@ -5114,7 +5114,7 @@ sub visitor_coat {
    sub bin {
    	   	my $depth = $_[0];
    		my $step = $_[1];
-   		print "Warning: not using step option for binning (if you did not explicitly set step to 1, it will cause havoc)\n";
+   	#	print "Warning: not using step option for binning (if you did not explicitly set step to 1, it will cause havoc)\n";
    		return $depth;
    }
 
