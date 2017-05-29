@@ -1284,16 +1284,16 @@ sub iterations_gulp_subtree_shuffling {
 		# $rh_out_subtree->{$name}->{$site}= массив уходов (имен узлов)) #todo
 		my %hash;
 		print " finished shuffling\n";
-		foreach my $name (keys %{$rh_out_subtree} ){
-			print $name."\n";
-			foreach my $site (keys %{$rh_out_subtree->{$name}}){
-				print $site."\t";
-				foreach my $nn (@{$rh_out_subtree->{$name}{$site}}){
-					print "$nn"."\t";
-				}
-				print "\n";
-			}
-		}
+	#	foreach my $name (keys %{$rh_out_subtree} ){
+	#		print $name."\n";
+	#		foreach my $site (keys %{$rh_out_subtree->{$name}}){
+	#			print $site."\t";
+	#			foreach my $nn (@{$rh_out_subtree->{$name}{$site}}){
+	#				print "$nn"."\t";
+	#			}
+	#			print "\n";
+	#		}
+	#	}
 		$self->entrenchment_for_subtrees($rh_out_subtree, $step, $tag, $verbose, $lifetime) 
 		# >new iteration string and all the corresponding data  are printed inside this sub:
 		# we used to launch visitor_coat in this sub (depth_groups_entrenchment_optimized_selection_alldepths) and take subtree_info from self. 
@@ -3847,7 +3847,7 @@ sub entrenchment_for_subtrees{
 			}
 			#print " for $site $nodename data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
 			if($self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"} < $subtree_info{$site}{"maxdepth"}){
-				print "Error! $site $nodename went out of bounds: data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
+				print "Possible error (not an error for nolim, when you do not care if simulated mutations fall out of real site_node maxdepth limits) $site $nodename went out of bounds: data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
 			}
 			if($self->{realdata}{subtree_info}{$nodename}{$site}{"totmuts"} != $subtree_info{$site}{"totmuts"}){
 				print "Debugmode-only totmut error: $site $nodename realdata totmuts ".$self->{realdata}{subtree_info}{$nodename}{$site}{"totmuts"}." and subtree_info totmuts is ".$subtree_info{$site}{"totmuts"}."\n";
@@ -3958,7 +3958,7 @@ sub entrenchment_for_subtrees{
  					my $found;
  					foreach my $stopper (@{$self->{realdata}{subtree_info}{$startnname}{$site_index}{"stoppers"}}){
  						if ($nname eq $stopper->get_name()){
- 							print "Found stopper ".$stopper->get_name()." at $site_index ".$startnname."\n";
+ 							#print "Found stopper ".$stopper->get_name()." at $site_index ".$startnname."\n";
  							$found = 1;
  						}
  					}
@@ -4385,30 +4385,30 @@ sub hist_median{
 		unless ($hist[$interval] == 0) {$head += $hist[$interval];}
 		$median = $interval*$step; 
 		$interval++;
-		if ($verbose) {
-			my $half = $summ/2;
-			print $head." ".$median." ".$half."\n";
-		}
+	#	if ($verbose) {
+	#		my $half = $summ/2;
+	#		print $head." ".$median." ".$half."\n";
+	#	}
 		if (abs ($head - $summ/2) < 0.000001) {last;}
 	}
-	if ($verbose) {print $summ."\n";}
+	#if ($verbose) {print $summ."\n";}
 	if (abs ($head - $summ/2) < 0.000001){ # magic 
 	#	$median += 0.5*$step;
 		my $leftmedian = $median;
 		my $rightmedian;
 		my $newhead = $head;
-		if ($verbose) {print "head == summ/2: ".$head." ".$leftmedian."\n";}
+	#	if ($verbose) {print "head == summ/2: ".$head." ".$leftmedian."\n";}
 		while ($newhead == $head){
 			$newhead += $hist[$interval];
 			$rightmedian = $interval*$step;
-			if ($verbose) {print $newhead." ".$rightmedian."\n";} 
+		#	if ($verbose) {print $newhead." ".$rightmedian."\n";} 
 			$interval++;
 		}
 		$median = ($leftmedian+$rightmedian)/2;
-		if ($verbose) {print "median is $median\n";}
+	#	if ($verbose) {print "median is $median\n";}
 	}
 #print_hist(\@hist);
-	if ($verbose) {print "median is $median\n";}
+#	if ($verbose) {print "median is $median\n";}
 	return $median;
 }
 
