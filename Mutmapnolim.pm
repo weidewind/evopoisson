@@ -5100,7 +5100,7 @@ sub visitor_coat {
    }
    
  # changed at 21.09.2016  
-   sub bin {
+   sub bin_old {
    	my $depth = $_[0];
    	my $step = $_[1];
    	
@@ -5111,6 +5111,12 @@ sub visitor_coat {
    	return $bin+1;
    }
    
+   sub bin {
+   	   	my $depth = $_[0];
+   		my $step = $_[1];
+   		print "Warning: not using step option for binning (if you did not explicitly set step to 1, it will cause havoc)\n";
+   		return $depth;
+   }
 
    
 
