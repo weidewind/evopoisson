@@ -1112,13 +1112,14 @@ sub shuffle_sanity_check {
 
 sub shuffle_mutator {
 	my $self = shift;
-	my $restriction = shift;
-	my @sites = @{$_[0]};
-	my $poisson = $_[1];
-	my $continue = $_[2];
 	my $mutator_type = $self->{static_mutator_type};
 	my @mock_mutmaps; 
-	if ($mutator_type == "sim"){
+	
+	if ($mutator_type eq "sim"){
+		my $restriction = shift;
+		my @sites = @{$_[0]};
+		my $poisson = $_[1];
+		my $continue = $_[2];
 		my $rh_tree_constrains = $self->get_tree_constraints($restriction, \@sites);
 		my $rh_out_tree = shuffle_muts_on_tree_exp::shuffle_mutations_on_tree($self->{static_tree}, $rh_tree_constrains, $poisson, $continue); #$continue - same type mutations do not block lines (there can be any number of mutations on one line)  
 		@mock_mutmaps = $self->read_shuffled_tree($rh_out_tree);
