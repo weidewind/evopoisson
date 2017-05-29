@@ -85,9 +85,9 @@ sub shuffle_mutations {
 					push @{$ra_events},$node->get_name;
 					#print "chose node ".$node->get_name." for anc ".$rnode->get_name."\n";
 					#print "Now get ";
-					foreach my $nname(@{$ra_events}){
-						print $nname."\t";
-					}
+					#foreach my $nname(@{$ra_events}){
+					#	print $nname."\t";
+					#}
 					#print "\n";
 					$blocked{$node->get_name}=1;
 					$n--;
