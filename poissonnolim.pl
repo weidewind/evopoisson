@@ -124,7 +124,7 @@ my $sim = $simnumber-$ready;
 if ($sim > 0){
 	print "New iteration tags will start from $newtag\n";
 	## First iterations_gulp runs separately - to estimate memusage
-	my $probe = 5; # first iterations-Gulp size, used for memusage esttimation, is not used afterwards
+	my $probe = 3; # first iterations-Gulp size, used for memusage esttimation, is not used afterwards
 	my $command = mycomm("probe", $probe, "memusage"); # prints memusage in file
 	system( $command );
 	my $locker = Memusage->get_locker($mutmap);

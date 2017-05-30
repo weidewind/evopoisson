@@ -2170,6 +2170,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 									foreach my $bin(@bins){
 										print $filehandle $bin.",".$bin.",";
 									}
+									print $filehandle "\n";
 									foreach my $bin(@bins){
 										print $filehandle $hash{$md}[$group_number]{$label}{$bin}[0].",".$hash{$md}[$group_number]{$label}{$bin}[1].",";
 									}
@@ -2798,7 +2799,7 @@ sub count_pvalues{
 				$i++;
 				my $exp = $splitter[$i];
 				my $binexp = $bins[$i];
-				print "Error! bins for obs and exp don't match: $binobs $binexp\n" unless ($binexp == $binobs);
+				print "Error! bins for obs and exp don't match: $binobs $binexp in $csvfile \n" unless ($binexp == $binobs);
 				$boot_exp_hash{$binexp} = $splitter[$i];
 			}
 			
@@ -2983,7 +2984,7 @@ sub count_pvalues{
 					$i++;
 					my $exp = $splitter[$i];
 					my $binexp = $bins[$i];
-					print "Error! bins for obs and exp don't match: $binobs $binexp\n" unless ($binexp == $binobs);
+					print "Error! bins for obs and exp don't match: $binobs $binexp in $csvfile \n" unless ($binexp == $binobs);
 					$boot_exp_hash{$binexp} = $splitter[$i];
 				}
 				
@@ -3115,7 +3116,7 @@ sub count_pvalues{
 					$i++;
 					my $exp = $splitter[$i];
 					my $binexp = $bins[$i];
-					print "Error! bins for obs and exp don't match: $binobs $binexp\n" unless ($binexp == $binobs);
+					print "Error! bins for obs and exp don't match: $binobs $binexp in $csvfile \n" unless ($binexp == $binobs);
 					$boot_exp_hash{$binexp} = $splitter[$i];
 				}
 				## end of copypaste
@@ -3356,7 +3357,7 @@ sub count_single_site_pvalues{
 				$i++;
 				my $exp = $splitter[$i];
 				my $binexp = $bins[$i];
-				print "Error! bins for obs and exp don't match: $binobs $binexp\n" unless ($binexp == $binobs);
+				print "Error! bins for obs and exp don't match: $binobs $binexp in $csvfile \n" unless ($binexp == $binobs);
 				$boot_exp_hash{$binexp} = $splitter[$i];
 			}
 			
