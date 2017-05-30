@@ -3063,7 +3063,7 @@ sub count_pvalues{
 			my %complement_flat_exp_hash;
 			#print " going to flat hash\n";
 			foreach my $node (keys %complement_obs_hash_restricted){
-				foreach my $bin(keys %{complement_obs_hash_restricted{$node}}){
+				foreach my $bin (keys %{complement_obs_hash_restricted{$node}}){
 					$complement_flat_obs_hash{$bin} += $complement_obs_hash_restricted{$node}{$bin}[0];
 					$complement_flat_exp_hash{$bin} += $complement_obs_hash_restricted{$node}{$bin}[1];
 				}
