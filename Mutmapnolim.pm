@@ -3299,7 +3299,7 @@ sub count_single_site_pvalues{
 		foreach my $site_node (sort (keys %obs_hash_restricted)){
 			my %flat_obs_hash;
 			my %flat_exp_hash;
-			foreach my $bin(keys %obs_hash_restricted{$site_node}){
+			foreach my $bin(keys %{$obs_hash_restricted{$site_node}}){
 				$flat_obs_hash{$bin} += $obs_hash_restricted{$site_node}{$bin}[0]; 
 				$flat_exp_hash{$bin} += $obs_hash_restricted{$site_node}{$bin}[1]; 
 			}
