@@ -1229,7 +1229,6 @@ sub iterations_gulp_subtree_shuffling {
 		
 	if ($verbose){print "Extracting realdata..\n";}	
 	my $realdata = $self->{realdata};
-	my $maxbin = $realdata->{"maxbin"};
 	my $step = $realdata->{"step"}; #bin size
 	unless (defined $step) {die "Oh no, bin size in realdata is not defined. Won't proceed with simulations.\n";}
 	my $ancestor_nodes = $realdata->{"ancestor_nodes"};
@@ -1284,52 +1283,17 @@ sub iterations_gulp_subtree_shuffling {
 		# $rh_out_subtree->{$name}->{$site}= массив уходов (имен узлов)) #todo
 		my %hash;
 		print " finished shuffling\n";
-	#	foreach my $name (keys %{$rh_out_subtree} ){
-	#		print $name."\n";
-	#		foreach my $site (keys %{$rh_out_subtree->{$name}}){
-	#			print $site."\t";
-	#			foreach my $nn (@{$rh_out_subtree->{$name}{$site}}){
-	#				print "$nn"."\t";
-	#			}
-	#			print "\n";
-	#		}
-	#	}
 		$self->entrenchment_for_subtrees($rh_out_subtree, $step, $tag, $verbose, $lifetime) 
 		# >new iteration string and all the corresponding data  are printed inside this sub:
 		# we used to launch visitor_coat in this sub (depth_groups_entrenchment_optimized_selection_alldepths) and take subtree_info from self. 
 		# But now we have no tree - only a set of overlapping subtrees which cannot be converted into a tree.
 		# So.. do we have to launch entrenchment_visitor for each subtree? Nope. Better to write a new algorithm (just tree search with restrictions) that will create the same output structure
 	#	my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths($step,$restriction,$ancestor_nodes, "overwrite", $tag, $verbose); #step (bin size), restriction, ancestor_nodes, should I overwrite static hash?
-
-#		foreach my $bin(1..$maxbin){
-#				foreach my $site_node(keys %prehash){
-#					$hash{$bin}[1] += $prehash{$site_node}{$bin}[1];
-#					$hash{$bin}[0] += $prehash{$site_node}{$bin}[0];				
-#			}
-#		}
-#		push @simulated_hists, \%hash;
 	}
 	if ($memusage){
 		my $locker = Memusage->get_locker($self);
 		$locker->print_memusage();
-	}
-#	my $arref = \@simulated_hists;
-#	my $csvfile = File::Spec->catfile($outdir, temp_tag(), $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
-#	open CSV, ">$csvfile";
-#	foreach my $bin(1..$maxbin){
-#			print CSV $bin."_obs,".$bin."_exp,";
-#	}
-#	print CSV "\n";
-	
-#	foreach my $i(0..$iterations-1){
-#		foreach my $bin(1..$maxbin){
-#			print CSV ($arref->[$i]->{$bin}->[0]).",".($arref->[$i]->{$bin}->[1]).",";
-#		}
-#		print CSV"\n";
-#	}
-#	close CSV;
-	
-	
+	}	
 }
 
 
@@ -1343,7 +1307,6 @@ sub get_strip_constraints {
 		$group_hash{$site} = 1;
 	}
 	my $realdata = $self->{realdata};
-	my $maxbin = $realdata->{"maxbin"};
 	my $obs_hash = get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	my $constraints;
@@ -1443,7 +1406,6 @@ sub iterations_gulp_vector_shuffling {
 	#my $norm = $_[6];
 	if ($verbose){print "Extracting realdata..\n";}	
 	my $realdata = $self->{realdata};
-	my $maxbin = $realdata->{"maxbin"};
 	my $step = $realdata->{"step"}; #bin size
 	unless (defined $step) {die "Oh no, bin size in realdata is not defined. Won't proceed with simulations.\n";}
 	my $ancestor_nodes = $realdata->{"ancestor_nodes"};
@@ -1471,8 +1433,8 @@ sub iterations_gulp_vector_shuffling {
 		# >new iteration string and all the corresponding data  are printed inside this sub:
 		my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths($step,$restriction,$ancestor_nodes, "overwrite", $tag, $verbose); #step (bin size), restriction, ancestor_nodes, should I overwrite static hash?
 
-		foreach my $bin(1..$maxbin){
-				foreach my $site_node(keys %prehash){
+		foreach my $site_node(keys %prehash){
+			foreach my $bin(keys %{$prehash{$site_node}}){
 					$hash{$bin}[1] += $prehash{$site_node}{$bin}[1];
 					$hash{$bin}[0] += $prehash{$site_node}{$bin}[0];				
 			}
@@ -1491,13 +1453,13 @@ sub iterations_gulp_vector_shuffling {
 	my $arref = \@simulated_hists;
 	my $csvfile = File::Spec->catfile($outdir, temp_tag(), $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
 	open CSV, ">$csvfile";
-	foreach my $bin(1..$maxbin){
-			print CSV $bin."_obs,".$bin."_exp,";
-	}
-	print CSV "\n";
 	
 	foreach my $i(0..$iterations-1){
-		foreach my $bin(1..$maxbin){
+		foreach my $bin(sort { $a <=> $b } keys %{$arref->[$i]}){
+			print CSV $bin.",".$bin.",";
+		}
+		print CSV"\n";
+		foreach my $bin(sort { $a <=> $b } keys %{$arref->[$i]}){
 			print CSV ($arref->[$i]->{$bin}->[0]).",".($arref->[$i]->{$bin}->[1]).",";
 		}
 		print CSV"\n";
@@ -1505,7 +1467,6 @@ sub iterations_gulp_vector_shuffling {
 	close CSV;
 	
 }
-
 
 
 sub get_obshash {
@@ -1641,14 +1602,14 @@ sub prepare_real_data {
 	}	
 	my $restricted_norm;
 	my %restricted_obs_hash;
-	my $maxbin = 0;
+	#my %bins;
 	my $debugnum = scalar keys %full_obs_hash;
 	print "Early news from prepare: there are $debugnum keys in full_obs_hash\n";
 	foreach my $site_node(keys %full_obs_hash){
 		my ($site, $node_name) = split(/_/, $site_node);
 		my $maxdepth = $self -> {static_subtree_info}{$node_name}{$site}{"maxdepth"};
 		foreach my $bin(keys %{$full_obs_hash{$site_node}}){
-			$maxbin = max($bin, $maxbin);
+			#$bins{$bin} = 1;
 			if ($maxdepth > $restriction){
 				$restricted_norm += $full_obs_hash{$site_node}{$bin}[0];
 				$restricted_obs_hash{$site_node}{$bin}[0] = $full_obs_hash{$site_node}{$bin}[0];
@@ -1657,6 +1618,9 @@ sub prepare_real_data {
 		}
 #		print "MAXBIN $maxbin\n";
 	}
+#	my @bins = sort  { $a <=> $b } keys %bins;
+#	
+	
 	
 #	print " NORM50 $norm50  NORM100 $norm100  NORM150 $norm150 \n";
 	my %obs_vectors = $self ->get_observation_vectors();
@@ -1666,7 +1630,7 @@ sub prepare_real_data {
 		"norm".$restriction => $restricted_norm,
 		step => $step,
 		restriction => $restriction,
-		maxbin => $maxbin,
+	#	bins => \@bins,
 		ancestor_nodes => \%ancestor_nodes,
 		obs_vectors => \%obs_vectors,
 		bkg_subs_on_node => $self -> {static_background_subs_on_node},
@@ -1721,7 +1685,6 @@ sub select_ancestor_nodes {
 		$group_hash{$site} = 1;
 	}
 	my $realdata = $self->{realdata};
-	my $maxbin = $realdata->{"maxbin"};
 	my $obs_hash = get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	my %group_nodes;
@@ -1754,7 +1717,6 @@ sub select_ancestor_nodes_and_sites {
 		$group_hash{$site} = 1;
 	}
 	my $realdata = $self->{realdata};
-	my $maxbin = $realdata->{"maxbin"};
 	my $obs_hash = get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	my %group_nodes;
@@ -1844,7 +1806,6 @@ sub concat_and_divide_simult {
 	my $realdata = $self->{realdata};
 	my %hash;
 	my $iteration_number = 0;
-	my $maxbin = $realdata->{"maxbin"};
 	
 	my %norms;
 	foreach my $md(@maxdepths){
@@ -1891,10 +1852,7 @@ sub concat_and_divide_simult {
 		
 	}
 
-	local *printer = sub {
-		print " maxbin was $maxbin ";
-				$maxbin = shift;
-		print "now it is $maxbin\n";		
+	local *printer = sub {		
 				foreach my $md(@maxdepths){ 
 					foreach my $group_number(0..scalar @groups-1){
 							
@@ -1904,9 +1862,10 @@ sub concat_and_divide_simult {
 								#print "found ".($new_labels-1)." new labels for group ".$group_names[$group_number]."\n";
 								my $next_to_print = $label_hashes{$md}[$group_number]{"printed"}+1;
 								foreach my $label($next_to_print..($label_hashes{$md}[$group_number]{"current"}-1)){ # last hash (with current label) is uncomplete
+									my @bins = sort { $a <=> $b } keys $hash{$md}[$group_number]{$label};
 									#print " looking at label $label \n";
 									if ($sums{$md}[$group_number]{$label} == 0){ # now it's impossible :)
-										foreach my $bin(1..$maxbin){
+										foreach my $bin(@bins){
 											$hash{$md}[$group_number]{$label}{$bin}[0] = "NA";
 											$hash{$md}[$group_number]{$label}{$bin}[1] = "NA";
 										}
@@ -1916,7 +1875,7 @@ sub concat_and_divide_simult {
 										#print "CONC "."sum ".$sums{$md}[$group_number]{$label}."\n";
 										#print "CONC "."in hash, bin 12: ".$hash{$md}[$group_number]{$label}{12}[0]."\n";
 										
-										foreach my $bin(1..$maxbin){
+										foreach my $bin(@bins){
 											$hash{$md}[$group_number]{$label}{$bin}[0] = $hash{$md}[$group_number]{$label}{$bin}[0]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
 											$hash{$md}[$group_number]{$label}{$bin}[1] = $hash{$md}[$group_number]{$label}{$bin}[1]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
 										}
@@ -1926,11 +1885,15 @@ sub concat_and_divide_simult {
 									my $filehandle = $filehandles{$md}{$group_number};
 									#print "CONC "."going to print something\n";
 									#print "CONC now expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2 (4th column) \n";
-									foreach my $bin(1..$maxbin){
+									foreach my $bin(@bins){
+										print $filehandle $bin.",".$bin.",";
+									}
+									print $filehandle "\n";
+									foreach my $bin(@bins){
 										print $filehandle $hash{$md}[$group_number]{$label}{$bin}[0].",".$hash{$md}[$group_number]{$label}{$bin}[1].",";
 									}
-									#print "CONC and now expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2 (4th column) \n";
 									print $filehandle "\n";
+									#print "CONC and now expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2 (4th column) \n";
 									delete $hash{$md}[$group_number]{$label};
 									$label_hashes{$md}[$group_number]{"printed"} = $label;
 								}
@@ -2045,12 +2008,12 @@ sub concat_and_divide_simult {
 	# because we iterate through site earlier $str = <GULP>;
 			
 			# maxbins are different for every iteration. Find maximum and use it.
-			$maxbin = max($maxbin, $bin_data[$#bin_data]->[0]);
-			print " here maxbin is $maxbin\n";
+		#	$maxbin = max($maxbin, $bin_data[$#bin_data]->[0]);
+		#	print " here maxbin is $maxbin\n";
 			#print "CONC "."maxbin $maxbin\n";	
 			
 			if ($iteration_number>=50 && $iteration_number%50 == 0){
-				printer($maxbin); # print to .csv files every 50 iterations, delete printed from memory
+				printer(); # print to .csv files every 50 iterations, delete printed from memory
 			}
 			
 		}
@@ -2058,7 +2021,7 @@ sub concat_and_divide_simult {
 	}
 	
 	## here 
-	printer($maxbin);
+	printer();
 	
 #	close NODECOUNT;
 	
@@ -2125,7 +2088,6 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 	my $realdata = $self->{realdata};
 	my %hash;
 	my $iteration_number = 0;
-	my $maxbin = $realdata->{"maxbin"};
 	
 	my %norms;
 	foreach my $md(@maxdepths){
@@ -2172,10 +2134,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 		
 	}
 
-	local *printer = sub {
-		print " maxbin was $maxbin ";
-				$maxbin = shift;
-		print "now it is $maxbin\n";		
+	local *printer = sub {	
 				foreach my $md(@maxdepths){ 
 					foreach my $group_number(0..scalar @groups-1){
 							
@@ -2185,9 +2144,10 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 								#print "found ".($new_labels-1)." new labels for group ".$group_names[$group_number]."\n";
 								my $next_to_print = $label_hashes{$md}[$group_number]{"printed"}+1;
 								foreach my $label($next_to_print..($label_hashes{$md}[$group_number]{"current"}-1)){ # last hash (with current label) is uncomplete
+									my @bins = sort { $a <=> $b } keys $hash{$md}[$group_number]{$label};
 									#print " looking at label $label \n";
 									if ($sums{$md}[$group_number]{$label} == 0){ # now it's impossible :)
-										foreach my $bin(1..$maxbin){
+										foreach my $bin(@bins){
 											$hash{$md}[$group_number]{$label}{$bin}[0] = "NA";
 											$hash{$md}[$group_number]{$label}{$bin}[1] = "NA";
 										}
@@ -2197,7 +2157,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 										#print "CONC "."sum ".$sums{$md}[$group_number]{$label}."\n";
 										#print "CONC "."in hash, bin 12: ".$hash{$md}[$group_number]{$label}{12}[0]."\n";
 										
-										foreach my $bin(1..$maxbin){
+										foreach my $bin(@bins){
 											$hash{$md}[$group_number]{$label}{$bin}[0] = $hash{$md}[$group_number]{$label}{$bin}[0]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
 											$hash{$md}[$group_number]{$label}{$bin}[1] = $hash{$md}[$group_number]{$label}{$bin}[1]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
 										}
@@ -2207,7 +2167,10 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 									my $filehandle = $filehandles{$md}{$group_number};
 									#print "CONC "."going to print something\n";
 									#print "CONC now expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2 (4th column) \n";
-									foreach my $bin(1..$maxbin){
+									foreach my $bin(@bins){
+										print $filehandle $bin.",".$bin.",";
+									}
+									foreach my $bin(@bins){
 										print $filehandle $hash{$md}[$group_number]{$label}{$bin}[0].",".$hash{$md}[$group_number]{$label}{$bin}[1].",";
 									}
 									#print "CONC and now expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2 (4th column) \n";
@@ -2322,12 +2285,12 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 	# because we iterate through site earlier $str = <GULP>;
 			
 			# maxbins are different for every iteration. Find maximum and use it.
-			$maxbin = max($maxbin, $bin_data[$#bin_data]->[0]);
-			print " here maxbin is $maxbin\n";
+			#$maxbin = max($maxbin, $bin_data[$#bin_data]->[0]);
+			#print " here maxbin is $maxbin\n";
 			#print "CONC "."maxbin $maxbin\n";	
 
 			if ($iteration_number>=50 && $iteration_number%50 == 0){
-				printer($maxbin); # print to .csv files every 50 iterations, delete printed from memory
+				printer(); # print to .csv files every 50 iterations, delete printed from memory
 			}
 			
 		}
@@ -2335,7 +2298,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 	}
 	
 	## here 
-	printer($maxbin);
+	printer();
 	
 #	close NODECOUNT;
 	
@@ -2384,7 +2347,6 @@ sub concat_and_divide_simult_single_sites {
 	
 	my %hash;
 	my $iteration_number = 1;
-	my $maxbin = $realdata->{"maxbin"};
 	
 	my %norms; #previous: $norms{$md}[$group_number] = norm
 	foreach my $md(@maxdepths){
@@ -2468,9 +2430,7 @@ sub concat_and_divide_simult_single_sites {
 				
 				$test_obs_summ += $str_array[1];
 				$test_exp_summ += $str_array[2];
-				
-				# maxbins are different for every iteration. Find maximum and use it.
-				$maxbin = max($maxbin, $str_array[0]);
+	
 				
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
 				foreach my $md(@maxdepths){
@@ -2505,23 +2465,24 @@ sub concat_and_divide_simult_single_sites {
 			
 
 			
-print " maxbin $maxbin, iteration number $iteration_number\n";	
+print "iteration number $iteration_number\n";	
 #print "sum50 $sum50 sum100 $sum100 sum150 $sum150 norm 50 $norm50 norm 100 $norm100 norm 150 $norm150\n";		
 			
 			foreach my $md(@maxdepths){ 
 				foreach my $site_node(keys %{$obs_hash}){
 					foreach my $simsite(keys %{$sums{$md}{$site_node}}){
 						#print "maxdepth $md group number $group_number \n";
+						my @bins = sort { $a <=> $b } keys %{$hash{$md}{$site_node}{$simsite}};
 						my $diff = abs($sums{$md}{$site_node}{$simsite} - $norms{$md}{$site_node})/$norms{$md}{$site_node};
 						print "$site_node obssum ".$norms{$md}{$site_node}." simsum ".$sums{$md}{$site_node}{$simsite}."diff $diff \n";
 						if ($sums{$md}{$site_node}{$simsite} == 0 || (defined($mutnum_control) && $diff > $mutnum_control)){
-							foreach my $bin(1..$maxbin){
+							foreach my $bin(@bins){
 								$hash{$md}{$site_node}{$simsite}{$bin}[0] = "NA";
 								$hash{$md}{$site_node}{$simsite}{$bin}[1] = "NA";
 							}
 						}
 						else {
-							foreach my $bin(1..$maxbin){
+							foreach my $bin(@bins){
 								#print "in hash: ".$hash{$md}[$group_number]{$bin}[0]."\n";
 								#print "norm ".$norms{$md}[$group_number]."\n";
 								#print "sum ".$sums{$md}[$group_number]."\n";
@@ -2532,7 +2493,11 @@ print " maxbin $maxbin, iteration number $iteration_number\n";
 						
 						my $filehandle = $filehandles{$md}{$site_node};
 						#print "going to print something\n";
-						foreach my $bin(1..$maxbin){
+						foreach my $bin(@bins){
+							print $filehandle $bin.",".$bin.",";
+						}
+						print $filehandle "\n";
+						foreach my $bin(@bins){
 							print $filehandle $hash{$md}{$site_node}{$simsite}{$bin}[0].",".$hash{$md}{$site_node}{$simsite}{$bin}[1].",";
 						}
 						print $filehandle "\n";
@@ -2550,7 +2515,7 @@ foreach my $md (@maxdepths)	{
 				print "md $md site_node $site_node simsite $simsite\n";
 				print $norms{$md}{$site_node}." realdata norm (realdata integral?)\n";
 				my $iter_integral;
-				foreach my $bin(1..$maxbin){
+				foreach my $bin(keys %{$hash{$md}{$site_node}{$simsite}}){
 					$iter_integral += $hash{$md}{$site_node}{$simsite}{$bin}[0];
 				}
 				print $iter_integral." iteration integral normalized\n";
@@ -2602,7 +2567,6 @@ sub group_counter {
 	my $realdata =  $self -> {realdata};
 	#my $realdata = get_real_data();
 	
-	my $maxbin = $realdata->{"maxbin"}; 
 	my $step =  $realdata->{"step"};
 	unless (defined $step) {die "Oh no, realdata bin size is not defined. Won't proceed with pvalues\n";}
 	#print "before cycle\n";
@@ -2632,7 +2596,6 @@ sub group_counter {
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			if ($maxdepth > $restriction && $group_hash{$site}){ #15.02 moved here
 			foreach my $bin(keys %{$obs_hash->{$site_node}}){
-				$maxbin = max($bin, $maxbin);
 					$norm_restricted += $obs_hash->{$site_node}->{$bin}->[0];
 					$obs_hash_restricted{$site_node}{$bin}[0] = $obs_hash->{$site_node}->{$bin}->[0];
 					$obs_hash_restricted{$site_node}{$bin}[1] = $obs_hash->{$site_node}->{$bin}->[1];
@@ -2660,7 +2623,6 @@ sub group_counter {
 				my ($site, $node_name) = split(/_/, $site_node);
 				my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 				foreach my $bin(keys %{$obs_hash->{$site_node}}){
-					$maxbin = max($bin, $maxbin);
 					if ($maxdepth > $restriction && $group_hash{$site}){
 						$norm_restricted += $obs_hash->{$site_node}->{$bin}->[0];
 						$obs_hash_restricted{$site_node}{$bin}[0] = $obs_hash->{$site_node}->{$bin}->[0];
@@ -2710,8 +2672,6 @@ sub count_pvalues{
 	
 	my $realdata =  $self -> {realdata};
 	#my $realdata = get_real_data();
-	
-	my $maxbin = $realdata->{"maxbin"}; 
 	my $step =  $realdata->{"step"};
 	unless (defined $step) {die "Oh no, realdata bin size is not defined. Won't proceed with pvalues\n";}
 	#print "before cycle\n";
@@ -2742,7 +2702,6 @@ sub count_pvalues{
 		#	if (compare::is_neighbour_changing($self->$static_subs_on_node{$node_name}{$site}, 1) == 1) # fisk
 			if ($maxdepth > $restriction && $group_hash{$site}){ #15.02 moved here
 				foreach my $bin(keys %{$obs_hash->{$site_node}}){
-					$maxbin = max($bin, $maxbin);
 					$norm_restricted += $obs_hash->{$site_node}->{$bin}->[0];
 					$obs_hash_restricted{$site_node}{$bin}[0] = $obs_hash->{$site_node}->{$bin}->[0];
 					$obs_hash_restricted{$site_node}{$bin}[1] = $obs_hash->{$site_node}->{$bin}->[1];
@@ -2783,25 +2742,25 @@ sub count_pvalues{
 		my %flat_obs_hash;
 		my %flat_exp_hash;
 		#print " going to flat hash\n";
-		foreach my $bin(1..$maxbin){
-			foreach my $node (keys %obs_hash_restricted){
+		foreach my $node (keys %obs_hash_restricted){
+			foreach my $bin(keys %{$obs_hash_restricted{$node}}){
 				$flat_obs_hash{$bin} += $obs_hash_restricted{$node}{$bin}[0]; 
 				$flat_exp_hash{$bin} += $obs_hash_restricted{$node}{$bin}[1]; 
 			}
 		}
 		
-		my $test_obs_summ = sum(hist_to_array(\%flat_obs_hash));
-		my $test_exp_summ = sum(hist_to_array(\%flat_exp_hash));
+		my $test_obs_summ = sum(values %flat_obs_hash);
+		my $test_exp_summ = sum(values %flat_exp_hash);
 		#print ("  data  obs sum $test_obs_summ exp summ $test_exp_summ \n");
 		unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 			print "Error! data hist sum test for all failed! \n";
 		}
 		
 		#print " computing hist emdian \n"	;
-		my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
-		my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
-		my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step); # 18.03 - added the same statistics based on histogram mean (instead of median)
-		my $exp_mean = hist_mean_for_hash(\%flat_exp_hash, $step);
+		my $obs_median = hist_median_for_hash_nobin(\%flat_obs_hash);
+		my $exp_median = hist_median_for_hash_nobin(\%flat_exp_hash);
+		my $obs_mean = hist_mean_for_hash_nobin(\%flat_obs_hash); # 18.03 - added the same statistics based on histogram mean (instead of median)
+		my $exp_mean = hist_mean_for_hash_nobin(\%flat_exp_hash);
 		
 		print $outputfile "\n observed median: $obs_median\n";
 		print $outputfile "\n poisson expected median: $exp_median\n";
@@ -2821,47 +2780,38 @@ sub count_pvalues{
 		my $csvfile = File::Spec->catfile($outdir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 		open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 		my $iteration = 0;
-		my @hist_obs;
-		my @hist_exp;
-		my @array_obs_minus_exp;
 		while(<CSVFILE>){
 			my %boot_obs_hash;
 			my %boot_exp_hash;
-			my @splitter = split(/,/, $_);
+			my @bins = split(/,/, $_);
+			my $str = <CSVFILE>;
+			my @splitter = split(/,/, $str);
 			if ($splitter[0] eq "NA"){ # if no appropriate nodes were produced in this iteration, it is skipped
 				next;
 			}
-			my @diff_10bin_array;
+
 			for (my $i = 0; $i < scalar @splitter; $i++){ 
-				my $bin = ($i/2)+1;
+				my $binobs = $bins[$i];
 				my $obs = $splitter[$i];
-				$boot_obs_hash{$bin} = $splitter[$i];
+				$boot_obs_hash{$binobs} = $splitter[$i];
 				#print " i $i bin $bin value  $splitter[$i]\n";
-				$hist_obs[$bin] += $splitter[$i];
-				
 				$i++;
 				my $exp = $splitter[$i];
-				$boot_exp_hash{$bin} = $splitter[$i];
-				$hist_exp[$bin] += $splitter[$i];
-				$diff_10bin_array[int($bin/10)] += $obs-$exp;
-				#push @{$array_obs_minus_exp[$bin]}, $obs-$exp;
+				my $binexp = $bins[$i];
+				print "Error! bins for obs and exp don't match: $binobs $binexp\n" unless ($binexp == $binobs);
+				$boot_exp_hash{$binexp} = $splitter[$i];
 			}
 			
-			for (my $bin10 = 0; $bin10 < scalar @diff_10bin_array; $bin10++){
-				push @{$array_obs_minus_exp[$bin10]},  $diff_10bin_array[$bin10]; # no itnumber needed
-			}
-			
-			
-			my $test_obs_summ = sum(hist_to_array(\%boot_obs_hash));
-			my $test_exp_summ = sum(hist_to_array(\%boot_exp_hash));
+			my $test_obs_summ = sum(values %boot_obs_hash);
+			my $test_exp_summ = sum(values %boot_exp_hash);
 			#print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
 			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 				print "Error! boot hist sum test for all failed! \n";
 			}
-			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
-			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash,$step);
-			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
-			my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
+			my $boot_obs_median = hist_median_for_hash_nobin(\%boot_obs_hash);
+			my $boot_exp_median = hist_median_for_hash_nobin(\%boot_exp_hash);
+			my $boot_obs_mean = hist_mean_for_hash_nobin(\%boot_obs_hash);
+			my $boot_exp_mean = hist_mean_for_hash_nobin(\%boot_exp_hash);
 			print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
 			print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
 			if (nearest(.00000001,$boot_obs_median - $boot_exp_median) >= nearest(.00000001,$obs_median - $exp_median)){
@@ -2879,13 +2829,6 @@ sub count_pvalues{
 			$iteration++;
 		}
 		
-		for (my $j = 0; $j < scalar @hist_obs; $j++){
-			my $mean_obs = $hist_obs[$j]/$iteration;
-			my $mean_exp = $hist_exp[$j]/$iteration;
-			my $stat_obs = Statistics::Descriptive::Full->new();
-			$stat_obs->add_data(\@{$array_obs_minus_exp[$j]});
-			print $outputfile "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
-		}
 	
 	
 	
@@ -2928,7 +2871,6 @@ sub count_pvalues{
 				my ($site, $node_name) = split(/_/, $site_node);
 				my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 				foreach my $bin(keys %{$obs_hash->{$site_node}}){
-					$maxbin = max($bin, $maxbin);
 					if ($maxdepth > $restriction && $group_hash{$site}){
 						$norm_restricted += $obs_hash->{$site_node}->{$bin}->[0];
 						$obs_hash_restricted{$site_node}{$bin}[0] = $obs_hash->{$site_node}->{$bin}->[0];
@@ -2993,18 +2935,18 @@ sub count_pvalues{
 				}
 			}
 			
-			my $test_obs_summ = sum(hist_to_array(\%flat_obs_hash));
-			my $test_exp_summ = sum(hist_to_array(\%flat_exp_hash));
+			my $test_obs_summ = sum(values %flat_obs_hash);
+			my $test_exp_summ = sum(values %flat_exp_hash);
 			#print ("  data obs sum $test_obs_summ exp summ $test_exp_summ \n");
 			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 				print "Error! data hist sum test for ".$group_names[$group_number]." failed! \n";
 			}
 			
 			#print  computing hist emdian \n"	;
-			my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
-			my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
-			my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step);
-			my $exp_mean = hist_mean_for_hash(\%flat_exp_hash, $step);
+			my $obs_median = hist_median_for_hash_nobin(\%flat_obs_hash);
+			my $exp_median = hist_median_for_hash_nobin(\%flat_exp_hash);
+			my $obs_mean = hist_mean_for_hash_nobin(\%flat_obs_hash);
+			my $exp_mean = hist_mean_for_hash_nobin(\%flat_exp_hash);
 			
 			print $outputfile "\n observed median: $obs_median expected poisson median $exp_median observed mean: $obs_mean expected poisson mean $exp_mean\n";
 			if($obs_mean eq "NaN" || $exp_mean eq "NaN") {
@@ -3020,61 +2962,45 @@ sub count_pvalues{
 			my $iteration = 0; # counter for meaningful iterations
 			my @group_boot_medians;
 			my @group_boot_means;
-			my @hist_obs;
-			my @hist_exp;
-			my @array_gbo_minus_gbe;
 			my $itnumber = 0; # tracks iteration number, so that group and its complement are taken from the same iteration
 			while(<CSVFILE>){
 				my %boot_obs_hash;
 				my %boot_exp_hash;
-				my @splitter = split(/,/, $_);
+				my @bins = split(/,/, $_);
+				my $str = <CSVFILE>;
+				my @splitter = split(/,/, $str);
 				if ($splitter[0] eq "NA"){ # if no appropriate nodes were produced in this iteration, it is skipped
 					$itnumber++;
 					next;
 				}
 				## copypaste 5.02
-				my @gbo_minus_gbe_10bin_array;
 				for (my $i = 0; $i < scalar @splitter; $i++){
-					my $bin = ($i/2)+1;
+					my $binobs = $bins[$i];
 					my $obs = $splitter[$i];
-					$boot_obs_hash{$bin} = $splitter[$i];
+					$boot_obs_hash{$binobs} = $splitter[$i];
 					#print " i $i bin $bin value  $splitter[$i]\n";
-					$hist_obs[$bin] += $splitter[$i];
 					
 					$i++;
 					my $exp = $splitter[$i];
-					$boot_exp_hash{$bin} = $splitter[$i];
-					$hist_exp[$bin] += $splitter[$i];
-					$gbo_minus_gbe_10bin_array[int($bin/10)] += $obs-$exp;
-					#push @{$array_obs_minus_exp[$bin]}, $obs-$exp;
+					my $binexp = $bins[$i];
+					print "Error! bins for obs and exp don't match: $binobs $binexp\n" unless ($binexp == $binobs);
+					$boot_exp_hash{$binexp} = $splitter[$i];
 				}
 				
-				for (my $bin10 = 0; $bin10 < scalar @gbo_minus_gbe_10bin_array; $bin10++){
-					#push @{$array_gbo_minus_gbe[$bin10]}, $gbo_minus_gbe_10bin_array[$bin10];
-					$array_gbo_minus_gbe[$bin10][$itnumber] = $gbo_minus_gbe_10bin_array[$bin10];
-				}
 				## end of copypaste
+
 				
-				
-				## 5.02 redundant
-				#for (my $i = 0; $i < scalar @splitter; $i++){
-				#	my $bin = ($i/2)+1;
-				#	$boot_obs_hash{$bin} = $splitter[$i];
-				#	$i++;
-				#	$boot_exp_hash{$bin} = $splitter[$i];
-				#}
-				
-				my $test_obs_summ = sum(hist_to_array(\%boot_obs_hash));
-				my $test_exp_summ = sum(hist_to_array(\%boot_exp_hash));
+				my $test_obs_summ = sum(values %boot_obs_hash);
+				my $test_exp_summ = sum(values %boot_exp_hash);
 				#print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
 				unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 					print "Error! boot hist sum test for group ".$group_names[$group_number]."failed! \n";
 				}
 				
-				my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
-				my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
-				my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
-				my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
+				my $boot_obs_median = hist_median_for_hash_nobin(\%boot_obs_hash);
+				my $boot_exp_median = hist_median_for_hash_nobin(\%boot_exp_hash);
+				my $boot_obs_mean = hist_mean_for_hash_nobin(\%boot_obs_hash);
+				my $boot_exp_mean = hist_mean_for_hash_nobin(\%boot_exp_hash);
 				
 				$group_boot_medians[$itnumber][0] = $boot_obs_median;
 				$group_boot_medians[$itnumber][1] = $boot_exp_median;
@@ -3097,7 +3023,6 @@ sub count_pvalues{
 			
 			my %complement_hash;
 			$group_number++;
-			my $maxbin = 0;
 			foreach my $site(@{$groups[$group_number]}){ #next
 				$complement_hash{$site} = 1;
 			}
@@ -3109,7 +3034,6 @@ sub count_pvalues{
 				my ($site, $node_name) = split(/_/, $site_node);
 				my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 				foreach my $bin(keys %{$obs_hash->{$site_node}}){
-					$maxbin = max($bin, $maxbin);
 					if ($maxdepth > $restriction && $complement_hash{$site}){
 						$complement_norm_restricted += $obs_hash->{$site_node}->{$bin}->[0];
 						$complement_obs_hash_restricted{$site_node}{$bin}[0] = $obs_hash->{$site_node}->{$bin}->[0];
@@ -3138,25 +3062,25 @@ sub count_pvalues{
 			my %complement_flat_obs_hash;
 			my %complement_flat_exp_hash;
 			#print " going to flat hash\n";
-			foreach my $bin(1..$maxbin){
-				foreach my $node (keys %complement_obs_hash_restricted){
+			foreach my $node (keys %complement_obs_hash_restricted){
+				foreach my $bin(keys %{complement_obs_hash_restricted{$node}}){
 					$complement_flat_obs_hash{$bin} += $complement_obs_hash_restricted{$node}{$bin}[0];
 					$complement_flat_exp_hash{$bin} += $complement_obs_hash_restricted{$node}{$bin}[1];
 				}
 			}
 			
-			my $test_obs_summ = sum(hist_to_array(\%complement_flat_obs_hash));
-			my $test_exp_summ = sum(hist_to_array(\%complement_flat_exp_hash));
+			my $test_obs_summ = sum(values %complement_flat_obs_hash);
+			my $test_exp_summ = sum(values %complement_flat_exp_hash);
 			#print (" data obs sum $test_obs_summ exp summ $test_exp_summ \n");
 			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 				print "Error! data hist sum test for complement of ".$group_names[$group_number]." failed! \n";
 			}
 			
 			#print " compung hist emdian \n"	;
-			my $complement_obs_median = hist_median_for_hash(\%complement_flat_obs_hash, $step);
-			my $complement_exp_median = hist_median_for_hash(\%complement_flat_exp_hash, $step);
-			my $complement_obs_mean = hist_mean_for_hash(\%complement_flat_obs_hash, $step);
-			my $complement_exp_mean = hist_mean_for_hash(\%complement_flat_exp_hash, $step);
+			my $complement_obs_median = hist_median_for_hash_nobin(\%complement_flat_obs_hash);
+			my $complement_exp_median = hist_median_for_hash_nobin(\%complement_flat_exp_hash);
+			my $complement_obs_mean = hist_mean_for_hash_nobin(\%complement_flat_obs_hash);
+			my $complement_exp_mean = hist_mean_for_hash_nobin(\%complement_flat_exp_hash);
 			
 			print $outputfile "\n observed median: $complement_obs_median expected median: $complement_exp_median observed mean: $complement_obs_mean expected mean: $complement_exp_mean\n";
 			if($complement_obs_mean eq "NaN" || $complement_exp_mean eq "NaN") {
@@ -3170,62 +3094,44 @@ sub count_pvalues{
 			my $iteration = 0;
 			my @complement_boot_medians;
 			my @complement_boot_means;
-			my @hist_compl_obs;
-			my @hist_compl_exp;
-			my @array_cbo_minus_cbe;
+
 			my $itnumber = 0;
 			while(<CSVFILE>){
 				my %boot_obs_hash;
 				my %boot_exp_hash;
-				my @splitter = split(/,/, $_);
+				my @bins = split(/,/, $_);
+				my $str = <CSVFILE>;
+				my @splitter = split(/,/, $str);
 				if ($splitter[0] eq "NA"){ # if no appropriate nodes were produced in this iteration, it is skipped
 					$itnumber++;
 					next;
 				}
 				## copypaste 5.02
-				my @cbo_minus_cbe_10bin_array;
 				for (my $i = 0; $i < scalar @splitter; $i++){
-					my $bin = ($i/2)+1;
+					my $binobs = $bins[$i];
 					my $obs = $splitter[$i];
-					$boot_obs_hash{$bin} = $splitter[$i];
+					$boot_obs_hash{$binobs} = $splitter[$i];
 					#print " i $i bin $bin value  $splitter[$i]\n";
-					$hist_compl_obs[$bin] += $splitter[$i];
-					
 					$i++;
 					my $exp = $splitter[$i];
-					$boot_exp_hash{$bin} = $splitter[$i];
-					$hist_compl_exp[$bin] += $splitter[$i];
-					$cbo_minus_cbe_10bin_array[int($bin/10)] += $obs-$exp;
-					#push @{$array_obs_minus_exp[$bin]}, $obs-$exp;
-				}
-				
-				for (my $bin10 = 0; $bin10 < scalar @cbo_minus_cbe_10bin_array; $bin10++){
-					#push @{$array_cbo_minus_cbe[$bin10]}, $cbo_minus_cbe_10bin_array[$bin10];
-					$array_cbo_minus_cbe[$bin10][$itnumber] = $cbo_minus_cbe_10bin_array[$bin10];
+					my $binexp = $bins[$i];
+					print "Error! bins for obs and exp don't match: $binobs $binexp\n" unless ($binexp == $binobs);
+					$boot_exp_hash{$binexp} = $splitter[$i];
 				}
 				## end of copypaste
+
 				
-				
-				## 5.02 redundant
-				#for (my $i = 0; $i < scalar @splitter; $i++){
-				#	my $bin = ($i/2)+1;
-				#	$boot_obs_hash{$bin} = $splitter[$i];
-				#	$i++;
-				#	$boot_exp_hash{$bin} = $splitter[$i];
-				#}
-				
-				
-				my $test_obs_summ = sum(hist_to_array(\%boot_obs_hash));
-				my $test_exp_summ = sum(hist_to_array(\%boot_exp_hash));
+				my $test_obs_summ = sum(values %boot_obs_hash);
+				my $test_exp_summ = sum(values %boot_exp_hash);
 				#print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
 				unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 					print "Error! boot hist sum test for complement ".$group_names[$group_number]." failed! \n";
 				}
 				
-				my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
-				my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
-				my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
-				my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);			
+				my $boot_obs_median = hist_median_for_hash_nobin(\%boot_obs_hash);
+				my $boot_exp_median = hist_median_for_hash_nobin(\%boot_exp_hash);
+				my $boot_obs_mean = hist_mean_for_hash_nobin(\%boot_obs_hash);
+				my $boot_exp_mean = hist_mean_for_hash_nobin(\%boot_exp_hash);			
 				$complement_boot_medians[$itnumber][0] = $boot_obs_median;
 				$complement_boot_medians[$itnumber][1] = $boot_exp_median;
 				$complement_boot_means[$itnumber][0] = $boot_obs_mean;
@@ -3242,14 +3148,8 @@ sub count_pvalues{
 				if (! defined $complement_boot_medians[$it] || ! defined $group_boot_medians[$it]){
 					$complement_boot_medians[$it] = undef;
 					$complement_boot_means[$it] = undef;
-					for (my $bin10 = 0; $bin10 < scalar @array_cbo_minus_cbe; $bin10++){
-						$array_cbo_minus_cbe[$bin10][$it] = undef;
-					}
 					$group_boot_medians[$it] = undef;
 					$group_boot_means[$it] = undef;
-					for (my $bin10 = 0; $bin10 < scalar @array_gbo_minus_gbe; $bin10++){
-						$array_gbo_minus_gbe[$bin10][$it] = undef;
-					}
 				} 
 			}
 			# now group and complement contain undefs at the same indices
@@ -3257,38 +3157,9 @@ sub count_pvalues{
 			@complement_boot_means = grep defined, @complement_boot_means;
 			@group_boot_medians = grep defined, @group_boot_medians;
 			@group_boot_means = grep defined, @group_boot_means;
-			for (my $bin10 = 0; $bin10 < scalar @array_cbo_minus_cbe; $bin10++){
-					@{$array_cbo_minus_cbe[$bin10]} = grep defined, @{$array_cbo_minus_cbe[$bin10]};
-			}
-			for (my $bin10 = 0; $bin10 < scalar @array_gbo_minus_gbe; $bin10++){
-					@{$array_gbo_minus_gbe[$bin10]} = grep defined, @{$array_gbo_minus_gbe[$bin10]};
-			}
 			##
 			print "Number of meaningful iterations (used for pvalue estimation) for group ".$group_names[$group_number]." is ".scalar @complement_boot_medians." or ".scalar @group_boot_means." first one is used for division, second - for iterating through simulations\n";
 			
-			my @array_diffdiff;
-			if (scalar @array_gbo_minus_gbe  != scalar @array_cbo_minus_cbe){
-				print "bintest failed! number of bin in group array is ".scalar @array_gbo_minus_gbe.", in complement array  ".scalar @array_cbo_minus_cbe."\n";
-				print "Don't worry though, their equality is not required\n";
-			}
-			my $maxbin  = max(scalar @array_gbo_minus_gbe, scalar @array_cbo_minus_cbe);
-			for (my $j = 0; $j < $maxbin; $j++){
-				if (scalar @{$array_gbo_minus_gbe[$j]}  != scalar @{$array_cbo_minus_cbe[$j]}){
-					print "itertest failed! number of iterations in group array for $j bin is ".scalar @{$array_gbo_minus_gbe[$j]}.", in complement array  ".scalar @{$array_cbo_minus_cbe[$j]}."\n";
-					print "Now you can start worrying\n";
-					print "But it's ok, if you mix iterations and don't print NAs in .csv. I'll just compute the difference between all full arrays\n";
-					my $number_of_iterations = min(scalar @{$array_gbo_minus_gbe[$j]}, scalar @{$array_cbo_minus_cbe[$j]});
-					foreach my $iteration(0..($number_of_iterations-1)){
-						push @{$array_diffdiff[$j]}, $array_gbo_minus_gbe[$j][$iteration] - $array_cbo_minus_cbe[$j][$iteration];
-					}
-					
-				}
-				else {
-					foreach my $iteration(@{$array_gbo_minus_gbe[$j]}){
-						push @{$array_diffdiff[$j]}, $array_gbo_minus_gbe[$j][$iteration] - $array_cbo_minus_cbe[$j][$iteration];
-					}
-				}
-			}
 			my $updated_iteration_number = scalar @complement_boot_medians;
 			if (scalar @complement_boot_medians != scalar @group_boot_medians){
 				print "Error! complement_boot_medians size is not equal to group_boot_medians size: ".scalar @complement_boot_medians." != ".scalar @group_boot_medians."\n";
@@ -3296,39 +3167,7 @@ sub count_pvalues{
 				$updated_iteration_number = min(scalar @complement_boot_medians, scalar @group_boot_medians);
 			}
 			
-			
-			unless($fake){
-			print $outputfile "bin mean_group_boot_obs mean_group_boot_exp ";
-			print $outputfile "mean_compl_boot_obs mean_compl_boot_exp ";
-			print $outputfile " diff_gbo-gbe-cbo+cbe_percentile_5 diff_gbo-gbe-cbo+cbe_percentile_95";
-			print $outputfile " diff_gbo-gbe_percentile_5 diff_gbo-gbe_percentile_95";
-			print $outputfile " diff_cbo-cbe_percentile_5 diff_cbo-cbe_percentile_95\n";
-			my $maxbin  = max(scalar @hist_obs, scalar @hist_compl_obs);
-			$maxbin = max ($maxbin, scalar @hist_exp);
-			$maxbin = max ($maxbin, scalar @hist_compl_exp);
-			
-			
-			for (my $j = 0; $j < $maxbin; $j++){ #foreach bin
-				my $mean_group_obs = $hist_obs[$j]/$updated_iteration_number; # 26.09.2016 - $updated_iteration_number instead of $iteration
-				my $mean_group_exp = $hist_exp[$j]/$updated_iteration_number;
-				my $mean_compl_obs = $hist_compl_obs[$j]/$updated_iteration_number;
-				my $mean_compl_exp = $hist_compl_exp[$j]/$updated_iteration_number;
-				my $stat_gbo_minus_gbe = Statistics::Descriptive::Full->new();
-				$stat_gbo_minus_gbe->add_data(\@{$array_gbo_minus_gbe[$j]});
-				my $stat_cbo_minus_cbe = Statistics::Descriptive::Full->new();
-				$stat_cbo_minus_cbe->add_data(\@{$array_cbo_minus_cbe[$j]});	
-				my $stat_diffdiff = Statistics::Descriptive::Full->new();
-				$stat_diffdiff->add_data(\@{$array_diffdiff[$j]});			
-				print $outputfile "$j $mean_group_obs $mean_group_exp ";
-				print $outputfile "$mean_compl_obs $mean_compl_exp ";
-				print $outputfile $stat_diffdiff->percentile(5)." ".$stat_diffdiff->percentile(95);
-				print $outputfile $stat_gbo_minus_gbe->percentile(5)." ".$stat_gbo_minus_gbe->percentile(95);
-				print $outputfile $stat_cbo_minus_cbe->percentile(5)." ".$stat_cbo_minus_cbe->percentile(95)."\n";
-			}
-			}
-			
-			
-			
+
 			my $pval_env_enrichment;
 			my $pval_epi_enrichment;
 			my $pval_env_depletion;
@@ -3420,9 +3259,7 @@ sub count_single_site_pvalues{
 	my @restriction_levels = @{$_[1]};
 	my $dir = $self -> {static_output_base};
 	my $outdir = $self -> {static_output_subfolder};
-	
 	my $realdata =  $self -> {realdata};
-	my $maxbin = $realdata->{"maxbin"}; 
 	my $step = $realdata->{"step"}; #bin size
 	unless (defined $step) {die "Oh no, bin size in realdata is not defined. Won't proceed with counting pvalues.\n";}
 	#print "before cycle\n";
@@ -3442,7 +3279,6 @@ sub count_single_site_pvalues{
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			if ($maxdepth > $restriction){ 
 			foreach my $bin(keys %{$obs_hash->{$site_node}}){
-					$maxbin = max($bin, $maxbin);
 					$norm_restricted{$site_node} += $obs_hash->{$site_node}->{$bin}->[0];
 					$obs_hash_restricted{$site_node}{$bin}[0] = $obs_hash->{$site_node}->{$bin}->[0];
 					$obs_hash_restricted{$site_node}{$bin}[1] = $obs_hash->{$site_node}->{$bin}->[1];
@@ -3463,15 +3299,15 @@ sub count_single_site_pvalues{
 		foreach my $site_node (sort (keys %obs_hash_restricted)){
 			my %flat_obs_hash;
 			my %flat_exp_hash;
-			foreach my $bin(1..$maxbin){
+			foreach my $bin(keys %obs_hash_restricted{$site_node}){
 				$flat_obs_hash{$bin} += $obs_hash_restricted{$site_node}{$bin}[0]; 
 				$flat_exp_hash{$bin} += $obs_hash_restricted{$site_node}{$bin}[1]; 
 			}
 			
-			my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
-			my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
-			my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step); # 18.03 - added the same statistics based on histogram mean (instead of median)
-			my $exp_mean = hist_mean_for_hash(\%flat_exp_hash, $step);
+			my $obs_median = hist_median_for_hash_nobin(\%flat_obs_hash);
+			my $exp_median = hist_median_for_hash_nobin(\%flat_exp_hash);
+			my $obs_mean = hist_mean_for_hash_nobin(\%flat_obs_hash); # 18.03 - added the same statistics based on histogram mean (instead of median)
+			my $exp_mean = hist_mean_for_hash_nobin(\%flat_exp_hash);
 			
 
 			print $outputfile "site_node\tbin\tobs\texp\n";
@@ -3501,47 +3337,41 @@ sub count_single_site_pvalues{
 		my $csvfile = File::Spec->catfile($outdir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$site_node.".csv");
 		open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 		my $iteration = 0;
-		my @hist_obs;
-		my @hist_exp;
 		my @array_obs_minus_exp;
 		while(<CSVFILE>){
 			my %boot_obs_hash;
 			my %boot_exp_hash;
-			my @splitter = split(/,/, $_);
+			my @bins = split(/,/, $_);
+			my $str = <CSVFILE>;
+			my @splitter = split(/,/, $str);
 			if ($splitter[0] eq "NA"){ # if no appropriate nodes were produced in this iteration, it is skipped
 				next;
 			}
-			my @diff_10bin_array;
+
 			for (my $i = 0; $i < scalar @splitter; $i++){
-				my $bin = ($i/2)+1;
+				my $binobs = $bins[$i];
 				my $obs = $splitter[$i];
-				$boot_obs_hash{$bin} = $splitter[$i];
+				$boot_obs_hash{$binobs} = $splitter[$i];
 				#print " i $i bin $bin value  $splitter[$i]\n";
-				$hist_obs[$bin] += $splitter[$i];
-				
 				$i++;
 				my $exp = $splitter[$i];
-				$boot_exp_hash{$bin} = $splitter[$i];
-				$hist_exp[$bin] += $splitter[$i];
-				$diff_10bin_array[int($bin/10)] += $obs-$exp;
-				#push @{$array_obs_minus_exp[$bin]}, $obs-$exp;
+				my $binexp = $bins[$i];
+				print "Error! bins for obs and exp don't match: $binobs $binexp\n" unless ($binexp == $binobs);
+				$boot_exp_hash{$binexp} = $splitter[$i];
 			}
 			
-			for (my $bin10 = 0; $bin10 < scalar @diff_10bin_array; $bin10++){
-				push @{$array_obs_minus_exp[$bin10]}, $diff_10bin_array[$bin10];
-			}
 			print ("iteration ".$iteration."\n");
-			my $test_obs_summ = sum(hist_to_array(\%boot_obs_hash));
-			my $test_exp_summ = sum(hist_to_array(\%boot_exp_hash));
+			my $test_obs_summ = sum(values %boot_obs_hash);
+			my $test_exp_summ = sum(values %boot_exp_hash);
 			
 			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 				print "Error! boot hist sum test for $site_node failed! \n";
 			}
-			if ($site_node eq "169_INTNODE2434") {hist_median_for_hash(\%boot_exp_hash, $step, "verbose");}
-			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
-			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
-			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
-			my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
+			#if ($site_node eq "169_INTNODE2434") {hist_median_for_hash(\%boot_exp_hash, $step, "verbose");}
+			my $boot_obs_median = hist_median_for_hash_nobin(\%boot_obs_hash);
+			my $boot_exp_median = hist_median_for_hash_nobin(\%boot_exp_hash);
+			my $boot_obs_mean = hist_mean_for_hash_nobin(\%boot_obs_hash);
+			my $boot_exp_mean = hist_mean_for_hash_nobin(\%boot_exp_hash);
 			print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
 			print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
 			if (nearest(.00000001,$boot_obs_median - $boot_exp_median) >= nearest(.00000001,$obs_median - $exp_median)){
@@ -3558,16 +3388,7 @@ sub count_single_site_pvalues{
 			}
 			$iteration++;
 		}
-	# fisa debugging	
-	#	if ($iteration > 0) {
-	#		for (my $j = 0; $j < scalar @hist_obs; $j++){
-	#			my $mean_obs = $hist_obs[$j]/$iteration;
-	#			my $mean_exp = $hist_exp[$j]/$iteration;
-	#			my $stat_obs = Statistics::Descriptive::Full->new();
-	#			$stat_obs->add_data(\@{$array_obs_minus_exp[$j]});
-	#			print $outputfile "bin $j mean_boot_obs $mean_obs mean_boot_exp $mean_exp diff_percentile_5 ".$stat_obs->percentile(5)." diff_percentile_95 ".$stat_obs->percentile(95).".\n";
-	#		}
-	#	}
+
 	
 		close CSVFILE;
 		
@@ -4343,7 +4164,7 @@ sub my_median{
 my @values = @{$_[0]};	
 my $median;
 my $mid = int @values/2;
-my @sorted_values = sort @values;
+my @sorted_values = sort { $a <=> $b } @values;
 if (@values % 2) {
     $median = $sorted_values[ $mid ];
 } else {
@@ -4351,6 +4172,7 @@ if (@values % 2) {
 } 
 return $median;
 }
+
 
 
 #takes a hash of probabilities for 0,1,2...
@@ -4369,6 +4191,68 @@ sub hist_mean_for_hash {
 	if (! defined $step) {$step  = 1;}
 	return hist_mean(\@hist, $step);
 }
+
+
+#takes a hash of probabilities for any distances (including nonintegral)
+sub hist_median_for_hash_nobin{
+    my %hist = %{$_[0]};
+	my $verbose = $_[2];
+	my $summ = sum (values %hist);
+	my $head = 0;
+	my @distances = sort { $a <=> $b } keys %hist;
+	my $distance = shift @distances;
+	my $median = 0;
+	
+	while ($head < $summ/2){
+		unless ($hist{$distance} == 0) {$head += $hist{$distance};}
+		$median = $distance; 
+		$distance = shift @distances;
+		if ($verbose) {
+			my $half = $summ/2;
+			print $head." ".$median." ".$half."\n";
+		}
+		if (abs ($head - $summ/2) < 0.000001) {last;}
+	}
+	if ($verbose) {print $summ."\n";}
+	if (abs ($head - $summ/2) < 0.000001){ # magic 
+	#	$median += 0.5*$step;
+		my $leftmedian = $median;
+		my $rightmedian;
+		my $newhead = $head;
+		if ($verbose) {print "head == summ/2: ".$head." ".$leftmedian."\n";}
+		while ($newhead == $head){
+			$newhead += $hist{$distance};
+			$rightmedian = $distance;
+			if ($verbose) {print $newhead." ".$rightmedian."\n";} 
+			$distance = shift @distances;
+		}
+		$median = ($leftmedian+$rightmedian)/2;
+		if ($verbose) {print "median is $median\n";}
+	}
+#print_hist(\@hist);
+	if ($verbose) {print "median is $median\n";}
+	return $median;
+}
+
+#takes a hash of probabilities for any distances (including nonintegral)
+sub hist_mean_for_hash_nobin {
+	my %hist = %{$_[0]};
+	my $summ =  sum (values %hist);
+	my @distances = sort { $a <=> $b } keys %hist;
+	my $integer;
+	for my $dist(@distances){
+		$integer += $dist*$hist{$dist};
+	}
+	if ($summ > 0){
+		return $integer/$summ;
+	}
+	else {
+		return "NaN";
+	}
+}
+
+
+
 
 #takes an array of probabilities for 0,1,2...
 sub hist_median{
