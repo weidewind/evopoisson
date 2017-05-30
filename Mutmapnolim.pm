@@ -1872,19 +1872,19 @@ sub concat_and_divide_simult {
 									}
 									else {
 										#print "CONC "."norm ".$norms{$md}[$group_number]."\n";
-										#print "CONC "."sum ".$sums{$md}[$group_number]{$label}."\n";
-										#print "CONC "."in hash, bin 12: ".$hash{$md}[$group_number]{$label}{12}[0]."\n";
+										print "CONC "."sum ".$sums{$md}[$group_number]{$label}."\n";
+										print "CONC "."in hash, bin 12: ".$hash{$md}[$group_number]{$label}{12}[0]."\n";
 										
 										foreach my $bin(@bins){
 											$hash{$md}[$group_number]{$label}{$bin}[0] = $hash{$md}[$group_number]{$label}{$bin}[0]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
 											$hash{$md}[$group_number]{$label}{$bin}[1] = $hash{$md}[$group_number]{$label}{$bin}[1]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
 										}
-										#print "CONC expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2 (4th column) \n";
+										print "CONC expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2  \n";
 									}
 									
 									my $filehandle = $filehandles{$md}{$group_number};
 									#print "CONC "."going to print something\n";
-									#print "CONC now expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2 (4th column) \n";
+									print "CONC now expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2  \n";
 									foreach my $bin(@bins){
 										print $filehandle $bin.",".$bin.",";
 									}
