@@ -76,11 +76,11 @@ my %distance_hash = old_distance_matrix($input_base);
 new_distance_matrix($tree);
 
 
-my $ancnode = "";
-my $node = "";
+my $ancnode = "INTNODE3841";
+my $node = "INTNODE3243";
 my $old = old_distance($ancnode, $node, \%distance_hash);
 my $new = new_distance($ancnode, $node, \%hash_of_nodes);
 
-
+print "old $old new $new \n";
 
 
