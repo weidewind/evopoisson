@@ -3868,7 +3868,7 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 			#print "site_node $site_node \n";
 			my $total_muts;
 			my $total_length;
-	print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
+	#print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
 			print " maxdepth is ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}. " and restriction is $restriction\n";
 			if ($self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"} > $restriction){
 				my %subtract_hash;
