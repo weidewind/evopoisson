@@ -1368,6 +1368,7 @@ sub get_constraints {
 	}
 
 	foreach my $site_node(keys %{$obs_hash}){
+			print "constraints maker found ".$site_node."\n";
 			my ($site, $node_name) = split(/_/, $site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 				if ($maxdepth > $restriction && $group_hash{$site}){
@@ -1377,7 +1378,7 @@ sub get_constraints {
 						$totlen += $subtree_info->{$node_name}{$site}{"hash"}{$bin}[1];
 					}
 					my $hazard = $mutnum/$totlen;
-					#print "hazard for $site $node_name is $hazard\n";
+					print "hazard for $site $node_name is $hazard: $mutnum / $totlen \n";
 					my $stoppers = $all_stoppers{$site};
 					my $constr = Constrains->new(number_of_mutations => $mutnum, stoppers => $stoppers, hazard => $hazard);
 					$constraints->{$node_name}{$site} = $constr;  
