@@ -4820,7 +4820,7 @@ sub visitor_coat {
 				my $ancname = $anc_node->get_name();
 				my $depth = $self->{static_distance_hash}{$ancname}{$nname};
 				$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($depth,$step)}[1] += $nlength;
-			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
+				print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				# commented out at 27.02.2017 and copy-pasted higher
 				#if (!($self->has_no_background_mutation($node, $site_index))){
 				#	push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"stoppers"}}, $node;
