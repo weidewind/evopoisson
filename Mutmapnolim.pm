@@ -250,6 +250,8 @@ $| = 1;
 		my $treefile = File::Spec->catfile($input_base, $args->{protein}.".l.r.newick");
 		if ($args->{syn_lengths} && !(-e $treefile)) {print_tree_with_syn_lengths_static($args);}
 		my $static_tree = parse_tree($treefile)  or die "No tree at $treefile";
+		my$treeheight = $static_tree->calc_tree_height();
+		print " Tree height is $treeheight\n";
 		my $self;
 		make_path($output_base);
 		make_path(File::Spec->catdir($output_base, temp_tag()));
@@ -1608,9 +1610,10 @@ sub prepare_real_data {
 	print "Early news from prepare: there are $debugnum keys in full_obs_hash\n";
 	foreach my $site_node(keys %full_obs_hash){
 		my ($site, $node_name) = split(/_/, $site_node);
+		
 		my $maxdepth = $self -> {static_subtree_info}{$node_name}{$site}{"maxdepth"};
 		foreach my $bin(keys %{$full_obs_hash{$site_node}}){
-			#$bins{$bin} = 1;
+			print "restricting hash: bin $bin for $site_node \n";
 			if ($maxdepth > $restriction){
 				$restricted_norm += $full_obs_hash{$site_node}{$bin}[0];
 				$restricted_obs_hash{$site_node}{$bin}[0] = $full_obs_hash{$site_node}{$bin}[0];
