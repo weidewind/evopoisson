@@ -3,6 +3,7 @@
 use List::Util qw(sum);
 use Cwd qw(abs_path cwd getcwd);
 use Bio::Phylo::IO;
+use File::Spec;
 use strict;
 
 sub old_distance_matrix {
