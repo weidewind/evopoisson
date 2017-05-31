@@ -1592,6 +1592,7 @@ sub prepare_real_data {
 	$self -> print_incidence_matrix(\%matrix);
 	my $debugnum = scalar keys %{$self ->{static_nodes_with_sub}};
 	print "Very early News from prepare: static_nodes_with_sub contains $debugnum keys\n";
+	print "Will restrict to subtrees longer than $restriction \n";
 	# used depth_groups_entrenchment_optimized_selector_alldepths but changed it for depth_groups_entrenchment_optimized_selector_alldepths_2, because the latter
 	# keeps in obs_hash info about site index as well as about node name
 	my %full_obs_hash = $self -> depth_groups_entrenchment_optimized_selector_alldepths_2($step, $restriction); # bin size
@@ -3852,9 +3853,9 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 	my @args = ( $step, $root);
 	$self->visitor_coat ($root, \@array,\&entrenchment_visitor,\&no_check,\@args,0, "overwrite"); # 27.02.2017 added "overwrite" flag
 	my $debugnum = scalar keys %{$self ->{static_nodes_with_sub}};
-	#print "News from depth..2: static_nodes_with_sub contains $debugnum keys\n";
+	print "News from depth..2: static_nodes_with_sub contains $debugnum keys\n";
 	my $debugnum = scalar keys %{$self ->{static_subtree_info}};
-	#print 	"News from depth..2: static_subtree_info contains $debugnum keys (nodes)\n";
+	print 	"News from depth..2: static_subtree_info contains $debugnum keys (nodes)\n";
 	foreach my $ind (@group){
 		foreach my $nod(@{$self ->{static_nodes_with_sub}{$ind}}){
 			#print "nod is ".$nod." ref(nod) is ".ref($nod)."\n";
@@ -3867,8 +3868,8 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 			#print "site_node $site_node \n";
 			my $total_muts;
 			my $total_length;
-	#print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
-			#print " maxdepth is ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}. " and restriction is $restriction\n";
+	print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
+			print " maxdepth is ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}. " and restriction is $restriction\n";
 			if ($self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"} > $restriction){
 				my %subtract_hash;
 				
@@ -3896,11 +3897,11 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 						$total_length -= $subtract_hash{$bin};
 					}
 				}	
-			#	print $node->get_name()." ".$ind." TOTALS: $total_muts, $total_length, maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n";
+				print $node->get_name()." ".$ind." TOTALS: $total_muts, $total_length, maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n";
 				#if ($total_length > 0 && $total_muts/$total_length < 0.005){
 				if ($total_length > 0 && $total_muts > 0){ # 21.10 added total_muts > 0
-			#	print "total muts $total_muts \n";
-			#	print "site $ind node ".$node->get_name()." maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n"; # commented out 16.09
+				print "total muts $total_muts \n";
+				print "site $ind node ".$node->get_name()." maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n"; # commented out 16.09
 					foreach my $bin (sort {$a <=> $b} (keys %{$self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}})){
 						#if ($total_length > 0 && $static_subtree_info{$node->get_name()}{$ind}{"hash"}{$bin}[1] > 0){ #there are some internal nodes with 0-length terminal daughter branches
 						 if ($total_length > 0){ 
