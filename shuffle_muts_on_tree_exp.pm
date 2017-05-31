@@ -27,8 +27,8 @@ sub shuffle_mutations {
 	while($I<@{$ra_strip_constr}){
 		my $n=$ra_strip_constr->[$I]->number_of_mutations();
 		my $lambda=$ra_strip_constr->[$I]->hazard(); #number of strips
-		#print "-----------------------ancestor is ".$rnode->get_name."site $I, want $n mutations here \n";
-		#print " lambda for ".$rnode->get_name." anc site $I is $lambda\n";
+		print "-----------------------ancestor is ".$rnode->get_name."site $I, want $n mutations here \n";
+		print " lambda for ".$rnode->get_name." anc site $I is $lambda\n";
 		my $ra_events=$ra_out_event_nodes->[-1];
 		my @nsamples;
 		my %blocked;
@@ -160,17 +160,17 @@ sub shuffle_mutations_on_tree{
 			$rh_out_subtree->{$name}={};
 			foreach my $site(keys %{$rh_constrains->{$name}}){
 				push @sites,$site;
-				#print "pushed $site into site array for $name\n";
+				print "pushed $site into site array for $name\n";
 				push @strip_constrs,$rh_constrains->{$name}->{$site};
 			};
 			my @tmp; 
-			#print " just about to shuffle muts on tree for node $name\n";
+			print " just about to shuffle muts on tree for node $name\n";
 			shuffle_mutations($node,\@strip_constrs,\@tmp, $poisson);
 			for(my $i=0;$i<@sites;$i++){
 				my $site=$sites[$i];
 				if(defined $tmp[$i]){
 					$rh_out_subtree->{$name}->{$site}=[] unless defined $rh_out_subtree->{$name}->{$site};
-					#print "for $site $name need ".$strip_constrs[$i]->number_of_mutations." mutations, got ".scalar(@{$tmp[$i]})."\n";
+					print "for $site $name need ".$strip_constrs[$i]->number_of_mutations." mutations, got ".scalar(@{$tmp[$i]})."\n";
 					die "\nNot all mutations were positioned on the tree!" unless $strip_constrs[$i]->number_of_mutations==scalar(@{$tmp[$i]});
 					push @{$rh_out_subtree->{$name}->{$site}},@{$tmp[$i]};
 				}else{
