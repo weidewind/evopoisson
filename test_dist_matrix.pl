@@ -79,8 +79,8 @@ sub new_distance {
 	my $ancnode = shift;
 	my $node = shift;
 	my $hash_of_nodes = shift;
-	$node = $hash_of_nodes->{$node};
-	$ancnode = $hash_of_nodes->{$ancnode};
+	$node = ${$hash_of_nodes->{$node}};
+	$ancnode = ${$hash_of_nodes->{$ancnode}};
 	return $node->get_generic('time') - $ancnode->get_generic('time');
 }
 
@@ -101,12 +101,21 @@ foreach my $node(@nodes){
 my %distance_hash = old_distance_matrix($input_base);
 new_distance_matrix($tree);
 
+test {
+	my $ancnode = shift;
+	my $node = shift;
+	my $old = old_distance($ancnode, $node, \%distance_hash);
+	my $new = new_distance($ancnode, $node, \%hash_of_nodes);
+	print "old $old new $new \n";
+	if ($old != $new){ print "Error!"}
+}
+
+my $ancnode = "INTNODE3841";
+my $node = "INTNODE3840";
+test($ancnode, $node);
 
 my $ancnode = "INTNODE3841";
 my $node = "INTNODE3243";
-my $old = old_distance($ancnode, $node, \%distance_hash);
-my $new = new_distance($ancnode, $node, \%hash_of_nodes);
-
-print "old $old new $new \n";
+test($ancnode, $node);
 
 
