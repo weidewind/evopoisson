@@ -168,7 +168,7 @@ if ($sim > 0){
 	}
 	##
 	## Forkmanager setup
-	my $manager = new Parallel::ForkManager(30);
+	my $manager = new Parallel::ForkManager(100);
 	#my $lockfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}, "lock");
 
 	$manager->run_on_start( 
