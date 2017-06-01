@@ -133,7 +133,7 @@ if ($sim > 0){
 	print "Memusage is ".$memusage."\n";
 	##
 	my $server_max_proc_num = 100;
-	my $max_proc_num = min(int($maxmem/$memusage),$server_max_proc_num);
+	my $max_proc_num = List::Util::min(int($maxmem/$memusage),$server_max_proc_num);
 	print " Max proc num $max_proc_num\n";
 	unless ($max_proc_num > 0) {die "Error: Memory usage is $memusage - more than you specified with masmem parameter\n"};
 	my @iters;
