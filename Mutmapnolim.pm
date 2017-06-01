@@ -1571,6 +1571,7 @@ sub prepare_real_data {
 	#my %bins;
 	my $debugnum = scalar keys %full_obs_hash;
 	print "Early news from prepare: there are $debugnum keys in full_obs_hash\n";
+	print "Will restrict to subtrees longer than $restriction \n";
 	foreach my $site_node(keys %full_obs_hash){
 		my ($site, $node_name) = split(/_/, $site_node);
 		my $maxdepth = $self -> {static_subtree_info}{$node_name}{$site}{"maxdepth"};
