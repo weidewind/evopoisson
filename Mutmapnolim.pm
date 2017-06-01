@@ -4746,7 +4746,7 @@ sub visitor_coat {
  	}
  	
  # since 01.06.2017 - instead of distance matrix	
- 	set_timestamps {
+sub	set_timestamps {
  		my $self = shift;
 		my $tree = $self->{static_tree};
 		$tree->visit_breadth_first(
@@ -4764,7 +4764,7 @@ sub visitor_coat {
 		);	
 	}
 	
-	sub get_sequential_distance {
+sub get_sequential_distance {
 	my $ancnode = shift;
 	my $node = shift;
 	return $node->get_generic('time') - $ancnode->get_generic('time');
