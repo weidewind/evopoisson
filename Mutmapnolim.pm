@@ -3735,7 +3735,7 @@ sub entrenchment_for_subtrees{
 		my $nlength = $node->get_branch_length;
 		my $startnname = $starting_node->get_name();
 		my $depth = $_[3] - $starting_node->get_branch_length ;
-		if ($depth != get_sequential_distance($starting_node, $node){
+		if ($depth != get_sequential_distance($starting_node, $node)){
 			print "Error! depth is strange\n";
 		}
 			
