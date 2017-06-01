@@ -131,7 +131,8 @@ if ($sim > 0){
 	my $memusage = $locker->get_memusage();
 	print "Memusage is ".$memusage."\n";
 	##
-	my $max_proc_num = int($maxmem/$memusage);
+	my $server_max_proc_num = 100;
+	my $max_proc_num = min(int($maxmem/$memusage),$server_max_proc_num);
 	print " Max proc num $max_proc_num\n";
 	unless ($max_proc_num > 0) {die "Error: Memory usage is $memusage - more than you specified with masmem parameter\n"};
 	my @iters;
@@ -168,7 +169,7 @@ if ($sim > 0){
 	}
 	##
 	## Forkmanager setup
-	my $manager = new Parallel::ForkManager(80);
+	my $manager = new Parallel::ForkManager($numfiles);
 	#my $lockfile = File::Spec->catfile($mutmap->{static_output_base}, $mutmap->{static_protein}, "lock");
 
 	$manager->run_on_start( 
