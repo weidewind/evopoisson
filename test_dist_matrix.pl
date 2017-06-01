@@ -85,9 +85,7 @@ sub new_distance {
 }
 
 
-my $input_base = File::Spec->catdir(getcwd(), "data");
-
-
+my $input_base = File::Spec->catdir(getcwd(), "data", "ksu");
 my $treefile = File::Spec->catfile($input_base, "h3.l.r.newick");
 my $tree = parse_tree($treefile)  or die "No tree at $treefile";
 my @nodes = $tree -> get_nodes;
@@ -101,21 +99,25 @@ foreach my $node(@nodes){
 my %distance_hash = old_distance_matrix($input_base);
 new_distance_matrix($tree);
 
-test {
+sub test {
 	my $ancnode = shift;
 	my $node = shift;
 	my $old = old_distance($ancnode, $node, \%distance_hash);
+	print "old $old ";
 	my $new = new_distance($ancnode, $node, \%hash_of_nodes);
-	print "old $old new $new \n";
+	print " new $new \n";
 	if ($old != $new){ print "Error!"}
 }
 
-my $ancnode = "INTNODE3841";
-my $node = "INTNODE3840";
-test($ancnode, $node);
+#my $ancnode = "INTNODE3841";
+#my $node = "INTNODE3840";
+#test($ancnode, $node);
 
-my $ancnode = "INTNODE3841";
-my $node = "INTNODE3243";
-test($ancnode, $node);
+#my $ancnode = "INTNODE3841";
+#my $node = "INTNODE3243";
+#test($ancnode, $node);
 
+my $ancnode = "Node_7476";
+my $node = "Node_7466";
+test($ancnode, $node);
 

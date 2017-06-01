@@ -1557,6 +1557,7 @@ sub print_nodes_in_analysis {
 	my @names = @{$_[2]};
 	my $subtract_tallest = $self->{static_subtract_tallest};
 	$self->set_distance_matrix();
+	#$self->set_timestamps();
 	#my %matrix = incidence_matrix(); #!
 	my $i = 0;
 	foreach my $group(@groups){
@@ -1585,6 +1586,7 @@ sub prepare_real_data {
 	unless(defined $restriction) { $restriction = 50; }
 	my $prot = $self->{static_protein};
 	$self -> set_distance_matrix();
+	#$self -> set_timestamps();
 	my %matrix = $self->incidence_matrix(); 
 	$self -> print_incidence_matrix(\%matrix);
 	my $debugnum = scalar keys %{$self ->{static_nodes_with_sub}};
@@ -4750,6 +4752,8 @@ sub visitor_coat {
  		#print "addded to 1\n";
  	}
  	
+ 	
+ 	
  	sub set_distance_matrix {
  		my $self = shift;
  		my $prot = $self->{static_protein};
@@ -4775,6 +4779,32 @@ sub visitor_coat {
  		
 
  	}
+ 	
+ # since 01.06.2017 - instead of distance matrix	
+ 	set_timestamps {
+ 		my $self = shift;
+		my $tree = $self->{static_tree};
+		$tree->visit_breadth_first(
+			-in   => sub{
+				my $node=shift;
+				if($node->is_root){
+					$node->set_generic('time' => 0);
+				}else{
+					my $pnode=$node->get_parent;
+					my $time=$pnode->get_generic('time');
+					$time+=$node->get_branch_length;
+					$node->set_generic('time' => $time);
+				}
+			}
+		);	
+	}
+	
+	sub get_sequential_distance {
+	my $ancnode = shift;
+	my $node = shift;
+	return $node->get_generic('time') - $ancnode->get_generic('time');
+}
+
  	
  	
  	
