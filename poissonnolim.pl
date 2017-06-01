@@ -12,6 +12,7 @@ use List::Util;
 use POSIX qw(floor ceil);
 use Parallel::ForkManager;
 use Memory::Usage;
+use List::Util;
 
 my $mu = Memory::Usage->new();
 $mu->record('starting work');
