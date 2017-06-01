@@ -79,7 +79,7 @@ sub shuffle_mutations {
 				}
 				else {
 					$p=1-exp(-$lambda*$t);
-					print "for ".$node->get_name." time is ".$t." and p is $p \n";
+					#print "for ".$node->get_name." time is ".$t." and p is $p \n";
 				}
 				$_=$rng->rand();
 				if($_<=$p){ 
