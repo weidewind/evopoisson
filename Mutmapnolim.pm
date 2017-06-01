@@ -54,35 +54,12 @@ $| = 1;
 
 	
 	
-
-	sub set_node_distance {
-		my $self = shift;
-		$self->{static_distance_hash}{$_[0]}->{$_[1]} = $_[2];	
-	}
 	
 	sub set_alignment_length {
 		my $self = shift;
 		$self->{static_alignment_length} = $_[0]; 
 	}
-	
-	sub has_node_distance {
-		my $self = shift;
-		if (!defined $self->{static_distance_hash}{$_[0]}->{$_[1]}){
-			return 0;
-		}
-		else {
-			return 1;
-		}
-	}
-	
-	sub get_node_distance {
-		my $self = shift;
-		return $self->{static_distance_hash}{$_[0]}->{$_[1]};
-	}
-	
-	
-
-	
+		
 	
 	sub maxpath_tag{
 		my $subtract_maxpath = $_[0];
@@ -296,7 +273,7 @@ $| = 1;
 				static_syn_lengths  =>$realdata->{syn_lengths},
 				static_alignment_length => $realdata->{alignment_length}, 
 				static_hash_of_nodes => $realdata->{hash_of_nodes}, 
-				static_distance_hash => $realdata->{distance_hash},
+				#static_distance_hash => $realdata->{distance_hash},
 				static_subs_on_node => $realdata->{static_subs_on_node}, # we never use these two when we produce new mutmappers from file (they are taken from observaton_vectors)
 				obs_vectors => $realdata->{obs_vectors}, #added on 17.11.2016
 				static_nodes_with_sub => $realdata->{static_nodes_with_sub}, #
@@ -778,20 +755,7 @@ sub get_mrcn {
         return $patristic_distance;
     }
     
-    sub node_distance {
-    	my $self = shift;
-    	my ( $node, $other_node ) = @_;
-    	if  ($self->has_node_distance($node, $other_node)){
-    		return $self->get_node_distance($node, $other_node);
-    	}
-    	else {
-    		## calc_true instead of calc_my since 02 06 2015
-    		my $dist = calc_true_patristic_distance($node, $other_node);
-    		$self->set_node_distance($node, $other_node, $dist);
-    		return $dist;
-    	}
-    	
-    }
+
 
 
 # prints tree with all mutations in the subtree of specified mutation (site, node). 
@@ -966,7 +930,7 @@ sub myclone {
 			static_state  => $self->{static_state},
 			static_alignment_length  => $self->{static_alignment_length},
 			static_hash_of_nodes => $self->{static_hash_of_nodes},
-			static_distance_hash => $self->{realdata}{"distance_hash"},
+			#static_distance_hash => $self->{realdata}{"distance_hash"},
 			static_background_subs_on_node => $self->{static_background_subs_on_node },
 			static_background_nodes_with_sub => $self->{static_background_nodes_with_sub},
 			obs_vectors => clone($self->{realdata}{"obs_vectors"})  #the only structure which can (and will) be changed
@@ -987,7 +951,7 @@ sub mydebugclone {
 			static_state  => $self->{static_state},
 			static_alignment_length  => $self->{static_alignment_length},
 			static_hash_of_nodes => $self->{static_hash_of_nodes},
-			static_distance_hash => $self->{realdata}{"distance_hash"},
+			#static_distance_hash => $self->{realdata}{"distance_hash"},
 			static_subs_on_node => $self->{static_subs_on_node },
 			static_nodes_with_sub => $self->{static_nodes_with_sub},
 			static_background_subs_on_node => $self->{static_background_subs_on_node },
@@ -1556,8 +1520,8 @@ sub print_nodes_in_analysis {
 	my @groups = @{$_[1]};
 	my @names = @{$_[2]};
 	my $subtract_tallest = $self->{static_subtract_tallest};
-	$self->set_distance_matrix();
-	#$self->set_timestamps();
+	#$self->set_distance_matrix();
+	$self->set_timestamps();
 	#my %matrix = incidence_matrix(); #!
 	my $i = 0;
 	foreach my $group(@groups){
@@ -1585,8 +1549,8 @@ sub prepare_real_data {
 	unless(defined $step) { $step = 0.5; }
 	unless(defined $restriction) { $restriction = 50; }
 	my $prot = $self->{static_protein};
-	$self -> set_distance_matrix();
-	#$self -> set_timestamps();
+	#$self -> set_distance_matrix();
+	$self -> set_timestamps();
 	my %matrix = $self->incidence_matrix(); 
 	$self -> print_incidence_matrix(\%matrix);
 	my $debugnum = scalar keys %{$self ->{static_nodes_with_sub}};
@@ -1637,7 +1601,7 @@ sub prepare_real_data {
 		obs_vectors => \%obs_vectors,
 		bkg_subs_on_node => $self -> {static_background_subs_on_node},
 		bkg_nodes_with_sub => $self -> {static_background_nodes_with_sub},
-		distance_hash => $self -> {static_distance_hash},
+		#distance_hash => $self -> {static_distance_hash},
 		hash_of_nodes => $self -> {static_hash_of_nodes},
 		subtree_info => $self -> {static_subtree_info},
 		alignment_length => $self -> {static_alignment_length},
@@ -3546,7 +3510,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 							$index_of_ancestor_node = $n;
 							last; # even if ancestors (from get_ancestors) contain the node itself, it won't make any difference
 						}
-						my $depth = $self->{static_distance_hash}{$node->get_name()}{$path_to_tallest_tip[$n]->get_name()};
+						my $depth = get_sequential_distance($node, $path_to_tallest_tip[$n]);
 						$subtract_hash{bin($depth,$step)} += $path_to_tallest_tip[$n]->get_branch_length;
 						$path_length += $path_to_tallest_tip[$n]->get_branch_length;
 					}
@@ -3666,7 +3630,8 @@ sub entrenchment_for_subtrees{
 			if ($exits != $subtree_info{$site}{"totmuts"}){
 				print "Error! for $site $nodename entrenchment found ".$subtree_info{$site}{"totmuts"}.", and shuffler planted $exits (not an error in debugmode, because in that case exits comprise all mutations in site (including those before ancestor and after stoppers)\n";
 				foreach my $ex (@{$rh_out_subtree->{$nodename}{$site}}){
-					print " ex ".$ex." depth ".$self->{static_distance_hash}{$nodename}{$ex}."\n";
+					my $exnode = ${$self->{static_hash_of_nodes}{$ex}};
+					print " ex ".$ex." depth ".get_sequential_distance($node, $exnode)."\n";
 				}
 			}
 			#print " for $site $nodename data maxdepth is ".$self->{realdata}{subtree_info}{$nodename}{$site}{"maxdepth"}." and sim maxdepth is ".$subtree_info{$site}{"maxdepth"}."\n";
@@ -3770,7 +3735,7 @@ sub entrenchment_for_subtrees{
 		my $nlength = $node->get_branch_length;
 		my $startnname = $starting_node->get_name();
 		my $depth = $_[3] - $starting_node->get_branch_length ;
-		if ($depth != $self->{static_distance_hash}{$startnname}{$nname}){
+		if ($depth != get_sequential_distance($starting_node, $node){
 			print "Error! depth is strange\n";
 		}
 			
@@ -3881,7 +3846,7 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 							$index_of_ancestor_node = $n;
 							last;
 						}
-						my $depth = $self ->{static_distance_hash}{$node->get_name()}{$path_to_tallest_tip[$n]->get_name()};
+						my $depth = get_sequential_distance($node, $path_to_tallest_tip[$n]);
 						$subtract_hash{bin($depth,$step)} += $path_to_tallest_tip[$n]->get_branch_length;
 						$path_length += $path_to_tallest_tip[$n]->get_branch_length;
 					}
@@ -4090,7 +4055,7 @@ sub nodeselector {
 							$index_of_ancestor_node = $n;
 							last;
 						}
-						my $depth = $self->{static_distance_hash}{$node->get_name()}{$path_to_tallest_tip[$n]->get_name()};
+						my $depth = get_sequential_distance($node, $path_to_tallest_tip[$n]);
 						$subtract_hash{bin($depth,$step)} += $path_to_tallest_tip[$n]->get_branch_length;
 						$path_length += $path_to_tallest_tip[$n]->get_branch_length;
 					}
@@ -4843,7 +4808,7 @@ sub visitor_coat {
 			foreach my $site_index(keys %closest_ancestors){ 
 				my $anc_node = $closest_ancestors{$site_index};
 				my $ancname = $anc_node->get_name();
-				my $depth = $self->{static_distance_hash}{$ancname}{$nname};
+				my $depth = get_sequential_distance($anc_node,$node);
 				$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($depth,$step)}[1] += $nlength;
 			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				# commented out at 27.02.2017 and copy-pasted higher
@@ -4868,8 +4833,8 @@ sub visitor_coat {
 			if ($closest_ancestors{$site_index}){
 				my $anc_node = $closest_ancestors{$site_index};
 				my $ancname = $anc_node->get_name();
-				my $halfdepth = $self->{static_distance_hash}{$ancname}{$nname} - ($nlength)/2; #19.09.2016 
-				my $fulldepth = $self->{static_distance_hash}{$ancname}{$nname}; #19.09.2016 
+				my $halfdepth = get_sequential_distance($anc_node,$node) - ($nlength)/2; #19.09.2016 
+				my $fulldepth = get_sequential_distance($anc_node,$node); #19.09.2016 
 			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
 			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
 				if (!$no_neighbour_changing || ($no_neighbour_changing && ! $comparator->is_neighbour_changing($self->{static_subs_on_node}{$nname}{$site_index}, 1))){
@@ -4910,7 +4875,7 @@ sub visitor_coat {
 		if (%closest_ancestors){
 			foreach my $site_index(keys %closest_ancestors){ 
 				my $anc_node = $closest_ancestors{$site_index};
-				my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$nname};
+				my $depth = get_sequential_distance($anc_node,$node);
 				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
 			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				my $current_maxdepth = $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"};
@@ -4968,7 +4933,7 @@ sub visitor_coat {
 			if (%closest_ancestors){
 				foreach my $site_index(keys %closest_ancestors){ 
 					my $anc_node = $closest_ancestors{$site_index};
-					my $depth = $self->{static_distance_hash}{$anc_node->get_name()}{$nname};
+					my $depth =  get_sequential_distance($anc_node,$node);
 					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"lrt"}{$nname}[1] = $depth-($node->get_branch_length); #23.03 t_branch_start
 					$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"lrt"}{$nname}[2] = $depth; #23.03 t_branch_end					
 				}
