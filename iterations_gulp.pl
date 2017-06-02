@@ -42,7 +42,7 @@ GetOptions (	'protein=s' => \$protein,
 		'memusage'  => \$memusage, # should i print memusage in file?
 		'no_neighbour_changing' => \$no_neighbour_changing,
 		'no_leaves' => \$no_leaves,
-		'restriction=i' => \$restriction,
+		'restriction=s' => \$restriction,
 		'faketag=s' => \$faketag,
 		'lifetime_restr' => \$lifetime_restr,
 		'onestrip' => \$onestrip,
