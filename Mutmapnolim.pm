@@ -1575,7 +1575,7 @@ sub prepare_real_data {
 	foreach my $site_node(keys %full_obs_hash){
 		my ($site, $node_name) = split(/_/, $site_node);
 		my $maxdepth = $self -> {static_subtree_info}{$node_name}{$site}{"maxdepth"};
-		print "site $site nodename $nodename maxdepth $maxdepth \n";
+		print "site $site nodename $node_name maxdepth $maxdepth \n";
 		foreach my $bin(keys %{$full_obs_hash{$site_node}}){
 			#$bins{$bin} = 1;
 			print "bin $bin\n";
