@@ -1575,10 +1575,10 @@ sub prepare_real_data {
 	foreach my $site_node(keys %full_obs_hash){
 		my ($site, $node_name) = cleave($site_node);
 		my $maxdepth = $self -> {static_subtree_info}{$node_name}{$site}{"maxdepth"};
-		print "site $site nodename $node_name maxdepth $maxdepth \n";
+		#print "site $site nodename $node_name maxdepth $maxdepth \n";
 		foreach my $bin(keys %{$full_obs_hash{$site_node}}){
 			#$bins{$bin} = 1;
-			print "bin $bin\n";
+			#print "bin $bin\n";
 			if ($maxdepth > $restriction){
 				$restricted_norm += $full_obs_hash{$site_node}{$bin}[0];
 				$restricted_obs_hash{$site_node}{$bin}[0] = $full_obs_hash{$site_node}{$bin}[0];
@@ -1745,7 +1745,7 @@ sub iterations_maxtag {
 			push @tags, $1;
 		}
 		else {
-			print "Strange tag in iterations file $gulp_filename ! It might be an error, and it might not.\nWon't change my behavior because of some stupid tag, just wanted you to be aware of it.\n";
+			print " tag in iterations file $gulp_filename ! It might be an error, and it might not.\nWon't change my behavior because of some stupid tag, just wanted you to be aware of it.\n";
 		}
 	}
 	my $maxtag = List::Util::max(@tags);
@@ -3738,8 +3738,8 @@ sub entrenchment_for_subtrees{
 		my $nlength = $node->get_branch_length;
 		my $startnname = $starting_node->get_name();
 		my $depth = $_[3] - $starting_node->get_branch_length ;
-		if ($depth != get_sequential_distance($starting_node, $node)){
-			print "Error! depth is strange: $depth ".get_sequential_distance($starting_node, $node)."\n";
+		if (abs($depth - get_sequential_distance($starting_node, $node)) > 0.00001 ){
+			print "Error! depth is strange : $depth ".get_sequential_distance($starting_node, $node)."\n";
 		}
 			
  		#print "depth $depth step $step bin ".(bin($depth,$step))."\n";
