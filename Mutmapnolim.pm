@@ -2113,7 +2113,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 								#print "found ".($new_labels-1)." new labels for group ".$group_names[$group_number]."\n";
 								my $next_to_print = $label_hashes{$md}[$group_number]{"printed"}+1;
 								foreach my $label($next_to_print..($label_hashes{$md}[$group_number]{"current"}-1)){ # last hash (with current label) is uncomplete
-									my @bins = sort { $a <=> $b } keys $hash{$md}[$group_number]{$label};
+									my @bins = keys $hash{$md}[$group_number]{$label};
 									#print " looking at label $label \n";
 									if ($sums{$md}[$group_number]{$label} == 0){ # now it's impossible :)
 										foreach my $bin(@bins){
@@ -3520,7 +3520,7 @@ sub depth_groups_entrenchment_optimized_selection_alldepths {
 				}
 				
 				
-				foreach my $bin (sort {$a <=> $b} keys %{$self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}}){
+				foreach my $bin ( keys %{$self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}}){
 					#print "bin $bin adding ".$static_subtree_info{$node->get_name()}{$ind}{"hash"}{$bin}[0]."\n";
 					$total_muts += $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[0];
 					$total_length += $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[1];
@@ -3867,7 +3867,7 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 				if ($total_length > 0 && $total_muts > 0){ # 21.10 added total_muts > 0
 			#	print "total muts $total_muts \n";
 			#	print "site $ind node ".$node->get_name()." maxdepth ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}."\n"; # commented out 16.09
-					foreach my $bin (sort {$a <=> $b} (keys %{$self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}})){
+					foreach my $bin (keys %{$self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}}){
 						#if ($total_length > 0 && $static_subtree_info{$node->get_name()}{$ind}{"hash"}{$bin}[1] > 0){ #there are some internal nodes with 0-length terminal daughter branches
 						 if ($total_length > 0){ 
 							my $local_length = $self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[1];
@@ -4087,7 +4087,7 @@ sub nodeselector {
 				}				
 				print "site $ind node ".$node->get_name()." maxdepth ".$self->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"};
 				my %totalcounts; # 26.02 counting nodes in analysis	
-					foreach my $bin (sort {$a <=> $b} (keys %{$self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}})){
+					foreach my $bin (keys %{$self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}}){
 						#if ($total_length > 0 && $static_subtree_info{$node->get_name()}{$ind}{"hash"}{$bin}[1] > 0){ #there are some internal nodes with 0-length terminal daughter branches
 						 if ($total_length > 0){ 
 							my $local_length = $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[1];
