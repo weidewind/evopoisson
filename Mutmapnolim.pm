@@ -1831,7 +1831,7 @@ sub concat_and_divide_simult {
 								#print "found ".($new_labels-1)." new labels for group ".$group_names[$group_number]."\n";
 								my $next_to_print = $label_hashes{$md}[$group_number]{"printed"}+1;
 								foreach my $label($next_to_print..($label_hashes{$md}[$group_number]{"current"}-1)){ # last hash (with current label) is uncomplete
-									my @bins = sort { $a <=> $b } keys $hash{$md}[$group_number]{$label};
+									my @bins = keys $hash{$md}[$group_number]{$label};
 									#print " looking at label $label \n";
 									if ($sums{$md}[$group_number]{$label} == 0){ # now it's impossible :)
 										foreach my $bin(@bins){
@@ -2442,7 +2442,7 @@ print "iteration number $iteration_number\n";
 				foreach my $site_node(keys %{$obs_hash}){
 					foreach my $simsite(keys %{$sums{$md}{$site_node}}){
 						#print "maxdepth $md group number $group_number \n";
-						my @bins = sort { $a <=> $b } keys %{$hash{$md}{$site_node}{$simsite}};
+						my @bins =  keys %{$hash{$md}{$site_node}{$simsite}};
 						my $diff = abs($sums{$md}{$site_node}{$simsite} - $norms{$md}{$site_node})/$norms{$md}{$site_node};
 						print "$site_node obssum ".$norms{$md}{$site_node}." simsum ".$sums{$md}{$site_node}{$simsite}."diff $diff \n";
 						if ($sums{$md}{$site_node}{$simsite} == 0 || (defined($mutnum_control) && $diff > $mutnum_control)){
