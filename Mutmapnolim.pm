@@ -2359,6 +2359,7 @@ sub concat_and_divide_simult_single_sites {
 	
 	my $simsite; # careful	
 	my $simnode;
+	my $sim_site_node;
 	my $str = <GULP>;
 	while (<GULP>){
 
@@ -2389,6 +2390,7 @@ sub concat_and_divide_simult_single_sites {
 					# $str_array[0] is bin number
 					$simsite = $str_array[1]; # careful 
 					$simnode = $str_array[3];
+					$sim_site_node = concat($simsite, $simnode);
 					$max_depth = $str_array[5];
 					
 					
@@ -2405,21 +2407,22 @@ sub concat_and_divide_simult_single_sites {
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
 				foreach my $md(@maxdepths){
 				#	if ($max_depth > $md){
-						foreach my $site_node(keys %{$obs_hash}){
-							my ($obssite, $obsnode) = cleave($site_node);
-							if ($obsnode eq $simnode){ # 28.09.2016 
-								if($obssite eq $simsite) { # 30.01.2017 
-									if ($norms{$md}{$site_node}){  # checks for maxdepth in realdata
+						#foreach my $site_node(keys %{$obs_hash}){ # commented out at 13.06.2017
+							#my ($obssite, $obsnode) = cleave($site_node);
+							#if ($obsnode eq $simnode){ # 28.09.2016 
+								#if($obssite eq $simsite) { # 30.01.2017 
+									
+									if ($norms{$md}{$sim_site_node}){  # checks for maxdepth in realdata # added sim_ at 13.06.2017
 									#print "group number $group_number md $md node name $node_name\n";
 										
-										$sums{$md}{$site_node}{$simsite} += $str_array[1]; #obssum 
-										$hash{$md}{$site_node}{$simsite}{$str_array[0]}[1] += $str_array[2];
-										$hash{$md}{$site_node}{$simsite}{$str_array[0]}[0] += $str_array[1];
+										$sums{$md}{$sim_site_node}{$simsite} += $str_array[1]; #obssum # added sim_ at 13.06.2017
+										$hash{$md}{$sim_site_node}{$simsite}{$str_array[0]}[1] += $str_array[2]; # added sim_ at 13.06.2017
+										$hash{$md}{$sim_site_node}{$simsite}{$str_array[0]}[0] += $str_array[1]; # added sim_ at 13.06.2017
 										
 									}
-								}
-							}
-						}
+								#}
+							#}
+						#}
 			#		}
 				}
 
