@@ -2071,7 +2071,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 		foreach my $group_number(0.. scalar @groups - 1){
 			my %node_hash = $self->select_ancestor_nodes_and_sites($md, \@{$groups[$group_number]});
 			foreach my $node_name (keys %node_hash){
-				$group_hashes{$md}[$group_number]{$node_name} = $node_hash{$node_name}; # $hash{$site}= totmut
+				$group_hashes{$md}[$group_number]{$node_name} = $node_hash{$node_name}; # $hash{$site}= totmut, now $group_hashes{$md}[$group_number]{$node_name}{$site} = totmut
 			}
 		}
 		
@@ -2216,7 +2216,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 							}
 							if ($counter_hashes{$md}[$group_number] && $counter_hashes{$md}[$group_number]{$simnode} && $counter_hashes{$md}[$group_number]{$simnode}{$simsite}){ 
 								if ($simmutnum){
-									print "found data for $simsite $simnode $md $group_names[$group_number]\n";
+									#print "found data for $simsite $simnode $md $group_names[$group_number]\n";
 										foreach my $bindat (@bin_data){
 											$sums{$md}[$group_number]{$label} += $bindat->[1];
 											$hash{$md}[$group_number]{$label}{$bindat->[0]}[1] += $bindat->[2];
@@ -2225,7 +2225,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 										delete $counter_hashes{$md}[$group_number]{$simnode}{$simsite};
 										my $l = scalar keys %{$counter_hashes{$md}[$group_number]{$simnode}};
 										my $m = scalar keys %{$counter_hashes{$md}[$group_number]};
-										print "still need ".$m." for $md $group_names[$group_number] and $l for $simnode\n";
+										#print "still need ".$m." for $md $group_names[$group_number] and $l for $simnode\n";
 								}
 								elsif ($simmutnum != $counter_hashes{$md}[$group_number]{$simnode}{$simsite}){
 										print "Error! simmutnum for $simnode $simsite $simmutnum , expected ".$counter_hashes{$md}[$group_number]{$simnode}{$simsite}."\n";
@@ -2234,7 +2234,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 								if (scalar keys %{$counter_hashes{$md}[$group_number]{$simnode}} == 0){
 									delete $counter_hashes{$md}[$group_number]{$simnode};
 									my $m = scalar keys %{$counter_hashes{$md}[$group_number]};
-									print "now need ".$m." for $md $group_names[$group_number]\n";
+									#print "now need ".$m." for $md $group_names[$group_number]\n";
 								}
 								if ((scalar keys %{$counter_hashes{$md}[$group_number]}) == 0){
 									print "Win! sum for label $label $md ".$group_names[$group_number]." is ".$sums{$md}[$group_number]{$label}."\n";
@@ -2242,7 +2242,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 									$label_hashes{$md}[$group_number]{"current"} += 1; # label corresponds to number of full collections (undef, if there is 0, 1, if we got one. But collection with this label is not full!)
 									$counter_hashes{$md}[$group_number] = dclone($group_hashes{$md}[$group_number]);
 									my $m = scalar keys %{$counter_hashes{$md}[$group_number]};
-									print "and now need ".$m." for $md $group_names[$group_number]\n";
+									#print "and now need ".$m." for $md $group_names[$group_number]\n";
 								}
 
 							}
@@ -2302,6 +2302,7 @@ sub concat_and_divide_simult_single_sites {
 	my $self = shift;
 	my $prot = $self->{static_protein};
 	my @maxdepths = @{$_[0]};
+	my $md = min(@maxdepths);
 	my $mutnum_control = $self->{static_mutnum_control};
 	#my @groups = @{$_[1]};
 	#my @group_names = @{$_[2]};
@@ -2319,15 +2320,14 @@ sub concat_and_divide_simult_single_sites {
 	my $iteration_number = 1;
 	
 	my %norms; #previous: $norms{$md}[$group_number] = norm
-	foreach my $md(@maxdepths){
-		foreach my $site_node(keys %{$obs_hash}){
+	foreach my $site_node(keys %{$obs_hash}){
 			my ($site, $node_name) = cleave($site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			if ($maxdepth > $md){
 				$norms{$md}{$site_node} = $self->compute_norm_single_site($site_node);
 			}
-		}	
-	}
+	}	
+
 	
 	
 	
@@ -2340,16 +2340,16 @@ sub concat_and_divide_simult_single_sites {
 	
 	my %filehandles;
 
-	foreach my $md(@maxdepths){
-		foreach my $site_node(keys %{$obs_hash}){
+
+	foreach my $site_node(keys %{$obs_hash}){
 			local *FILE;
 			my $csvfile =  File::Spec->catfile($subdir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$site_node.".csv");
 			open FILE, ">$csvfile" or die "Cannot create $csvfile";
 			FILE->autoflush(1);
 			$filehandles{$md}{$site_node} = *FILE;
-		}
-		
 	}
+		
+	
 
 	
 	foreach my $gulp_filename(@files){
@@ -2405,7 +2405,7 @@ sub concat_and_divide_simult_single_sites {
 	
 				
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
-				foreach my $md(@maxdepths){
+#				foreach my $md(@maxdepths){
 				#	if ($max_depth > $md){
 						#foreach my $site_node(keys %{$obs_hash}){ # commented out at 13.06.2017
 							#my ($obssite, $obsnode) = cleave($site_node);
@@ -2424,7 +2424,7 @@ sub concat_and_divide_simult_single_sites {
 							#}
 						#}
 			#		}
-				}
+#				}
 
 				
 				$str = <GULP>;
@@ -2441,7 +2441,7 @@ sub concat_and_divide_simult_single_sites {
 print "iteration number $iteration_number\n";	
 #print "sum50 $sum50 sum100 $sum100 sum150 $sum150 norm 50 $norm50 norm 100 $norm100 norm 150 $norm150\n";		
 			
-			foreach my $md(@maxdepths){ 
+		#	foreach my $md(@maxdepths){ 
 				foreach my $site_node(keys %{$obs_hash}){
 					foreach my $simsite(keys %{$sums{$md}{$site_node}}){
 						#print "maxdepth $md group number $group_number \n";
@@ -2477,25 +2477,25 @@ print "iteration number $iteration_number\n";
 					
 					}
 				}
-			}
+		#	}
 			
 			
 			
 #print ">iteration number ".$iteration_number."\n";		
-foreach my $md (@maxdepths)	{
-		foreach my $site_node(keys %{$obs_hash}){
-			foreach my $simsite(keys %{$sums{$md}{$site_node}}){	
-				print "md $md site_node $site_node simsite $simsite\n";
-				print $norms{$md}{$site_node}." realdata norm (realdata integral?)\n";
-				my $iter_integral;
-				foreach my $bin(keys %{$hash{$md}{$site_node}{$simsite}}){
-					$iter_integral += $hash{$md}{$site_node}{$simsite}{$bin}[0];
-				}
-				print $iter_integral." iteration integral normalized\n";
-				print $sums{$md}{$site_node}{$simsite}." iteration integral\n";
-			}
-		}
-}
+#foreach my $md (@maxdepths)	{
+#		foreach my $site_node(keys %{$obs_hash}){
+#			foreach my $simsite(keys %{$sums{$md}{$site_node}}){	
+#				print "md $md site_node $site_node simsite $simsite\n";
+#				print $norms{$md}{$site_node}." realdata norm (realdata integral?)\n";
+#				my $iter_integral;
+#				foreach my $bin(keys %{$hash{$md}{$site_node}{$simsite}}){
+#					$iter_integral += $hash{$md}{$site_node}{$simsite}{$bin}[0];
+#				}
+#				print $iter_integral." iteration integral normalized\n";
+#				print $sums{$md}{$site_node}{$simsite}." iteration integral\n";
+#			}
+#		}
+#}
 			
 			
 			
@@ -2511,13 +2511,13 @@ foreach my $md (@maxdepths)	{
 	}
 	
 	
-	foreach my $md(@maxdepths){
-		foreach my $site_node(keys %{$obs_hash}){
+
+	foreach my $site_node(keys %{$obs_hash}){
 					my $filehandle = $filehandles{$md}{$site_node};
 					close $filehandle;
-		}
-		
 	}
+		
+
 	
 
 }	

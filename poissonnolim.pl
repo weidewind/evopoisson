@@ -45,6 +45,7 @@ my $debugmode;
 my $poisson; # exp shuffler is poisson not exp :)
 my $syn_lengths;
 
+my $parallel;
 
 GetOptions (	
 		'protein=s' => \$protein,
@@ -71,6 +72,7 @@ GetOptions (
 		'debugmode' => \$debugmode,
 		'distrpoisson' =>\$poisson,
 		'syn_lengths' => \$syn_lengths,
+		'parallel' => \$parallel,
 	);
 
 $| = 1;
@@ -220,7 +222,32 @@ else {
 	@groups_and_names = $mutmap-> predefined_groups_and_names();
 }
 
-$mutmap-> concat_and_divide_simult_for_mutnum_controlled (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+
+if ($parallel){
+	my @commands;
+	foreach my $groupnumber (0.. scalar @{$groups_and_names[0]} - 1){	
+		my $command = concatcomm($groupnumber);
+		push @commands, $command;
+		print $command."\n";	
+	}
+	my $manager = new Parallel::ForkManager(scalar @{$groups_and_names[0]});
+	$manager->run_on_wait( 
+	      sub {
+	         print "Waiting for all concat_and_divide children to terminate... \n";
+	      },
+	      180 # time interval between checks
+	 ); 
+	foreach my $command (@commands) {
+	      $manager->start and next;
+	      system( $command );
+	      $manager->finish;
+	 }
+	$manager->wait_all_children;
+}
+else {
+	$mutmap-> concat_and_divide_simult_for_mutnum_controlled (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+}
+
 $mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;
 
 
@@ -257,4 +284,31 @@ sub mockcomm {
 	my $tag = shift;
 	my $command = "sleep 10";
 	return $command;
+}
+
+sub concatcomm {
+	my $groupnumber = shift;
+	my $perlocation = "perl";
+	my $exports = "";
+	if ($switch) {
+		$perlocation = "~/perl5/perlbrew/perls/perl-5.22.1/bin/perl";
+	 	$exports = "export PERL5LIB=/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/.perl/lib/perl5/5.22.1/x86_64-linux:/export/home/popova/.perl/lib/perl5/5.22.1:/export/home/popova/.perl/lib/perl5/x86_64-linux:/export/home/popova/.perl/lib/perl5:/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/workspace/evopoisson:$PERL5LIB; ";
+	}
+	my $command = $exports.$perlocation." concat_and_divide_groups.pl --protein $protein --state $state --groupnumber $groupnumber --subtract_tallest $subtract_tallest  --restrictions $restrictions ";
+	if($output){$command = $command."--output $output ";}
+	if($input){$command = $command."--input $input ";}
+	if ($verbose){ $command = $command." --verbose ";}
+	if ($memusage){ $command = $command." --memusage ";}
+	if ($no_leaves){ $command = $command." --no_leaves ";}
+	if ($include_tips) {$command = $command." --include_tips ";}
+	if ($skip_stoppers) {$command = $command." --skip_stoppers ";}
+	if ($syn_lengths) {$command = $command." --syn_lengths ";}
+	if ($no_neighbour_changing){ $command = $command." --no_neighbour_changing ";}
+	if ($lifetime_restr) { $command = $command." --lifetime_restr ";}
+	if ($onestrip) { $command = $command." --onestrip ";}
+	if ($debugmode) { $command = $command." --debugmode ";}
+	if ($poisson) { $command = $command." --distrpoisson ";}
+	
+	return $command;
+	
 }
