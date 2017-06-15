@@ -112,6 +112,7 @@ if ($fake){
 
 $mu->record('just before mutmap creation');
 $args->{fromfile} = 1;
+$args->{tree_object} = $mutmap->get_tree();
 my $mutmap = Mutmapnolim->new($args); # from file
 $mu->record('mutmap created');
 $mutmap-> createCodeversionFile("poisson");

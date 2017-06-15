@@ -219,6 +219,11 @@ $| = 1;
 		make_path(File::Spec->catdir($output_subfolder, temp_tag()));
 	}
 	
+	sub get_tree {
+		my $self = shift;
+		return $self->{static_tree};
+	}
+	
 	sub new {
 		my ($class, $args) = @_;	
 		#my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest})); 
@@ -226,7 +231,10 @@ $| = 1;
 		my $input_base = dataFinder ($args);
 		my $treefile = File::Spec->catfile($input_base, $args->{protein}.".l.r.newick");
 		if ($args->{syn_lengths} && !(-e $treefile)) {print_tree_with_syn_lengths_static($args);}
-		my $static_tree = parse_tree($treefile)  or die "No tree at $treefile";
+		my $static_tree;
+		if ($args->{tree_object}){$static_tree = $args->{tree_object};}
+		else {$static_tree = parse_tree($treefile)  or die "No tree at $treefile";}
+		
 		my $self;
 		make_path($output_base);
 		make_path(File::Spec->catdir($output_base, temp_tag()));
