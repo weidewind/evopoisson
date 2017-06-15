@@ -3239,6 +3239,7 @@ sub count_single_site_pvalues{
 	my $self = $_[0];
 	my $prot = $self -> {static_protein};
 	my @restriction_levels = @{$_[1]};
+	my $restriction = min(@restriction_levels);
 	my $dir = $self -> {static_output_base};
 	my $outdir = $self -> {static_output_subfolder};
 	my $realdata =  $self -> {realdata};
@@ -3249,8 +3250,6 @@ sub count_single_site_pvalues{
 	my $obs_hash = get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
 	my $subtree_info = $realdata->{"subtree_info"};
 
-	#my $restriction = List::Util::min(@restriction_levels); # todo: print maxdepth instead of restriction level in filenames (or somewhere inside the output file), so that we analyse each site_node only once
-	for my $restriction(@restriction_levels){
 		print "level $restriction\n";
 		my %obs_hash_restricted;
 		my %norm_restricted;
@@ -3395,7 +3394,7 @@ sub count_single_site_pvalues{
 		}
 			$self -> printFooter($outputfile);
 		close $outputfile;	
-	}	
+
 
 }
 
