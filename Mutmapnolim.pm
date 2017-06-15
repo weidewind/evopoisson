@@ -2333,7 +2333,7 @@ sub concat_and_divide_simult_single_sites {
 			my ($site, $node_name) = cleave($site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			if ($maxdepth > $md){
-				$norms{$md}{$site_node} = $self->compute_norm_single_site($site_node);
+				$norms{$site_node} = $self->compute_norm_single_site($site_node);
 			}
 	}	
 #	}
@@ -2355,7 +2355,7 @@ sub concat_and_divide_simult_single_sites {
 			my $csvfile =  File::Spec->catfile($subdir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$site_node.".csv");
 			open FILE, ">$csvfile" or die "Cannot create $csvfile";
 			FILE->autoflush(1);
-			$filehandles{$md}{$site_node} = *FILE;
+			$filehandles{$site_node} = *FILE;
 	}
 		
 #	}
@@ -2421,13 +2421,13 @@ sub concat_and_divide_simult_single_sites {
 							#if ($obsnode eq $simnode){ # 28.09.2016 
 								#if($obssite eq $simsite) { # 30.01.2017 
 									
-									if ($norms{$md}{$sim_site_node}){  # checks for maxdepth in realdata # added sim_ at 13.06.2017
+									if ($norms{$sim_site_node}){  # checks for maxdepth in realdata # added sim_ at 13.06.2017
 									#print "group number $group_number md $md node name $node_name\n";
 										
-										$sums{$md}{$sim_site_node}{$simsite} += $str_array[1]; #obssum # added sim_ at 13.06.2017
-										$hash{$md}{$sim_site_node}{$simsite}{$str_array[0]}[1] += $str_array[2]; # added sim_ at 13.06.2017
-										$hash{$md}{$sim_site_node}{$simsite}{$str_array[0]}[0] += $str_array[1]; # added sim_ at 13.06.2017
-										
+										$sums{$sim_site_node} += $str_array[1]; #obssum # added sim_ at 13.06.2017 deleted $simsite at 15.06
+										$hash{$sim_site_node}{$str_array[0]}[1] += $str_array[2]; # added sim_ at 13.06.2017 deleted $simsite at 15.06
+										$hash{$sim_site_node}{$str_array[0]}[0] += $str_array[1]; # added sim_ at 13.06.2017 deleted $simsite at 15.06
+										 
 									}
 								#}
 							#}
@@ -2452,39 +2452,39 @@ print "iteration number $iteration_number\n";
 			
 #			foreach my $md(@maxdepths){ 
 				foreach my $site_node(keys %{$obs_hash}){
-					foreach my $simsite(keys %{$sums{$md}{$site_node}}){
+#					foreach my $simsite(keys %{$sums{$site_node}}){ # deleted  $simsite 15.06
 						#print "maxdepth $md group number $group_number \n";
-						my @bins =  keys %{$hash{$md}{$site_node}{$simsite}};
-						my $diff = abs($sums{$md}{$site_node}{$simsite} - $norms{$md}{$site_node})/$norms{$md}{$site_node};
-						print "$site_node obssum ".$norms{$md}{$site_node}." simsum ".$sums{$md}{$site_node}{$simsite}."diff $diff \n";
-						if ($sums{$md}{$site_node}{$simsite} == 0 || (defined($mutnum_control) && $diff > $mutnum_control)){
+						my @bins =  keys %{$hash{$site_node}}; #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
+						my $diff = abs($sums{$site_node} - $norms{$site_node})/$norms{$site_node}; #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
+						print "$site_node obssum ".$norms{$site_node}." simsum ".$sums{$site_node}."diff $diff \n"; #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
+						if ($sums{$site_node} == 0 || (defined($mutnum_control) && $diff > $mutnum_control)){
 							foreach my $bin(@bins){
-								$hash{$md}{$site_node}{$simsite}{$bin}[0] = "NA";
-								$hash{$md}{$site_node}{$simsite}{$bin}[1] = "NA";
+								$hash{$site_node}{$bin}[0] = "NA"; #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
+								$hash{$site_node}{$bin}[1] = "NA"; #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
 							}
 						}
 						else {
 							foreach my $bin(@bins){
-								#print "in hash: ".$hash{$md}[$group_number]{$bin}[0]."\n";
-								#print "norm ".$norms{$md}[$group_number]."\n";
-								#print "sum ".$sums{$md}[$group_number]."\n";
-								$hash{$md}{$site_node}{$simsite}{$bin}[0] = $hash{$md}{$site_node}{$simsite}{$bin}[0]*$norms{$md}{$site_node}/$sums{$md}{$site_node}{$simsite};
-								$hash{$md}{$site_node}{$simsite}{$bin}[1] = $hash{$md}{$site_node}{$simsite}{$bin}[1]*$norms{$md}{$site_node}/$sums{$md}{$site_node}{$simsite};
+								#print "in hash: ".$hash[$group_number]{$bin}[0]."\n";
+								#print "norm ".$norms[$group_number]."\n";
+								#print "sum ".$sums[$group_number]."\n";
+								$hash{$site_node}{$bin}[0] = $hash{$site_node}{$bin}[0]*$norms{$site_node}/$sums{$site_node};  #deleted  $simsite from $hash{$site_node}{$simsite}  and sums 15.06
+								$hash{$site_node}{$bin}[1] = $hash{$site_node}{$bin}[1]*$norms{$site_node}/$sums{$site_node};  #deleted  $simsite from $hash{$site_node}{$simsite}  and sums 15.06
 							}
 						}
 						
-						my $filehandle = $filehandles{$md}{$site_node};
+						my $filehandle = $filehandles{$site_node};
 						#print "going to print something\n";
 						foreach my $bin(@bins){
 							print $filehandle $bin.",".$bin.",";
 						}
 						print $filehandle "\n";
 						foreach my $bin(@bins){
-							print $filehandle $hash{$md}{$site_node}{$simsite}{$bin}[0].",".$hash{$md}{$site_node}{$simsite}{$bin}[1].",";
+							print $filehandle $hash{$site_node}{$bin}[0].",".$hash{$site_node}{$bin}[1].",";
 						}
 						print $filehandle "\n";
 					
-					}
+#					}
 				}
 #			}
 			
@@ -2493,15 +2493,15 @@ print "iteration number $iteration_number\n";
 #print ">iteration number ".$iteration_number."\n";		
 #foreach my $md (@maxdepths)	{
 #		foreach my $site_node(keys %{$obs_hash}){
-#			foreach my $simsite(keys %{$sums{$md}{$site_node}}){	
+#			foreach my $simsite(keys %{$sums{$site_node}}){	
 #				print "md $md site_node $site_node simsite $simsite\n";
-#				print $norms{$md}{$site_node}." realdata norm (realdata integral?)\n";
+#				print $norms{$site_node}." realdata norm (realdata integral?)\n";
 #				my $iter_integral;
-#				foreach my $bin(keys %{$hash{$md}{$site_node}{$simsite}}){
-#					$iter_integral += $hash{$md}{$site_node}{$simsite}{$bin}[0];
+#				foreach my $bin(keys %{$hash{$site_node}{$simsite}}){
+#					$iter_integral += $hash{$site_node}{$simsite}{$bin}[0];
 #				}
 #				print $iter_integral." iteration integral normalized\n";
-#				print $sums{$md}{$site_node}{$simsite}." iteration integral\n";
+#				print $sums{$site_node}{$simsite}." iteration integral\n";
 #			}
 #		}
 #}
@@ -2522,7 +2522,7 @@ print "iteration number $iteration_number\n";
 	
 #	foreach my $md(@maxdepths){
 	foreach my $site_node(keys %{$obs_hash}){
-					my $filehandle = $filehandles{$md}{$site_node};
+					my $filehandle = $filehandles{$site_node};
 					close $filehandle;
 	}
 		
