@@ -2370,7 +2370,7 @@ sub concat_and_divide_simult_single_sites {
 	next if (-d $gulp_filename);
 	my $fullpath = File::Spec -> catfile($dirname, $gulp_filename);
 	open GULP, "<$fullpath" or die "Cannot open $fullpath";
-	
+	print "gulp file $gulp_filename\n";
 	my $simsite; # careful	
 	my $simnode;
 	my $sim_site_node;
@@ -3370,6 +3370,8 @@ sub count_single_site_pvalues{
 			
 			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 				print "Error! boot hist sum test for $site_node failed! $test_obs_summ obs, $test_exp_summ exp\n";
+				my $binnum = (scalar @splitter)/2
+				print "there are $binnum bins here\n";
 			}
 			#if ($site_node eq "169_INTNODE2434") {hist_median_for_hash(\%boot_exp_hash, $step, "verbose");}
 			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
