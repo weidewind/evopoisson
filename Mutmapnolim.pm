@@ -2693,7 +2693,7 @@ sub count_pvalues{
 		#	print "MAXBIN $maxbin\n";
 		}
 		my $count = scalar keys %obs_hash_restricted;
-		print COUNTER "Total for $restriction all $count\n";
+		print COUNTER "$restriction all - $count\n";
 		
 			
 		## end of copypaste	
