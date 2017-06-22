@@ -18,7 +18,7 @@ use Bio::SeqIO;
 use Data::Dumper;
 use Bit::Vector;
 use Try::Tiny;
-use List::Util qw(sum min);
+use List::Util qw(sum min max);
 use Const::Fast;
 use Switch;
 use List::Util qw/shuffle/; 
