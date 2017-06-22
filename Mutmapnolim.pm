@@ -2455,7 +2455,7 @@ print "iteration number $iteration_number\n";
 				foreach my $site_node(keys %{$obs_hash}){
 #					foreach my $simsite(keys %{$sums{$site_node}}){ # deleted  $simsite 15.06
 						#print "maxdepth $md group number $group_number \n";
-						my @bins =  (1..max(keys %{$hash{$site_node}}); #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
+						my @bins = (1..max(keys %{$hash{$site_node}})); #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
 						my $diff = abs($sums{$site_node} - $norms{$site_node})/$norms{$site_node}; #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
 						print "$site_node obssum ".$norms{$site_node}." simsum ".$sums{$site_node}."diff $diff \n"; #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
 						if ($sums{$site_node} == 0 || (defined($mutnum_control) && $diff > $mutnum_control)){
@@ -2793,7 +2793,7 @@ sub count_pvalues{
 			my $test_exp_summ = sum(values %boot_exp_hash);
 			#print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
 			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
-				print "Error! boot hist sum test for all failed! \n";
+				print "Error! boot hist sum test for all failed! $test_obs_summ obs, $test_exp_summ exp\n";
 			}
 			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
 			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
@@ -2985,7 +2985,7 @@ sub count_pvalues{
 				my $test_exp_summ = sum(values %boot_exp_hash);
 				#print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
 				unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
-					print "Error! boot hist sum test for group ".$group_names[$group_number]."failed! \n";
+					print "Error! boot hist sum test for group ".$group_names[$group_number]."failed! $test_obs_summ obs, $test_exp_summ exp \n";
 				}
 				
 				my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
@@ -3120,7 +3120,7 @@ sub count_pvalues{
 				my $test_exp_summ = sum(values %boot_exp_hash);
 				#print (" obs sum $test_obs_summ exp summ $test_exp_summ \n");
 				unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
-					print "Error! boot hist sum test for complement ".$group_names[$group_number]." failed! \n";
+					print "Error! boot hist sum test for complement ".$group_names[$group_number]." failed! $test_obs_summ obs, $test_exp_summ exp \n";
 				}
 				
 				my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
@@ -3363,7 +3363,7 @@ sub count_single_site_pvalues{
 			my $test_exp_summ = sum(values %boot_exp_hash);
 			
 			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
-				print "Error! boot hist sum test for $site_node failed! \n";
+				print "Error! boot hist sum test for $site_node failed! $test_obs_summ obs, $test_exp_summ exp\n";
 			}
 			#if ($site_node eq "169_INTNODE2434") {hist_median_for_hash(\%boot_exp_hash, $step, "verbose");}
 			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
