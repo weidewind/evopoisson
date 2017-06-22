@@ -1840,7 +1840,9 @@ sub concat_and_divide_simult {
 								#print "found ".($new_labels-1)." new labels for group ".$group_names[$group_number]."\n";
 								my $next_to_print = $label_hashes{$md}[$group_number]{"printed"}+1;
 								foreach my $label($next_to_print..($label_hashes{$md}[$group_number]{"current"}-1)){ # last hash (with current label) is uncomplete
-									my @bins = (1..max(keys $hash{$md}[$group_number]{$label}));
+									my $max = max(keys $hash{$md}[$group_number]{$label});
+									print "maxbin is $max\n";
+									my @bins = (1..$max);
 									#print " looking at label $label \n";
 									if ($sums{$md}[$group_number]{$label} == 0){ # now it's impossible :)
 										foreach my $bin(@bins){
@@ -2122,7 +2124,9 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 								#print "found ".($new_labels-1)." new labels for group ".$group_names[$group_number]."\n";
 								my $next_to_print = $label_hashes{$md}[$group_number]{"printed"}+1;
 								foreach my $label($next_to_print..($label_hashes{$md}[$group_number]{"current"}-1)){ # last hash (with current label) is uncomplete
-									my @bins = (1..max(keys $hash{$md}[$group_number]{$label}));
+									my $max = max(keys $hash{$md}[$group_number]{$label});
+									print "maxbin is $max\n";
+									my @bins = (1..$max);
 									#print " looking at label $label \n";
 									if ($sums{$md}[$group_number]{$label} == 0){ # now it's impossible :)
 										foreach my $bin(@bins){
@@ -2455,7 +2459,9 @@ print "iteration number $iteration_number\n";
 				foreach my $site_node(keys %{$obs_hash}){
 #					foreach my $simsite(keys %{$sums{$site_node}}){ # deleted  $simsite 15.06
 						#print "maxdepth $md group number $group_number \n";
-						my @bins = (1..max(keys %{$hash{$site_node}})); #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
+						my $max = max(keys %{$hash{$site_node}});
+						print "maxbin is $max\n";
+						my @bins = (1..$max); #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
 						my $diff = abs($sums{$site_node} - $norms{$site_node})/$norms{$site_node}; #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
 						print "$site_node obssum ".$norms{$site_node}." simsum ".$sums{$site_node}."diff $diff \n"; #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
 						if ($sums{$site_node} == 0 || (defined($mutnum_control) && $diff > $mutnum_control)){
