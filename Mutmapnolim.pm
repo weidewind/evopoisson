@@ -1425,12 +1425,13 @@ sub iterations_gulp_vector_shuffling {
 	my $arref = \@simulated_hists;
 	my $csvfile = File::Spec->catfile($outdir, temp_tag(), $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
 	open CSV, ">$csvfile";
-	my $maxbin = max(keys %{$arref->[$i]});
-	foreach my $bin(1..$maxbin){
- 			print CSV $bin."_obs,".$bin."_exp,";
- 	}
+	#my $maxbin = max(keys %{$arref->[$i]});
+	#foreach my $bin(1..$maxbin){
+ 	#		print CSV $bin."_obs,".$bin."_exp,";
+ 	#}
  	print CSV "\n";
 	foreach my $i(0..$iterations-1){
+		my $maxbin = max(keys %{$arref->[$i]});
 		foreach my $bin(1..$maxbin){
 			print CSV ($arref->[$i]->{$bin}->[0]).",".($arref->[$i]->{$bin}->[1]).",";
 		}
@@ -1849,14 +1850,14 @@ sub concat_and_divide_simult {
 									}
 									else {
 										#print "CONC "."norm ".$norms{$md}[$group_number]."\n";
-										print "CONC "."sum ".$sums{$md}[$group_number]{$label}."\n";
-										print "CONC "."in hash, bin 12: ".$hash{$md}[$group_number]{$label}{12}[0]."\n";
+										#print "CONC "."sum ".$sums{$md}[$group_number]{$label}."\n";
+										#print "CONC "."in hash, bin 12: ".$hash{$md}[$group_number]{$label}{12}[0]."\n";
 										
 										foreach my $bin(@bins){
 											$hash{$md}[$group_number]{$label}{$bin}[0] = $hash{$md}[$group_number]{$label}{$bin}[0]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
 											$hash{$md}[$group_number]{$label}{$bin}[1] = $hash{$md}[$group_number]{$label}{$bin}[1]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
 										}
-										print "CONC expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2  \n";
+										#print "CONC expect  ".$hash{$md}[$group_number]{$label}{2}[1]." at bin 2  \n";
 									}
 									
 									my $filehandle = $filehandles{$md}{$group_number};
@@ -5010,7 +5011,7 @@ sub get_sequential_distance {
    }
    
  # changed at 21.09.2016  
-   sub bin_old {
+   sub bin {
    	my $depth = $_[0];
    	my $step = $_[1];
    	
@@ -5021,7 +5022,7 @@ sub get_sequential_distance {
    	return $bin+1;
    }
    
-   sub bin {
+   sub bin_new {
    	   	my $depth = $_[0];
    		my $step = $_[1];
    	#	print "Warning: not using step option for binning (if you did not explicitly set step to 1, it will cause havoc)\n";
