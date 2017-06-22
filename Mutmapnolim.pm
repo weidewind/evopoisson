@@ -1840,7 +1840,7 @@ sub concat_and_divide_simult {
 								#print "found ".($new_labels-1)." new labels for group ".$group_names[$group_number]."\n";
 								my $next_to_print = $label_hashes{$md}[$group_number]{"printed"}+1;
 								foreach my $label($next_to_print..($label_hashes{$md}[$group_number]{"current"}-1)){ # last hash (with current label) is uncomplete
-									my $max = max(keys $hash{$md}[$group_number]{$label});
+									my $max = max(keys %{$hash{$md}[$group_number]{$label}});
 									print "maxbin is $max\n";
 									my @bins = (1..$max);
 									#print " looking at label $label \n";
@@ -2124,7 +2124,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 								#print "found ".($new_labels-1)." new labels for group ".$group_names[$group_number]."\n";
 								my $next_to_print = $label_hashes{$md}[$group_number]{"printed"}+1;
 								foreach my $label($next_to_print..($label_hashes{$md}[$group_number]{"current"}-1)){ # last hash (with current label) is uncomplete
-									my $max = max(keys $hash{$md}[$group_number]{$label});
+									my $max = max(keys %{$hash{$md}[$group_number]{$label}});
 									print "maxbin is $max\n";
 									my @bins = (1..$max);
 									#print " looking at label $label \n";
@@ -2460,6 +2460,11 @@ print "iteration number $iteration_number\n";
 #					foreach my $simsite(keys %{$sums{$site_node}}){ # deleted  $simsite 15.06
 						#print "maxdepth $md group number $group_number \n";
 						my $max = max(keys %{$hash{$site_node}});
+						my @sorted = sort  { $a <=> $b } keys %{$hash{$site_node}};
+						foreach my $k(@sorted){
+							print $k." ";
+						}
+						print "\n";
 						print "maxbin is $max\n";
 						my @bins = (1..$max); #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
 						my $diff = abs($sums{$site_node} - $norms{$site_node})/$norms{$site_node}; #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
