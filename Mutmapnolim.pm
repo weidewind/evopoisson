@@ -2460,10 +2460,10 @@ print "iteration number $iteration_number\n";
 #					foreach my $simsite(keys %{$sums{$site_node}}){ # deleted  $simsite 15.06
 						#print "maxdepth $md group number $group_number \n";
 						my $max = max(keys %{$hash{$site_node}});
-						my @sorted = sort  { $a <=> $b } keys %{$hash{$site_node}};
-						foreach my $k(@sorted){
-							print $k." ";
-						}
+						#my @sorted = sort  { $a <=> $b } keys %{$hash{$site_node}};
+						#foreach my $k(@sorted){
+						#	print $k." ";
+						#}
 						print "\n";
 						print "maxbin is $max\n";
 						my @bins = (1..$max); #deleted  $simsite from $hash{$site_node}{$simsite} 15.06
