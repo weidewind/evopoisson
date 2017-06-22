@@ -4733,7 +4733,7 @@ sub visitor_coat {
  	
 
  	
- 	sub max ($$) { $_[$_[0] < $_[1]] }
+ 	#sub max ($$) { $_[$_[0] < $_[1]] }
  	
  	sub update_ring {
  		my $self = $_[0];
