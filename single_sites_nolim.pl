@@ -21,6 +21,8 @@ my $restrictions = '50,100,150';
 my $verbose;
 my $tag = '';
 my $mutnum_control = 0;
+my $skip_stoppers;
+my $no_neighbour_changing;
 
 
 
@@ -34,13 +36,14 @@ GetOptions (	'protein=s' => \$protein,
 		'tag=s' => \$tag,
 		'mutnum_control=s' => \$mutnum_control,
 		'no_neighbour_changing' => \$no_neighbour_changing,
+		'skip_stoppers' => \$skip_stoppers,
 	);
 
 
 
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing,  mutnum_control => $mutnum_control, fromfile => 1}; 
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing, skip_stoppers => $skip_stoppers, mutnum_control => $mutnum_control, fromfile => 1}; 
 unless  (Mutmapnolim::realdata_exists($args)) { die "No such realdata!"; }
 my @restriction_levels = split(/,/, $restrictions);
 my $rr = Mutmapnolim::check_realdata_restriction($args);

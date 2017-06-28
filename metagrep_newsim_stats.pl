@@ -7,10 +7,12 @@ use Cwd qw(abs_path cwd getcwd);
 my $input;
 my $state = "nsyn";
 my $no_neighbour_changing;
+my $skip_stoppers;
 GetOptions (	
 		'input=s' =>\$input,
 		'state=s' =>\$state,
 		'no_neighbour_changing' =>\$no_neighbour_changing,
+		'skip_stoppers' =>\$skip_stoppers,
 	);
 
 my $dirname = File::Spec->catdir(getcwd(), $input); 
@@ -35,6 +37,9 @@ foreach my $di(sort @dirs){
 		$dipath =  File::Spec->catdir($dipath,$state,"maxpath_not_subtracted");
 		if ($no_neighbour_changing){
 			$dipath =  File::Spec->catdir($dipath,"no_neighbour_changing");
+		}
+		if($skip_stoppers){
+			$dipath =  File::Spec->catdir($dipath,"skip_stoppers");
 		}
 		print "fake dir found: $dipath \n";
 		opendir(DH, $dipath);

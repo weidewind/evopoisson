@@ -23,7 +23,7 @@ my $no_neighbour_changing;
 my $no_leaves;
 my $restriction;
 my $faketag;
-
+my $skip_stoppers;
 my $lifetime_restr;
 my $onestrip;
 my $shuffler_type = "exp";
@@ -41,6 +41,7 @@ GetOptions (	'protein=s' => \$protein,
 		'verbose'  => \$verbose,
 		'memusage'  => \$memusage, # should i print memusage in file?
 		'no_neighbour_changing' => \$no_neighbour_changing,
+		'skip_stoppers' => \$skip_stoppers,
 		'no_leaves' => \$no_leaves,
 		'restriction=s' => \$restriction,
 		'faketag=s' => \$faketag,
@@ -56,7 +57,7 @@ GetOptions (	'protein=s' => \$protein,
 ## Procedure for launching a gulp of iterations
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "--subtract_tallest must be either 0 or 1\n";}
 unless (defined $tag){die "There will be several gulp files in one folder, therefore a --tag for each gulp must be specified (and it should be an integer)";}
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing, no_leaves => $no_leaves, syn_lengths => $syn_lengths, fromfile => 1, faketag => $faketag}; 
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing, skip_stoppers => $skip_stoppers, no_leaves => $no_leaves, syn_lengths => $syn_lengths, fromfile => 1, faketag => $faketag}; 
 unless  (Mutmapnolim::realdata_exists($args)) { die "No such realdata!"; }
 print "realdata restriction is ".Mutmapnolim::check_realdata_restriction($args)."\n";
 
