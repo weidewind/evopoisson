@@ -12,7 +12,7 @@ my $restriction = 50;
 GetOptions (	
 		'input=s' =>\$input,
 		'prot=s' =>\$prot,
-		'restriction=i' =>\$restriction,
+		'restriction=s' =>\$restriction,
 	);
 
 # reading simulation files

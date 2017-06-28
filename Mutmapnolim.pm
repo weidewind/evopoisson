@@ -104,6 +104,22 @@ $| = 1;
 			return "unreadable";
 	}
 	
+	sub stoppers_tag {
+		my $skip_stoppers = shift;
+		my $tag;
+		if (defined $skip_stoppers){
+			if ($skip_stoppers eq "y" || $skip_stoppers eq "yes" || $skip_stoppers == 1 ){
+				$tag = "skip_stoppers";
+			}
+			elsif ($skip_stoppers eq "n" || $skip_stoppers eq "no" || $skip_stoppers == 0 ) {
+				$tag = "with_stoppers";
+			}
+			else {die "Invalid skip_stoppers: $skip_stoppers";}
+		}
+		else {$tag = '';}
+		
+		return $tag;
+	}
 	
 	sub neighbour_tag {
 		my $no_neighbour_changing = shift;
@@ -171,7 +187,7 @@ $| = 1;
 	
 	sub pathFinder {
 		my $args = shift;	
-		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest}), neighbour_tag($args->{no_neighbour_changing}), syn_lengths_tag($args->{syn_lengths}), leaves_tag($args->{no_leaves})); 
+		my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest}), stoppers_tag($args->{skip_stoppers}), neighbour_tag($args->{no_neighbour_changing}), syn_lengths_tag($args->{syn_lengths}), leaves_tag($args->{no_leaves})); 
 		return $output_base;
 
 	}
@@ -2810,8 +2826,8 @@ sub count_pvalues{
 			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
 			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
 			my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
-			print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
-			print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
+		#	print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
+		#	print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
 			if (nearest(.00000001,$boot_obs_median - $boot_exp_median) >= nearest(.00000001,$obs_median - $exp_median)){
 				$pval_env += 1;
 			}
@@ -3008,7 +3024,9 @@ sub count_pvalues{
 				$group_boot_medians[$itnumber][1] = $boot_exp_median;
 				$group_boot_means[$itnumber][0] = $boot_obs_mean;
 				$group_boot_means[$itnumber][1] = $boot_exp_mean;			
-				unless ($fake) {print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";}
+				unless ($fake) {
+				#	print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";
+				}
 				$itnumber++;
 				$iteration++;
 			}
@@ -3142,7 +3160,9 @@ sub count_pvalues{
 				$complement_boot_medians[$itnumber][1] = $boot_exp_median;
 				$complement_boot_means[$itnumber][0] = $boot_obs_mean;
 				$complement_boot_means[$itnumber][1] = $boot_exp_mean;
-				unless ($fake) {print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";}
+				unless ($fake) {
+					#print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";
+				}
 				$itnumber++;
 				$iteration++;
 			}
@@ -3383,8 +3403,8 @@ sub count_single_site_pvalues{
 			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
 			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
 			my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
-			print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
-			print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
+		#	print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
+		#	print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
 			if (nearest(.00000001,$boot_obs_median - $boot_exp_median) >= nearest(.00000001,$obs_median - $exp_median)){
 				$pval_env += 1;
 			}

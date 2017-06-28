@@ -3,7 +3,7 @@
 use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); #adds working directory to @INC
-use Mutmap (realdata_exists, check_realdata_restriction);
+use Mutmapnolim (realdata_exists, check_realdata_restriction);
 use Getopt::Long;
 use Getopt::ArgvFile;
 use File::Path qw(make_path remove_tree);
@@ -28,7 +28,7 @@ GetOptions (	'protein=s' => \$protein,
 	);
 
 my @muts = split(/,/, $muts);
-my $mutmap = Mutmap->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
+my $mutmap = Mutmapnolim->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
 my @tree_files = $mutmap->print_subtree_with_mutations(\@muts, $tag);
 if ($jpeg){
 	eval {

@@ -92,7 +92,7 @@ foreach my $filename(sort @files){
 						$obss = "";
 					}
 					if ($_ =~ /^>(.*)/){
-						my @args = split(/[_\s+]/, $1); 
+						my @args = split(/[:\s+]/, $1); 
 						pop @args; # iterations number
 						print SITES $depth.",";
 						foreach my $arg(@args){

@@ -45,6 +45,8 @@ my $debugmode;
 my $poisson; # exp shuffler is poisson not exp :)
 my $syn_lengths;
 
+my $onlysim; # do not launch concat_and_divide and count_pvalue
+
 
 GetOptions (	
 		'protein=s' => \$protein,
@@ -71,6 +73,7 @@ GetOptions (
 		'debugmode' => \$debugmode,
 		'distrpoisson' =>\$poisson,
 		'syn_lengths' => \$syn_lengths,
+		'onlysim' => \$onlysim,
 	);
 
 $| = 1;
@@ -213,17 +216,18 @@ if ($sim > 0){
 	##
 }
 ## 25.01 Procedure for obtaining p-values
-my @groups_and_names;
-if ($no_groups){
-	@groups_and_names = $mutmap-> protein_no_group();
+unless ($onlysim){
+	my @groups_and_names;
+	if ($no_groups){
+		@groups_and_names = $mutmap-> protein_no_group();
+	}
+	else {
+		@groups_and_names = $mutmap-> predefined_groups_and_names();
+	}
+	
+	$mutmap-> concat_and_divide_simult_for_mutnum_controlled (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+	$mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;
 }
-else {
-	@groups_and_names = $mutmap-> predefined_groups_and_names();
-}
-
-$mutmap-> concat_and_divide_simult_for_mutnum_controlled (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
-$mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;
-
 
 sub mycomm {
 	my $tag = shift;
