@@ -27,6 +27,7 @@ my $include_tips;
 my $skip_stoppers;
 my $mutnum_control = 0.2;
 my $syn_lengths;
+my $overwrite;
 
 
 GetOptions (	
@@ -44,6 +45,7 @@ GetOptions (
 		'skip_stoppers' => \$skip_stoppers,
 		'mutnum_control=s' => \$mutnum_control,
 		'syn_lengths' => \$syn_lengths,
+		'overwrite' => \$overwrite,
 	);
 
 $| = 1;
@@ -56,15 +58,26 @@ my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state 
 my @restriction_levels = split(/,/, $restrictions);
 my $specified_restriction = List::Util::min(@restriction_levels);
 my $mutmap;
-unless (Mutmapnolim::realdata_exists($args)) { 
+unless (Mutmapnolim::realdata_exists($args) || $overwrite) { 
 	die "No realdata exists for specified parameter\n"; 
 }
-my $rr = Mutmapnolim::check_realdata_restriction($args);
-unless ($rr <= $specified_restriction){
-	die "Existing realdata restriction is greater than the minimal restriction you specified: ".$rr." > ".$specified_restriction."\n"; 
+my $mutmap;
+if ($overwrite){
+	print "--overwrite option: going to overwrite existing realdata\n"; 
+	$args->{fromfile} = 0;
+	$mutmap = Mutmapnolim->new($args);
+	$mutmap-> prepare_real_data ({restriction => $specified_restriction,step => $step});
 }
-print "Going to use existing realdata with restriction $rr\n";
-$mutmap = Mutmapnolim->new($args);
+else {
+	my @restriction_levels = split(/,/, $restrictions);
+	my $rr = Mutmapnolim::check_realdata_restriction($args);
+	my $sr = List::Util::min(@restriction_levels);
+	print "realdata restriction is $rr\n";
+	if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restriction you specified: ".$rr." > ".$sr."\n"; }
+	print "Going to use existing realdata with restriction $rr\n";
+	$mutmap = Mutmapnolim->new($args);
+}
+
 $mutmap-> createCodeversionFile("poisson");
 
 my $ready = $mutmap-> count_iterations();

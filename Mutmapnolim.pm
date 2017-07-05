@@ -1786,6 +1786,7 @@ sub concat_and_divide_simult {
 	my @maxdepths = @{$_[0]};
 	my @groups = @{$_[1]};
 	my @group_names = @{$_[2]};
+	my $nolim = $_[3];
 	my $mutnum_control = $self->{static_mutnum_control};
 	my $subtract_maxpath = $self->{static_subtract_tallest};
 	my $dir = $self->{static_output_base};
@@ -1951,7 +1952,7 @@ sub concat_and_divide_simult {
 				
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
 				foreach my $md(@maxdepths){
-					if ($max_depth > $md){
+					if ($nolim || $max_depth > $md){
 						#print "max_depth $max_depth , md $md\n";
 						foreach my $group_number(0..scalar @groups-1){
 							my $label;
@@ -2460,7 +2461,7 @@ sub concat_and_divide_simult_single_sites {
 				$str = <GULP>;
 				
 			}
-	
+	 
 	
 			
 			## parsed all information about this iteration 

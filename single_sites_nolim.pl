@@ -23,6 +23,7 @@ my $tag = '';
 my $mutnum_control = 0;
 my $skip_stoppers;
 my $no_neighbour_changing;
+my $overwrite;
 
 
 
@@ -37,6 +38,7 @@ GetOptions (	'protein=s' => \$protein,
 		'mutnum_control=s' => \$mutnum_control,
 		'no_neighbour_changing' => \$no_neighbour_changing,
 		'skip_stoppers' => \$skip_stoppers,
+		'overwrite' => \$overwrite,
 	);
 
 
@@ -44,16 +46,24 @@ GetOptions (	'protein=s' => \$protein,
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest must be either 0 or 1\n";}
 ## for concat_and_divide_simult you need a mutmap produced from realdata, therefore fromfile => true
 my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing, skip_stoppers => $skip_stoppers, mutnum_control => $mutnum_control, fromfile => 1}; 
-unless  (Mutmapnolim::realdata_exists($args)) { die "No such realdata!"; }
+unless  (Mutmapnolim::realdata_exists($args) || $overwrite) { die "No such realdata!"; }
+my $mutmap;
+if ($overwrite){
+	print "--overwrite option: going to overwrite existing realdata\n"; 
+	$args->{fromfile} = 0;
+	$mutmap = Mutmapnolim->new($args);
+	$mutmap-> prepare_real_data ({restriction => $specified_restriction,step => $step});
+}
+else {
 my @restriction_levels = split(/,/, $restrictions);
-my $rr = Mutmapnolim::check_realdata_restriction($args);
-my $sr = List::Util::min(@restriction_levels);
-print "realdata restriction is $rr\n";
-if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restriction you specified: ".$rr." > ".$sr."\n"; }
-
+	my $rr = Mutmapnolim::check_realdata_restriction($args);
+	my $sr = List::Util::min(@restriction_levels);
+	print "realdata restriction is $rr\n";
+	if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restriction you specified: ".$rr." > ".$sr."\n"; }
+	$mutmap = Mutmapnolim->new($args);
+}
 
 ## 25.01 Procedure for obtaining p-values for every ancestor node (site_node)
-my $mutmap = Mutmapnolim->new($args);
 $mutmap -> set_tag($tag);
 $mutmap-> createCodeversionFile("single_sites");
 $mutmap-> concat_and_divide_simult_single_sites (\@restriction_levels, $mutnum_control);

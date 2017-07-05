@@ -152,7 +152,6 @@ foreach my $di(sort @dirs){
 					while (<FILE>){
 						if ($_ =~ /^[\s\t]+observed/){
 							my @splitter = split(/[\s\t]+/, $_);
-							print $splitter[3]." ".$splitter[7]." ".$splitter[10]." ".$splitter[14]."\n";
 							$median_stat = $splitter[3]-$splitter[7];
 							$mean_stat = $splitter[10]-$splitter[14];
 							last;
