@@ -8,7 +8,7 @@ do
 			it=$((number+10*i))
 				sleep 3
 				out="${foldername}/${it}_fake"
-				( perl poissonnolim.pl -p h3 --state syn --step 0.5 --restrictions 50,100 --onlysim --simnumber 1000 --mutnum_control 0 --fake --shuffler_type exp --maxmem 3500000 --output $out &>output/logs/fakes_h3_syn_wst;
+				( perl poissonnolim.pl -p h3 --state syn --step 0.5 --restrictions 50,100 --onlysim --simnumber 1000 --mutnum_control 0 --fake --shuffler_type exp --maxmem 10000000 --output $out &>output/logs/fakes_h3_syn_wst;
 				  perl groups_nolim.pl -p h3 --state syn --restrictions 50,100 --mutnum_control 0 --output $out &>output/logs/fakes_h3_syn_groups_wst &
  				perl single_sites_nolim.pl -p h3 --state syn --step 0.5 --restrictions 50 --mutnum_control 0 --output $out &>output/logs/fakes_h3_syn_sites_wst) &
 		done
