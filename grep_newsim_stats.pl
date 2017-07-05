@@ -38,7 +38,7 @@ foreach my $gulp_filename(@files){
 					$mutnum = $str_array[7];
 					$totlen = $str_array[9];
 					if($max_depth > $restriction){
-						push @{$iterations_hash{$simsite."_".$simnode}}, [$max_depth, $mutnum, $totlen];
+						push @{$iterations_hash{$simsite.":".$simnode}}, [$max_depth, $mutnum, $totlen];
 					}
 				}
 	}

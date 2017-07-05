@@ -23,7 +23,7 @@ foreach my $filename(sort @files){
 	my $prot = $1;
 	my $groupfile = File::Spec->catfile($dirname, $prot."_groups");
 	open GROUPS, ">$groupfile" or die "Cannot open $groupfile: $!\n";
-	print GROUPS "group\tmaxdepth\titerations\ttype\tepi_enrichment_pvalue\tenv_enrichment_pvalue\tepi_pvalue\tenv_pvalue\n";
+	print GROUPS "group,maxdepth,iterations,type,epi_enrichment_pvalue,env_enrichment_pvalue,epi_pvalue,env_pvalue\n";
 	close GROUPS;
 }	
 
@@ -46,7 +46,14 @@ foreach my $filename(sort @files){
 						$its =~ s/[\s\t]+//g; 
 			}
 			if ($_ =~ /^me/){
-				print GROUPS $group."\t".$depth."\t".$its."\t".$_;
+				my @splitter = split(/[\s\t]+/, $_);
+				print GROUPS $group.",".$depth.",".$its.",";
+				if (scalar @splitter == 3){
+					print GROUPS $splitter[0].",,,".$splitter[1].",".$splitter[2]."\n";
+				}
+				elsif(scalar @splitter == 5){
+					print GROUPS $splitter[0].",".$splitter[1].",".$splitter[2].",".$splitter[3].",".$splitter[4]."\n";
+				}
 			}
 			if ($_ =~ /^#/){
 				$its = "";

@@ -9,7 +9,7 @@ do
 		do
 			it=$((number+10*i))
 				out="output/${foldername}/${it}_fake/syn/maxpath_not_subtracted"
-				perl grep_newsim_stats.pl -p h3 -r 0.03 -i $out &
+				perl grep_newsim_stats.pl -p h3 -r 0 -i $out &
 				
 		done
 		wait
