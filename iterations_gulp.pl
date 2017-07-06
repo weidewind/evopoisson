@@ -30,6 +30,7 @@ my $shuffler_type = "exp";
 my $debugmode;
 my $syn_lengths;
 my $poisson;
+my $skip_stoppers_in_simulation
 
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
@@ -51,6 +52,7 @@ GetOptions (	'protein=s' => \$protein,
 		'debugmode' => \$debugmode,
 		'distrpoisson' =>\$poisson,
 		'syn_lengths' =>\$syn_lengths,
+		'skip_stoppers_in_simulation' => \$skip_stoppers_in_simulation,
 	);
 
 
@@ -64,7 +66,7 @@ print "realdata restriction is ".Mutmapnolim::check_realdata_restriction($args).
 if ($verbose) { print "Starting gulp $tag of $iterations iterations for protein $protein..\n"; }
 ## for launching iterations you need a mutmap produced from realdata, therefore fromfile => true
 my $mutmap = Mutmapnolim->new($args);
-$mutmap-> iterations_gulp ($iterations, $tag, $verbose, $memusage, $restriction, $lifetime_restr, $onestrip, $shuffler_type, $debugmode, $poisson);
+$mutmap-> iterations_gulp ($iterations, $tag, $verbose, $memusage, $restriction, $lifetime_restr, $onestrip, $shuffler_type, $debugmode, $poisson, $skip_stoppers_in_simulation);
 if ($verbose) { print "Finished gulp $tag of $iterations iterations for protein $protein\n"; }
 ###
 

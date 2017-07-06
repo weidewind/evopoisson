@@ -44,6 +44,7 @@ my $shuffler_type = "exp";
 my $debugmode;
 my $poisson; # exp shuffler is poisson not exp :)
 my $syn_lengths;
+my $skip_stoppers_in_simulation;
 
 my $onlysim; # do not launch concat_and_divide and count_pvalue
 
@@ -74,6 +75,7 @@ GetOptions (
 		'distrpoisson' =>\$poisson,
 		'syn_lengths' => \$syn_lengths,
 		'onlysim' => \$onlysim,
+		'skip_stoppers_in_simulation' => \$skip_stoppers_in_simulation,
 	);
 
 $| = 1;
@@ -253,6 +255,7 @@ sub mycomm {
 	if ($onestrip) { $command = $command." --onestrip ";}
 	if ($debugmode) { $command = $command." --debugmode ";}
 	if ($poisson) { $command = $command." --distrpoisson ";}
+	if ($skip_stoppers_in_simulation) { $command = $command." --skip_stoppers_in_simulation ";}
 	if ($shuffler_type ne "strip" && $onestrip){print "onestrip option is ignored (only meaningful for strip shuffler_type)";}
 	return $command;
 	

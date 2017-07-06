@@ -1194,7 +1194,7 @@ sub iterations_gulp{
 	my $shuffler_type = shift;
 	my $debugmode = shift;
 	my $poisson = shift;
-	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, $lifetime_restr, $onestrip, $shuffler_type, $debugmode, $poisson); # 0 - no lifetime restriction, 1 - one strip, "exp" or "strip" shuffler, "debug" - mock shuffler
+	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, $lifetime_restr, $onestrip, $shuffler_type, $debugmode, $poisson, $skip_stoppers_in_simulation); # 0 - no lifetime restriction, 1 - one strip, "exp" or "strip" shuffler, "debug" - mock shuffler
 }
 
 # new simulation method 11.01.2017 
@@ -1214,6 +1214,7 @@ sub iterations_gulp_subtree_shuffling {
 	my $shufflertype = shift;
 	my $debugmode = shift;
 	my $poisson = shift;
+	my $skip_stoppers_in_simulation = shift;
 		
 	if ($verbose){print "Extracting realdata..\n";}	
 	my $realdata = $self->{realdata};
@@ -1241,7 +1242,7 @@ sub iterations_gulp_subtree_shuffling {
 		$shuffler = shuffle_muts_on_tree::prepare_shuffler($self->{static_tree}, $rh_constrains, $onestrip);
 	} 
 	elsif ($shufflertype eq "exp"){
-		$rh_constrains = $self->get_constraints($restriction, \@sites); 
+		$rh_constrains = $self->get_constraints($restriction, \@sites, $skip_stoppers_in_simulation); 
 	}
 	else {
 		die "Unknown shuffler type\n";
@@ -1334,6 +1335,7 @@ sub get_constraints {
 	my $self = shift;
 	my $restriction = $_[0];
 	my @group = @{$_[1]};
+	my $skip_stoppers_in_simulation = $_[2];
 	my %group_hash;
 	foreach my $site(@group){
 		$group_hash{$site} = 1;
@@ -1345,12 +1347,14 @@ sub get_constraints {
 	
 	# all bkgr mutations, that would be stoppers for any ancestor node
 	my %all_stoppers;
-	my @nodes = $self->{static_tree}->get_nodes;
-	foreach my $site_index(@group){
-		foreach my $node(@nodes){
-			my $nname = $node->get_name;
-			if (!($self->has_no_background_mutation($nname, $site_index))){
-				push @{$all_stoppers{$site_index}}, $node;
+	unless ($skip_stoppers_in_simulation && $self->{static_state} eq "nsyn"){
+		my @nodes = $self->{static_tree}->get_nodes;
+		foreach my $site_index(@group){
+			foreach my $node(@nodes){
+				my $nname = $node->get_name;
+				if (!($self->has_no_background_mutation($nname, $site_index))){
+					push @{$all_stoppers{$site_index}}, $node;
+				}
 			}
 		}
 	}
@@ -1786,7 +1790,6 @@ sub concat_and_divide_simult {
 	my @maxdepths = @{$_[0]};
 	my @groups = @{$_[1]};
 	my @group_names = @{$_[2]};
-	my $nolim = $_[3];
 	my $mutnum_control = $self->{static_mutnum_control};
 	my $subtract_maxpath = $self->{static_subtract_tallest};
 	my $dir = $self->{static_output_base};
@@ -1952,7 +1955,7 @@ sub concat_and_divide_simult {
 				
 				#print " Maxdepth $max_depth itnum $iteration_number bin ".$str_array[0]." exp ".$str_array[2]." obs ".$str_array[1]." \n";
 				foreach my $md(@maxdepths){
-					if ($nolim || $max_depth > $md){
+					if ($max_depth > $md){
 						#print "max_depth $max_depth , md $md\n";
 						foreach my $group_number(0..scalar @groups-1){
 							my $label;
