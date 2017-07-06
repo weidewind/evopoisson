@@ -1194,6 +1194,7 @@ sub iterations_gulp{
 	my $shuffler_type = shift;
 	my $debugmode = shift;
 	my $poisson = shift;
+	my $skip_stoppers_in_simulation = shift;
 	$self->iterations_gulp_subtree_shuffling($iterations,$tag,$verbose,$memusage, $restriction, $lifetime_restr, $onestrip, $shuffler_type, $debugmode, $poisson, $skip_stoppers_in_simulation); # 0 - no lifetime restriction, 1 - one strip, "exp" or "strip" shuffler, "debug" - mock shuffler
 }
 
