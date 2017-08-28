@@ -457,7 +457,7 @@ sub parse_fasta {
 
 sub parse_tree {
 					my $tree_file = $_[0];
-					open TREE, "< $tree_file" or die "Cannot open file ".$tree_file."\n";
+					open TREE, "<$tree_file" or die "Cannot open file ".$tree_file."\n";
 					# get a newick string from some source
  					my $tree_string;
  					my $t;
@@ -574,7 +574,22 @@ sub print_syn_lenths_tree{
 	close FILE;
 }
 
-
+sub print_tree_with_nsyn_lengths{
+	my $self = shift;
+	unless ($self->{static_state} eq "nsyn"){($self->{static_state} eq "nsyn");}
+	my $map = $self->{static_subs_on_node};
+	my $tree = clone($self->{static_tree});
+	my $treefile = File::Spec->catfile($self->{static_input_base}, $self->{static_protein}.".l.r.updated.newick");
+	
+	my @nodes =  $tree-> get_nodes;
+	foreach my $node (@nodes){
+		$node -> set_branch_length(scalar keys %{$map->{$node->get_name}});
+	}
+	my $string = $tree->get_root->to_newick('-nodelabels' => 1);
+	open FILE, ">$treefile" or die $!;
+	print FILE $string;
+	close FILE;
+}
 
 
 sub mylength {
@@ -1244,6 +1259,7 @@ sub iterations_gulp_subtree_shuffling {
 	} 
 	elsif ($shufflertype eq "exp"){
 		$rh_constrains = $self->get_constraints($restriction, \@sites, $skip_stoppers_in_simulation); 
+		Dumper ($rh_constrains);
 	}
 	else {
 		die "Unknown shuffler type\n";
@@ -1363,18 +1379,20 @@ sub get_constraints {
 	foreach my $site_node(keys %{$obs_hash}){
 			my ($site, $node_name) = cleave($site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
+			print "maxdepth for $site $node_name is $maxdepth\n";
 				if ($maxdepth > $restriction && $group_hash{$site}){
 					my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
 					my $totlen;
 					foreach my $bin (keys %{$subtree_info->{$node_name}->{$site}->{"hash"}}){
 						$totlen += $subtree_info->{$node_name}{$site}{"hash"}{$bin}[1];
 					}
+					print "for $site $node_name mutnum is $mutnum and totlen is $totlen\n";
 					my $hazard = $mutnum/$totlen;
-					#print "hazard for $site $node_name is $hazard\n";
+					print "hazard for $site $node_name is $hazard\n";
 					my $stoppers = $all_stoppers{$site};
 					my $constr = Constrains->new(number_of_mutations => $mutnum, stoppers => $stoppers, hazard => $hazard);
 					$constraints->{$node_name}{$site} = $constr;  
-					#print "constraints hazard for $site $node_name ".$constraints->{$node_name}{$site}->hazard()."\n";
+					print "constraints hazard for $site $node_name ".$constraints->{$node_name}{$site}->hazard()."\n";
 				}
 		}
 	return $constraints;
@@ -2261,7 +2279,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 										my $m = scalar keys %{$counter_hashes{$md}[$group_number]};
 										#print "still need ".$m." for $md $group_names[$group_number] and $l for $simnode\n";
 								}
-								elsif ($simmutnum != $counter_hashes{$md}[$group_number]{$simnode}{$simsite}){
+								if ($simmutnum != $counter_hashes{$md}[$group_number]{$simnode}{$simsite}){
 										print "Error! simmutnum for $simnode $simsite $simmutnum , expected ".$counter_hashes{$md}[$group_number]{$simnode}{$simsite}."\n";
 								}
 
@@ -3318,7 +3336,7 @@ sub count_single_site_pvalues{
 		}
 		##
 		my $count = scalar keys %obs_hash_restricted;
-	
+	    if (!$restriction) {$restriction = 0;}
 		my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_single_sites");
 		open my $outputfile, ">$file" or die "Cannot create $file";
 		{ my $ofh = select $outputfile;

@@ -30,7 +30,7 @@ my $shuffler_type = "exp";
 my $debugmode;
 my $syn_lengths;
 my $poisson;
-my $skip_stoppers_in_simulation
+my $skip_stoppers_in_simulation;
 
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,

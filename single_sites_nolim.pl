@@ -48,16 +48,16 @@ unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "subtract_tallest
 my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing, skip_stoppers => $skip_stoppers, mutnum_control => $mutnum_control, fromfile => 1}; 
 unless  (Mutmapnolim::realdata_exists($args) || $overwrite) { die "No such realdata!"; }
 my $mutmap;
+my @restriction_levels = split(/,/, $restrictions);
+my $sr = List::Util::min(@restriction_levels);
 if ($overwrite){
 	print "--overwrite option: going to overwrite existing realdata\n"; 
 	$args->{fromfile} = 0;
 	$mutmap = Mutmapnolim->new($args);
-	$mutmap-> prepare_real_data ({restriction => $specified_restriction,step => $step});
+	$mutmap-> prepare_real_data ({restriction => $sr,step => $step});
 }
 else {
-my @restriction_levels = split(/,/, $restrictions);
 	my $rr = Mutmapnolim::check_realdata_restriction($args);
-	my $sr = List::Util::min(@restriction_levels);
 	print "realdata restriction is $rr\n";
 	if ($rr > $sr){ die "Error: realdata restriction is greater than minimal restriction you specified: ".$rr." > ".$sr."\n"; }
 	$mutmap = Mutmapnolim->new($args);

@@ -19,7 +19,7 @@ if (scalar @files == 0){
 foreach my $filename(sort @files){
 	my $filepath =  File::Spec->catfile($dirname,$filename);
 	next if (-d $$filepath);
-	next unless ($filename =~ /(.*)_gulpselector_vector_boot_median_test_([0-9\.]+)_(.*)/);
+	next unless ($filename =~ /(.*)_gulpselector_vector_boot_median_test_([0-9\.]*)_(.*)/);
 	my $prot = $1;
 	my $groupfile = File::Spec->catfile($dirname, $prot."_groups");
 	open GROUPS, ">$groupfile" or die "Cannot open $groupfile: $!\n";
@@ -30,7 +30,7 @@ foreach my $filename(sort @files){
 foreach my $filename(sort @files){
 	my $filepath =  File::Spec->catfile($dirname,$filename);
 	next if (-d $$filepath);
-	next unless ($filename =~ /(.*)_gulpselector_vector_boot_median_test_([0-9\.]+)_(.*)/);
+	next unless ($filename =~ /(.*)_gulpselector_vector_boot_median_test_([0-9\.]*)_(.*)/);
 	my $prot = $1;
 	my $depth = $2;
 	my $ending = $3;
