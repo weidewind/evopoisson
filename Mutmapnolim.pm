@@ -1382,10 +1382,7 @@ sub get_constraints {
 			print "maxdepth for $site $node_name is $maxdepth\n";
 				if ($maxdepth > $restriction && $group_hash{$site}){
 					my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
-					my $totlen;
-					foreach my $bin (keys %{$subtree_info->{$node_name}->{$site}->{"hash"}}){
-						$totlen += $subtree_info->{$node_name}{$site}{"hash"}{$bin}[1];
-					}
+					my $totlen = $subtree_info->{$node_name}->{$site}->{"totlengths"};
 					print "for $site $node_name mutnum is $mutnum and totlen is $totlen\n";
 					my $hazard = $mutnum/$totlen;
 					print "hazard for $site $node_name is $hazard\n";
@@ -1398,87 +1395,6 @@ sub get_constraints {
 	return $constraints;
 }	
 
-
-# 5.11 for entrenchment_bootstrap_full_selection_vector
-# was used before 11.01.2017 (previous name - iterations_gulp)
-# constraint: total number of mutations in each site
-# mutations are assigned to branches proportionally to their lengths
-# works with the whole tree
-sub iterations_gulp_vector_shuffling {
-	my $self = shift;
-	my $iterations = shift;
-	my $tag = shift;
-	my $verbose = shift;
-	my $memusage = shift;
-	my $restriction = shift;
-		
-	#my $ancestor_nodes = $_[4];
-	#my $obs_vector = $_[5];
-	#my $norm = $_[6];
-	if ($verbose){print "Extracting realdata..\n";}	
-	my $realdata = $self->{realdata};
-	my $step = $realdata->{"step"}; #bin size
-	unless (defined $step) {die "Oh no, bin size in realdata is not defined. Won't proceed with simulations.\n";}
-	my $ancestor_nodes = $realdata->{"ancestor_nodes"};
-	#my $obs_vectors = $realdata->{"obs_vectors"};
-	my $outdir;
-	if ($self->{static_output_subfolder}){
-		$outdir = $self->{static_output_subfolder};
-	}
-	else {
-		$outdir = $self->{static_output_base};
-	}
-	#if ($verbose){print "Cloning mutmap..\n";}
-	#my $mock_mutmap = $self->myclone(); # 25.07 create a new object for shuffling
-	#my $mock_mutmap = $self->mydebugclone();
-	my @simulated_hists;
-	
-	for (my $i = 1; $i <= $iterations; $i++){
-		if ($verbose){print "Creating clone..\n";}
-
-		my $mock_mutmap = $self->myclone();
-		if ($verbose){print "Shuffling clone..\n";}
-		$mock_mutmap->shuffle_mutator(); # this method shuffles observation vectors and sets new $static_nodes.. and static_subs..
-		
-		my %hash;
-		# >new iteration string and all the corresponding data  are printed inside this sub:
-		my %prehash = $mock_mutmap->depth_groups_entrenchment_optimized_selection_alldepths($step,$restriction,$ancestor_nodes, "overwrite", $tag, $verbose); #step (bin size), restriction, ancestor_nodes, should I overwrite static hash?
-
-		foreach my $site_node(keys %prehash){
-			foreach my $bin(keys %{$prehash{$site_node}}){
-					$hash{$bin}[1] += $prehash{$site_node}{$bin}[1];
-					$hash{$bin}[0] += $prehash{$site_node}{$bin}[0];				
-			}
-		}
-		# 21.12 we do not need any norm here since we normalize values in concat_and_divide - separately for different maxdepths
-		push @simulated_hists, \%hash;
-		#%static_ring_hash = (); # must be cleaned in visitor_coat
-		#%static_subtree_info = (); # must be cleaned in visitor_coat
-	}
-	if ($memusage){
-		my $locker = Memusage->get_locker($self);
-		$locker->print_memusage();
-	}
-	# store \@simulated_hists, File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored_".$tag); # was used because I was afraid of loosing a large amount of time because of some mistake
-	# my $arref = retrieve(File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_gulpselector_vector_alldepths_stored_".$tag));
-	my $arref = \@simulated_hists;
-	my $csvfile = File::Spec->catfile($outdir, temp_tag(), $self->{static_protein}."_gulpselector_vector_alldepths_".$tag.".csv");
-	open CSV, ">$csvfile";
-	#my $maxbin = max(keys %{$arref->[$i]});
-	#foreach my $bin(1..$maxbin){
- 	#		print CSV $bin."_obs,".$bin."_exp,";
- 	#}
- 	print CSV "\n";
-	foreach my $i(0..$iterations-1){
-		my $maxbin = max(keys %{$arref->[$i]});
-		foreach my $bin(1..$maxbin){
-			print CSV ($arref->[$i]->{$bin}->[0]).",".($arref->[$i]->{$bin}->[1]).",";
-		}
-		print CSV"\n";
-	}
-	close CSV;
-	
-}
 
 
 sub get_obshash {
@@ -3515,161 +3431,6 @@ sub print_data_for_LRT {
 
 
 
-
-## Since 5.02
-sub depth_groups_entrenchment_optimized_selection_alldepths {
-	my $self = shift;
-	my $step = $_[0];
-	my $restriction = $_[1]; # 10.10 restriction returns
-	my $ancestral_nodes = $_[2];
-	my $overwrite = $_[3];
-	my $tag = $_[4];
-	my $verbose = $_[5];
-	my $gr = $_[6];
-	my $dir = File::Spec->catdir($self->{static_output_base}, $self->{static_protein});
-	make_path($dir);
-	my $filename = File::Spec->catfile($dir, $self->{static_protein}."_for_enrichment_".$tag);
-	if ($verbose){print "Going to print in file $filename \n";}
-	open my $file, ">>$filename" or die "Cannot create $filename\n";
-	my $root = $self->{static_tree}-> get_root;
-	my @array;
-	my %hist;
-	print $file ">new iteration\n";
-	
-	my @group;
-	if ($gr){ 
-		@group = @{$gr};
-	}
-	else {
-		my $length = $self->mylength();
-		@group = (1..$length);
-	}
-	
-	foreach my $key (keys %{$ancestral_nodes}){
-	#print " ancestral node $key \n";
-	}
-	
-	my %closest_ancestors;
-	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
-	my @args = ( $step, $root);
-	$self->visitor_coat ($root, \@array,\&entrenchment_visitor,\&no_check,\@args,0,$overwrite);
-
-	foreach my $ind (@group){
-	#print "here my ind $ind\n";
-		foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
-			my $node;
-			if(ref($nod) eq "REF"){
-				$node = ${$nod};
-			}
-			else {$node = $nod};
-			my $nodename = $node->get_name();
-			my $site_node = concat($ind,$nodename);
-			#print "here my site_node $site_node\n";
-			if (!$ancestral_nodes->{$nodename}){
-				#print "$ind $nodename NOT IN REAL ANCESTORS\n";
-				my $totmut;
-				my $totlen;
-				foreach my $bin (keys %{$self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}}){
-					$totmut += $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[0];
-					$totlen += $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[1];
-				}	
-			#	print " totmut $totmut, totlen $totlen\n";
-				next;
-			}
-		#	print "$site_node is still here\n";
-			my $total_muts;
-			my $total_length;
-	#print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
-	#print "maxdepth ".$static_subtree_info{$node->get_name()}{$ind}{"maxdepth"}."\n";
-			if ($self->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"} > $restriction){ #10.10 restriction returns. 
-				
-				my %subtract_hash;
-				
-				
-				if ($self->{static_subtract_tallest}){
-					my $tallest_tip = ${$self->{static_hash_of_nodes}{$self->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth_node"}}};	
-					my @path_to_tallest_tip = @{$tallest_tip->get_ancestors()};	
-					my $index_of_ancestor_node; 
-					my $path_length = $tallest_tip->get_branch_length; 
-				
-					for(my $n = 0; $n < scalar @path_to_tallest_tip; $n++){		
-						if ($path_to_tallest_tip[$n]->get_name eq $node->get_name){
-							$index_of_ancestor_node = $n;
-							last; # even if ancestors (from get_ancestors) contain the node itself, it won't make any difference
-						}
-						my $depth = get_sequential_distance($node, $path_to_tallest_tip[$n]);
-						$subtract_hash{bin($depth,$step)} += $path_to_tallest_tip[$n]->get_branch_length;
-						$path_length += $path_to_tallest_tip[$n]->get_branch_length;
-					}
-				}
-				
-				
-				foreach my $bin ( keys %{$self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}}){
-					#print "bin $bin adding ".$static_subtree_info{$node->get_name()}{$ind}{"hash"}{$bin}[0]."\n";
-					$total_muts += $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[0];
-					$total_length += $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[1];
-					if ($self->{static_subtract_tallest} && $subtract_hash{$bin}){
-						$total_length -= $subtract_hash{$bin};
-					}
-				}	
-				#print $node->get_name()." ".$ind." TOTALS: $total_muts, $total_length, maxdepth ".$static_subtree_info{$node->get_name()}{$ind}{"maxdepth"}."\n";
-				#if ($total_length > 0 && $total_muts/$total_length < 0.005){
-				if ($total_length > 0){
-					#print "total muts $total_muts \n";
-					print $file "site $ind node ".$node->get_name()." maxdepth ".$self->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}." muts ".$total_muts."\n";
-					my $check_local_lengths_sum;
-					my $check_total_obs;
-					my $check_total_exp;
-					foreach my $bin (sort {$a <=> $b} (keys %{$self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}})){
-						
-							my $local_length = $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[1];
-							if ($self->{static_subtract_tallest} && $subtract_hash{$bin}){
-								$local_length -= $subtract_hash{$bin};
-							}
-							$check_local_lengths_sum += $local_length;
-							$hist{$site_node}{$bin}[0] += $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[0]; #observed
-							$hist{$site_node}{$bin}[1] += $total_muts*$local_length/$total_length; #expected	
-	#print "adding to obs bin $bin ".$static_subtree_info{$node->get_name()}{$ind}{"hash"}{$bin}[0]."\n";
-
-						    if (!$hist{$site_node}{$bin}[0]){
-						    	$hist{$site_node}{$bin}[0] += 0;
-						    }
-						    if (!$hist{$site_node}{$bin}[1]){
-						    	$hist{$site_node}{$bin}[1] += 0;
-						    }
-
-	 print $file "$bin,".$hist{$site_node}{$bin}[0].",".$hist{$site_node}{$bin}[1]."\n";
-	 $check_total_obs += $hist{$site_node}{$bin}[0];
-	 $check_total_exp += $hist{$site_node}{$bin}[1];
-				}
-
-				if ($total_length == $check_local_lengths_sum){
-				#print "local lengths sumtest ok: $total_length $check_local_lengths_sum\n";
-				}
-				else {
-				print "local length sumtest failed! total $total_length, local_sum $check_local_lengths_sum\n";
-				}
-				if ($check_total_obs-$check_total_exp < 0.001 && -$check_total_obs+$check_total_exp < 0.001 ){
-				#print "obsexp sumtest ok\n";
-				}
-				else {
-				print "obsexp sumtest failed! total obs $check_total_obs, total exp $check_total_exp total_muts $total_muts site $ind node ".$node->get_name()."\n";
-				}
-				}
-
-			}
-			
-		}
-	}	
-	close $file;
-	#foreach my $bin (sort {$a <=> $b} keys %hist){
-	#	print " up to ".$bin*$step."\t".$hist{$bin}[0]."\t".$hist{$bin}[1]."\n";
-	#}
-	return %hist;	
-}
-
-
-
 sub entrenchment_for_subtrees{
 	my $self = shift;
 	my $rh_out_subtree = shift;
@@ -3710,10 +3471,6 @@ sub entrenchment_for_subtrees{
 		foreach my $site (keys %{$rh_out_subtree->{$nodename}}){
 			my $site_node = concat($site, $nodename);
 			my $exits = scalar @{$rh_out_subtree->{$nodename}{$site}};
-			my $square;
-			foreach my $bin (keys %{$subtree_info{$site}{"hash"}}){
-				$square += $subtree_info{$site}{"hash"}{$bin}[1];
-			}
 			if ($exits != $subtree_info{$site}{"totmuts"}){
 				print "Error! for $site $nodename entrenchment found ".$subtree_info{$site}{"totmuts"}.", and shuffler planted $exits (not an error in debugmode, because in that case exits comprise all mutations in site (including those before ancestor and after stoppers)\n";
 				foreach my $ex (@{$rh_out_subtree->{$nodename}{$site}}){
@@ -3729,18 +3486,17 @@ sub entrenchment_for_subtrees{
 				print "Debugmode-only totmut error: $site $nodename realdata totmuts ".$self->{realdata}{subtree_info}{$nodename}{$site}{"totmuts"}." and subtree_info totmuts is ".$subtree_info{$site}{"totmuts"}."\n";
 			}
 			my $realdata_totmuts;
-			my $realdata_totlen;
+			my $realdata_totlen = $self->{realdata}{subtree_info}{$nodename}{$site}{"totlengths"};
 			foreach my $bin (keys %{$self->{realdata}{subtree_info}{$nodename}{$site}{"hash"}}){
 				$realdata_totmuts += $self->{realdata}{subtree_info}{$nodename}{$site}{"hash"}{$bin}[0];
-				$realdata_totlen += $self->{realdata}{subtree_info}{$nodename}{$site}{"hash"}{$bin}[1];
+				#$realdata_totlen += $self->{realdata}{subtree_info}{$nodename}{$site}{"hash"}{$bin}[1];
 			}
 			#print  $site_node." ".$subtree_info{$site}{"maxdepth"}." total square $square ".$subtree_info{$site}{"totmuts"}." must be $exits \n";
 			my $total_muts;
-			my $total_length;
+			my $total_length = $subtree_info{$site}{"totlengths"};
 			foreach my $bin (sort {$a <=> $b} keys %{$subtree_info{$site}{"hash"}}){
-				#print "bin $bin adding ".$static_subtree_info{$node->get_name()}{$site}{"hash"}{$bin}[0]."\n";
 				$total_muts += $subtree_info{$site}{"hash"}{$bin}[0];
-				$total_length += $subtree_info{$site}{"hash"}{$bin}[1];
+				#$total_length += $subtree_info{$site}{"hash"}{$bin}[1];
 			}	
 			if ($total_muts != $subtree_info{$site}{"totmuts"}){
 				print "Error! total_muts $total_muts is not equal to subtree_info total_muts ".$subtree_info{$site}{"totmuts"}."\n";
@@ -3849,22 +3605,16 @@ sub entrenchment_for_subtrees{
  					delete $alive{$site_index};
  					next;
  				}
+ 				$subtree_info->{$site_index}{"hash"}{bin($depth-$nlength/2,$step)}[1] += $nlength;
+ 				$subtree_info->{$site_index}{"totlengths"} += $nlength; 
 		 		if ($mutations->{$site_index}{$nname}){ #take muts from hash! 
 		 			$subtree_info->{$site_index}{"hash"}{bin($depth-$nlength/2,$step)}[0] += 1; # changed at 27.02.2017 (-halfbranch)
 		 		#	print "Found a mutation at $site_index ".$node->get_name()."\n";
 		 			$subtree_info->{$site_index}{"totmuts"} += 1;
-		 		#	$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] -= ($node->get_branch_length)/2; # 19.09.2016 mutations happen in the middle of a branch; commented out at 27.02.2017
-		 			$subtree_info->{$site_index}{"hash"}{bin($depth-$nlength/2,$step)}[1] += $nlength/2; # added at 27.02.2017
-		 			if ($self->{static_include_tips}) {
-		 				$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] += $nlength/2; # added at 21.03.2017
-		 			}
+		 			$subtree_info->{$site_index}{"totlengths"} -= $nlength/2;
 		 	#		print "subtree_info totmuts for starting_node ".$starting_node->get_name()." node ".$node->get_name()." site $site_index is ".$subtree_info->{$site_index}{"totmuts"}."\n";
-		 			#print "addded to 0\n";
 		 			delete $alive{$site_index};
-		 		}
-		 		else { # added at 27.02.2017 - now branch length is added to depth bin if there is no mutation on it
-		 			$subtree_info->{$site_index}{"hash"}{bin($depth,$step)}[1] += $nlength;
-		 		}		 	
+		 		}	 	
 		 		#	print "subtree maxdepth for ".$starting_node->get_name()." $site_index is ".$subtree_info->{$site_index}{"maxdepth"}."\n";
 		 		if (!($subtree_info->{$site_index}{"maxdepth"}) || $subtree_info->{$site_index}{"maxdepth"} < $depth){
 		 			$subtree_info->{$site_index}{"maxdepth"} = $depth;
@@ -3915,9 +3665,9 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 			else {$node = $nod;}
 			my $site_node = concat($ind,$node->get_name());
 			#print "site_node $site_node \n";
-			my $total_muts;
-			my $total_length;
-	#print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
+			my $total_muts = $self ->{static_subtree_info}{$node->get_name()}{$ind}{"totmuts"};
+			my $total_length= $self ->{static_subtree_info}{$node->get_name()}{$ind}{"totlengths"};
+			#print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
 			#print " maxdepth is ".$self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"}. " and restriction is $restriction\n";
 			if ($self ->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"} > $restriction){
 				my %subtract_hash;
@@ -3940,8 +3690,8 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 				}
 				
 				foreach my $bin (keys %{$self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}}){
-					$total_muts += $self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[0];
-					$total_length += $self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[1];
+				#	$total_muts += $self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[0];
+				#	$total_length += $self ->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[1];
 					if ($self ->{static_subtract_tallest} && $subtract_hash{$bin}){
 						$total_length -= $subtract_hash{$bin};
 					}
@@ -3982,108 +3732,7 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 }
 
 
-# syn research method; detecting ancestor syn mutations which can undergo several different syn muts
-# and checking how many muts of each type really happened ({tv}GAG->GAT - 1, GAG->GAA = 0; {ts}GAG->GAA - 4)
-sub reversals_list {
-	my $self = shift;
-	#my @group = @{$_[0]};
-	my $root = $self->{static_tree}-> get_root;
-	my @array;
-	#unless (@group) {
-	my @group = (1..$self->mylength());
-	#}
-		my %closest_ancestors;
-	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
-	my @args = ( 0.5, $root);
-	$self->visitor_coat ($root, \@array,\&synresearch_visitor,\&no_check,\@args,0);
-	my $filepath = File::Spec->catfile($self->{static_output_base}, $self->{static_protein}."_reversals_list");
-	open my $file, ">$filepath" or die "Cannot open $filepath\n";
-	print $file "ancestor,list,number";
-	foreach my $ind (@group){
-			foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
-			my $node = ${$nod};
-			if (!$node->is_terminal){
 
-				if ($self->{static_subtree_info}{$node->get_name()}{$ind}{"list"}) {
-						my $str = concat($ind, $node->get_name());
-						my $counter;
-						my $list;
-						foreach my $nodename (@{$self->{static_subtree_info}{$node->get_name()}{$ind}{"list"}}){
-							$counter++;
-							$list = $list.";".$nodename;
-						}
-						$list = substr($list,1);
-						$str = $str.",".$list.",".$counter."\n";
-						print $file $str;
-				}
-
-			}
-			
-		}
-	}
-	$self->printFooter($file);
-	close $file;
-	
-}
-
-
-
-
-
-# syn research method; detecting ancestor syn mutations which can undergo several different syn muts
-# and checking how many muts of each type really happened ({tv}GAG->GAT - 1, GAG->GAA = 0; {ts}GAG->GAA - 4)
-sub synmut_types {
-	my $self = shift;
-	#my @group = @{$_[0]};
-	my $root = $self->{static_tree}-> get_root;
-	my @array;
-	my %results;
-	#unless (@group) {
-	my @group = (1..$self->mylength());
-	#}
-	my %closest_ancestors;
-	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
-	my @args = ( 0.5, $root);
-	my $comparator = compare::new();
-	$self->visitor_coat ($root, \@array,\&synresearch_visitor,\&no_check,\@args,0);
-	foreach my $ind (@group){
-			foreach my $nod(@{$self->{static_nodes_with_sub}{$ind}}){
-			my $node = ${$nod};
-			if (!$node->is_terminal){
-				my $anc = $self->{static_subs_on_node}{$node->get_name()}{$ind}->{"Substitution::derived_allele"};
-			#	print "anc $anc\n";
-				my $synmuts = $comparator->get_synmuts($anc);
-				my $numtypes = (scalar keys %{$synmuts->{"ts"}}) + (scalar keys %{$synmuts->{"tv"}});
-				# todo create all possible syn types
-				if ($numtypes > 1){
-					if ($self->{static_subtree_info}{$node->get_name()}{$ind}{"synresearch"} && scalar @{$self->{static_subtree_info}{$node->get_name()}{$ind}{"synresearch"}} > 1) {
-						my $str =  $ind."_".$node->get_name()." anc $anc\t";
-						my $counter;
-						foreach my $subst (@{$self->{static_subtree_info}{$node->get_name()}{$ind}{"synresearch"}}){
-							if (defined $synmuts->{"ts"}{$subst->{"Substitution::derived_allele"}}){
-								if ($synmuts->{"ts"}{$subst->{"Substitution::derived_allele"}} == 0 ) {$counter++;}
-								$synmuts->{"ts"}{$subst->{"Substitution::derived_allele"}} +=1;
-								$str = $str."ts sub ".$subst->{"Substitution::derived_allele"}."\t";
-							}
-							elsif (defined $synmuts->{"tv"}{$subst->{"Substitution::derived_allele"}}) {
-								if ($synmuts->{"tv"}{$subst->{"Substitution::derived_allele"}} == 0 ) {$counter++;}
-								$synmuts->{"tv"}{$subst->{"Substitution::derived_allele"}} +=1;
-								$str = $str."tv sub ".$subst->{"Substitution::derived_allele"}."\t";
-							}
-						}
-						$str = $counter."\t".$str."\n";
-						print $str;
-					}
-				}
-				$results{$ind}{$node->get_name()}{"anc"} = $anc;
-				$results{$ind}{$node->get_name()}{"muts"} = $synmuts;
-			}
-			
-		}
-	}
-	return %results;
-	
-}
 
 
 
@@ -4122,8 +3771,8 @@ sub nodeselector {
 			}
 			else {$node = $nod;}
 			my $site_node = concat($ind, $node->get_name());
-			my $total_muts;
-			my $total_length;
+			my $total_muts = $self->{static_subtree_info}{$node->get_name()}{$ind}{"totmuts"};
+			my $total_length = $self->{static_subtree_info}{$node->get_name()}{$ind}{"totlengths"};
 			
 	#print "depth ".$static_depth_hash{$ind}{$node->get_name()}."\n";
 			if ($self->{static_subtree_info}{$node->get_name()}{$ind}{"maxdepth"} > $restriction){
@@ -4149,8 +3798,8 @@ sub nodeselector {
 				}
 				
 				foreach my $bin (keys %{$self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}}){
-					$total_muts += $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[0];
-					$total_length += $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[1];
+				#	$total_muts += $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[0];
+				#	$total_length += $self->{static_subtree_info}{$node->get_name()}{$ind}{"hash"}{$bin}[1];
 					if ($self->{static_subtract_tallest} && $subtract_hash{$bin}){
 						$total_length -= $subtract_hash{$bin};
 					}
@@ -4895,13 +4544,12 @@ sub get_sequential_distance {
 			foreach my $site_index(keys %closest_ancestors){ 
 				my $anc_node = $closest_ancestors{$site_index};
 				my $ancname = $anc_node->get_name();
-				my $depth = get_sequential_distance($anc_node,$node);
-				$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($depth,$step)}[1] += $nlength;
+				#my $depth = get_sequential_distance($anc_node,$node);
+				my $halfdepth = get_sequential_distance($anc_node,$node) - ($nlength)/2; 
+				$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += $nlength;
+				$self->{static_subtree_info}{$ancname}{$site_index}{"totlengths"} += $nlength; # for lambda computation only!		
 			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				# commented out at 27.02.2017 and copy-pasted higher
-				#if (!($self->has_no_background_mutation($node, $site_index))){
-				#	push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"stoppers"}}, $node;
-				#}
 				my $current_maxdepth = $self->{static_subtree_info}{$ancname}{$site_index}{"maxdepth"};
 				if ($current_maxdepth < $depth){
 						$self->{static_subtree_info}{$ancname}{$site_index}{"maxdepth"} = $depth;
@@ -4921,20 +4569,17 @@ sub get_sequential_distance {
 				my $anc_node = $closest_ancestors{$site_index};
 				my $ancname = $anc_node->get_name();
 				my $halfdepth = get_sequential_distance($anc_node,$node) - ($nlength)/2; #19.09.2016 
-				my $fulldepth = get_sequential_distance($anc_node,$node); #19.09.2016 
+			#	my $fulldepth = get_sequential_distance($anc_node,$node); #19.09.2016 
 			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
-			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
 				if (!$no_neighbour_changing || ($no_neighbour_changing && ! $comparator->is_neighbour_changing($self->{static_subs_on_node}{$nname}{$site_index}, 1))){
 					if (!$no_leaves || ($no_leaves && !($node->is_terminal()))){
 						$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($halfdepth,$step)}[0] += 1; #19.09.2016 
 						$self->{static_subtree_info}{$ancname}{$site_index}{"totmuts"} += 1; #21.12.2016
 					}
 				}
-				$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += ($nlength)/2; # #19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
-				$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] -= $nlength; #19.09.2016 we added this length before, but shouldn't have done it
-				if ($include_tips){
-					$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] += ($nlength)/2; #21.03.2017 
-				}			
+			#	$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += $nlength; # #29.08 halves are back again 19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
+			#	$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] -= $nlength; #19.09.2016 we added this length before, but shouldn't have done it
+				$self->{static_subtree_info}{$ancname}{$site_index}{"totlengths"} -= ($nlength)/2; # for lambda computation only!		
 			#	print "mutation! anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
 				
 			}
@@ -4946,69 +4591,7 @@ sub get_sequential_distance {
 		}
 #!
  	}
-  
-  # entrenchment_visitorversion for for synmut_types: collect substitutions for each ancestor mutation (not just count them; do not track distance)
-    	sub synresearch_visitor {
- 		my $self = shift;
- 		my $node = $_[0];
- 		my $step = $_[1]->[0];
- 		my $subtract_tallest = $self->{static_subtract_tallest};
- 		my $no_neighbour_changing = $self->{static_no_neighbour_changing};
- 		my $no_leaves = $self->{static_no_leaves};
- 		my $comparator = $self->{static_comparator};
-		if (!$node->is_root){
-		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation node for this node, key is a site number
-		my $nname = $node->get_name();
-		if (%closest_ancestors){
-			foreach my $site_index(keys %closest_ancestors){ 
-				my $anc_node = $closest_ancestors{$site_index};
-				my $depth = get_sequential_distance($anc_node,$node);
-				$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($depth,$step)}[1] += $node->get_branch_length;
-			#	print "anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
-				my $current_maxdepth = $self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"};
-				if ($current_maxdepth < $depth){
-						$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth"} = $depth;
-						if ($subtract_tallest){
-							$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"maxdepth_node"} = $nname;
-						}
-				}					
-			}
-			
-			my @ancestors = keys %closest_ancestors;	
-			foreach my $site_index(@ancestors){
-				if (!($self->has_no_background_mutation($nname, $site_index))){
-					delete $closest_ancestors{$site_index};
-				}
-			}	
-		}
-		
-		foreach my $site_index(keys %{$self->{static_subs_on_node}{$nname}}){
-			
-			if ($closest_ancestors{$site_index}){
-				my $anc_node = $closest_ancestors{$site_index};
-				#my $halfdepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()} - ($node->get_branch_length)/2; #19.09.2016 
-				#my $fulldepth = $self->{static_distance_hash}{$anc_node->get_name()}{$node->get_name()}; #19.09.2016 
-			#	print " ancestor ".$anc_node->get_name(). " node ".$node->get_name()." depth $depth\n";
-			#	push $static_subtree_info{$anc_node->get_name()}{$site_index}{"nodes"}, \$node;
-				if (!$no_neighbour_changing || ($no_neighbour_changing && ! $comparator->is_neighbour_changing($self->{static_subs_on_node}{$nname}{$site_index}, 1))){
-					if (!$no_leaves || ($no_leaves && !($node->is_terminal()))){
-						push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"synresearch"}}, $self->{static_subs_on_node}{$nname}{ $site_index}; 
-						push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"list"}}, $nname;
-					}
-				}
-			#	$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += ($node->get_branch_length)/2; # #19.09.2016  15.09.2016 version: halves of branches with foreground mutations are trimmed (the only thing I changed here) 
-			#	$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"hash"}{bin($fulldepth,$step)}[1] -= $node->get_branch_length; #19.09.2016 we added this length before, but shouldn't have done it
-			#	print "mutation! anc ".$anc_node->get_name()." site ".$site_index." node ".$node->get_name()." depth $depth bin ".bin($depth,$step)." branchlength ".$node->get_branch_length."\n";
-				
-			}
-			$closest_ancestors{$site_index} = $node;
-			
-		}
-		
-		$node->set_generic("-closest_ancestors" => \%closest_ancestors);
-		}
-#!
- 	} 
+
    
    	sub lrt_visitor {
    		my $self = shift;
