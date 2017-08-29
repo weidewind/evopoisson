@@ -4544,7 +4544,7 @@ sub get_sequential_distance {
 			foreach my $site_index(keys %closest_ancestors){ 
 				my $anc_node = $closest_ancestors{$site_index};
 				my $ancname = $anc_node->get_name();
-				#my $depth = get_sequential_distance($anc_node,$node);
+				my $depth = get_sequential_distance($anc_node,$node);
 				my $halfdepth = get_sequential_distance($anc_node,$node) - ($nlength)/2; 
 				$self->{static_subtree_info}{$ancname}{$site_index}{"hash"}{bin($halfdepth,$step)}[1] += $nlength;
 				$self->{static_subtree_info}{$ancname}{$site_index}{"totlengths"} += $nlength; # for lambda computation only!		
