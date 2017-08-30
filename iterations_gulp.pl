@@ -31,6 +31,7 @@ my $debugmode;
 my $syn_lengths;
 my $poisson;
 my $skip_stoppers_in_simulation;
+my $mutnum_control;
 
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
@@ -53,13 +54,14 @@ GetOptions (	'protein=s' => \$protein,
 		'distrpoisson' =>\$poisson,
 		'syn_lengths' =>\$syn_lengths,
 		'skip_stoppers_in_simulation' => \$skip_stoppers_in_simulation,
+		'mutnum_control' => \$mutnum_control,
 	);
 
 
 ## Procedure for launching a gulp of iterations
 unless ($subtract_tallest == 0 || $subtract_tallest == 1) {die "--subtract_tallest must be either 0 or 1\n";}
 unless (defined $tag){die "There will be several gulp files in one folder, therefore a --tag for each gulp must be specified (and it should be an integer)";}
-my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing, skip_stoppers => $skip_stoppers, no_leaves => $no_leaves, syn_lengths => $syn_lengths, fromfile => 1, faketag => $faketag}; 
+my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, subtract_tallest => $subtract_tallest, no_neighbour_changing => $no_neighbour_changing, mutnum_control => $mutnum_control, skip_stoppers => $skip_stoppers, no_leaves => $no_leaves, syn_lengths => $syn_lengths, fromfile => 1, faketag => $faketag}; 
 unless  (Mutmapnolim::realdata_exists($args)) { die "No such realdata!"; }
 print "realdata restriction is ".Mutmapnolim::check_realdata_restriction($args)."\n";
 

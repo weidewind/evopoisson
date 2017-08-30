@@ -226,7 +226,7 @@ unless ($onlysim){
 	else {
 		@groups_and_names = $mutmap-> predefined_groups_and_names();
 	}
-	if ($mutnum_control eq 0 || !$mutnum_control){
+	if ($mutnum_control == 0){
 		$mutmap-> concat_and_divide_simult_for_mutnum_controlled (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 	}
 	else {
@@ -245,7 +245,7 @@ sub mycomm {
 		$perlocation = "~/perl5/perlbrew/perls/perl-5.22.1/bin/perl";
 	 	$exports = "export PERL5LIB=/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/.perl/lib/perl5/5.22.1/x86_64-linux:/export/home/popova/.perl/lib/perl5/5.22.1:/export/home/popova/.perl/lib/perl5/x86_64-linux:/export/home/popova/.perl/lib/perl5:/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/perl5/lib/perl5/x86_64-linux:/export/home/popova/perl5/lib/perl5:/export/home/popova/workspace/evopoisson:$PERL5LIB; ";
 	}
-	my $command = $exports.$perlocation." iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag --restriction $specified_restriction --shuffler_type $shuffler_type ";
+	my $command = $exports.$perlocation." iterations_gulp.pl --protein $protein --state $state --subtract_tallest $subtract_tallest --iterations $its --tag $tag --restriction $specified_restriction --shuffler_type $shuffler_type --mutnum_control $mutnum_control ";
 	if($output){$command = $command."--output $output ";}
 	if($input){$command = $command."--input $input ";}
 	if ($verbose){ $command = $command." --verbose ";}

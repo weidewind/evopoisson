@@ -1284,6 +1284,7 @@ sub iterations_gulp_subtree_shuffling {
 			}
 			elsif ($shufflertype eq "exp"){
 				print "Going to shuffle..\n";
+				print "mutnum control parameter is $mutnum_control\n";
 				$rh_out_subtree = shuffle_muts_on_tree_exp::shuffle_mutations_on_tree($self->{static_tree}, $rh_constrains, $poisson, $mutnum_control); 
 			}
 		}

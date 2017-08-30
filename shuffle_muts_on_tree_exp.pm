@@ -20,6 +20,7 @@ struct Constrains =>{
 #Number of strips is required!
 sub shuffle_mutations {
 	my ($rnode,$ra_strip_constr,$ra_out_event_nodes, $poisson, $mutnum_control)=@_;
+	print "mutnum control is $mutnum_control\n";
 	@{$ra_out_event_nodes}=();
 	push @{$ra_out_event_nodes},[];
 	my $ii=$MaxTries;
