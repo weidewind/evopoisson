@@ -226,8 +226,12 @@ unless ($onlysim){
 	else {
 		@groups_and_names = $mutmap-> predefined_groups_and_names();
 	}
-	
-	$mutmap-> concat_and_divide_simult_for_mutnum_controlled (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+	if ($mutnum_control eq 0 || !$mutnum_control){
+		$mutmap-> concat_and_divide_simult_for_mutnum_controlled (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+	}
+	else {
+		$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+	}
 	$mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;
 }
 

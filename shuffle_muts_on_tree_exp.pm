@@ -19,7 +19,7 @@ struct Constrains =>{
 #The function expects a lifetime constrain in terms of a number of strips
 #Number of strips is required!
 sub shuffle_mutations {
-	my ($rnode,$ra_strip_constr,$ra_out_event_nodes, $poisson)=@_;
+	my ($rnode,$ra_strip_constr,$ra_out_event_nodes, $poisson, $mutnum_control)=@_;
 	@{$ra_out_event_nodes}=();
 	push @{$ra_out_event_nodes},[];
 	my $ii=$MaxTries;
@@ -102,7 +102,8 @@ sub shuffle_mutations {
 				}
 			}
 		}
-		if($n){
+
+		if($mutnum_control == 0 && $n){
 			#print "n is $n \n";
 			#failed to place all mutations
 			@{$ra_events}=();
@@ -112,7 +113,7 @@ sub shuffle_mutations {
 				$ra_out_event_nodes->[-1]=undef;
 			}
 		}
-		if($n==0 ||$ii==-1){ # changed: || $ii==0
+		if($mutnum_control > 0 || $n==0 ||$ii==-1){ # changed: || $ii==0
 			#go next
 		#	print "lucky me! \n";
 			push @{$ra_out_event_nodes},[];
@@ -129,7 +130,7 @@ sub shuffle_mutations {
 #output args:
 #hash{node_name}{site_index} = [], ref on array with nodes carrying mutations 
 sub shuffle_mutations_on_tree{
-	my ($tree,$rh_constrains, $poisson)=@_;
+	my ($tree,$rh_constrains, $poisson, $mutnum_control)=@_;
 	my $rh_out_subtree;
 #	print "Went inside shuffler\n";
 	#if a setting of attributes on tree nodes is not a problem than cloning may be omitted
@@ -165,13 +166,13 @@ sub shuffle_mutations_on_tree{
 			};
 			my @tmp; 
 			#print " just about to shuffle muts on tree for node $name\n";
-			shuffle_mutations($node,\@strip_constrs,\@tmp, $poisson);
+			shuffle_mutations($node,\@strip_constrs,\@tmp, $poisson, $mutnum_control);
 			for(my $i=0;$i<@sites;$i++){
 				my $site=$sites[$i];
 				if(defined $tmp[$i]){
 					$rh_out_subtree->{$name}->{$site}=[] unless defined $rh_out_subtree->{$name}->{$site};
 					#print "for $site $name need ".$strip_constrs[$i]->number_of_mutations." mutations, got ".scalar(@{$tmp[$i]})."\n";
-					die "\nNot all mutations were positioned on the tree!" unless $strip_constrs[$i]->number_of_mutations==scalar(@{$tmp[$i]});
+					die "\nNot all mutations were positioned on the tree!" unless ($mutnum_control > 0 || $strip_constrs[$i]->number_of_mutations==scalar(@{$tmp[$i]}));
 					push @{$rh_out_subtree->{$name}->{$site}},@{$tmp[$i]};
 				}else{
 					$rh_out_subtree->{$name}->{$site}=undef;

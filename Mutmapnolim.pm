@@ -1118,6 +1118,7 @@ sub shuffle_mutator {
 	my $mutator_type = $self->{static_mutator_type};
 	my @mock_mutmaps; 
 	
+	#todo (not working!)
 	if ($mutator_type eq "sim"){
 		my $restriction = shift;
 		my @sites = @{$_[0]};
@@ -1232,6 +1233,7 @@ sub iterations_gulp_subtree_shuffling {
 	my $poisson = shift;
 	my $skip_stoppers_in_simulation = shift;
 		
+	my $mutnum_control = $self->{static_mutnum_control};	
 	if ($verbose){print "Extracting realdata..\n";}	
 	my $realdata = $self->{realdata};
 	my $step = $realdata->{"step"}; #bin size
@@ -1282,7 +1284,7 @@ sub iterations_gulp_subtree_shuffling {
 			}
 			elsif ($shufflertype eq "exp"){
 				print "Going to shuffle..\n";
-				$rh_out_subtree = shuffle_muts_on_tree_exp::shuffle_mutations_on_tree($self->{static_tree}, $rh_constrains, $poisson); 
+				$rh_out_subtree = shuffle_muts_on_tree_exp::shuffle_mutations_on_tree($self->{static_tree}, $rh_constrains, $poisson, $mutnum_control); 
 			}
 		}
 		
@@ -1895,7 +1897,10 @@ sub concat_and_divide_simult {
 						foreach my $group_number(0..scalar @groups-1){
 							my $label;
 							if (exists $label_hashes{$md}[$group_number]{"current"}) {$label = $label_hashes{$md}[$group_number]{"current"};}
-							else {$label = 0;}
+							else {								
+								$label = 1;
+								$label_hashes{$md}[$group_number]{"current"} = 1;
+							}
 							if ($counter_hashes{$md}[$group_number]{$simnode}){ 
 								my $mutnums = $counter_hashes{$md}[$group_number]{$simnode};
 								#print " need ".scalar @{$mutnums}." sites for ".$group_names[$group_number]."\n";
