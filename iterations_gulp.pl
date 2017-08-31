@@ -54,7 +54,7 @@ GetOptions (	'protein=s' => \$protein,
 		'distrpoisson' =>\$poisson,
 		'syn_lengths' =>\$syn_lengths,
 		'skip_stoppers_in_simulation' => \$skip_stoppers_in_simulation,
-		'mutnum_control' => \$mutnum_control,
+		'mutnum_control=s' => \$mutnum_control,
 	);
 
 
