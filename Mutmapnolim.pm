@@ -1660,9 +1660,12 @@ sub select_ancestor_nodes_and_sites {
 			my ($site, $node_name) = cleave( $site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
+			print "selector test: $node_name $site $mutnum ";
 			if ($maxdepth > $restriction && $group_hash{$site}){
 					$group_nodes{$node_name}{$site} = $mutnum; #mutnum control: keeping mutnums for every site in the group, which mutated at this node
+					print " got into hash ";
 			}
+			print "\n";
 	}
 	return %group_nodes;
 }		
