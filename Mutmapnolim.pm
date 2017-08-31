@@ -2189,6 +2189,9 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 								$label_hashes{$md}[$group_number]{"current"} = 1;
 							}
 							if ($counter_hashes{$md}[$group_number] && $counter_hashes{$md}[$group_number]{$simnode} && $counter_hashes{$md}[$group_number]{$simnode}{$simsite}){ 
+								if ($simmutnum != $counter_hashes{$md}[$group_number]{$simnode}{$simsite}){
+										print "Error! simmutnum for $simnode $simsite $simmutnum , expected ".$counter_hashes{$md}[$group_number]{$simnode}{$simsite}."\n";
+								}
 								if ($simmutnum){
 									#print "found data for $simsite $simnode $md $group_names[$group_number]\n";
 										foreach my $bindat (@bin_data){
@@ -2201,10 +2204,6 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 										my $m = scalar keys %{$counter_hashes{$md}[$group_number]};
 										#print "still need ".$m." for $md $group_names[$group_number] and $l for $simnode\n";
 								}
-								if ($simmutnum != $counter_hashes{$md}[$group_number]{$simnode}{$simsite}){
-										print "Error! simmutnum for $simnode $simsite $simmutnum , expected ".$counter_hashes{$md}[$group_number]{$simnode}{$simsite}."\n";
-								}
-
 								if (scalar keys %{$counter_hashes{$md}[$group_number]{$simnode}} == 0){
 									delete $counter_hashes{$md}[$group_number]{$simnode};
 									my $m = scalar keys %{$counter_hashes{$md}[$group_number]};
