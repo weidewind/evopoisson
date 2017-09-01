@@ -6,7 +6,7 @@ use strict;
 use Data::Dumper;
 use Mutmapnolim qw(tttplot);
 
-my $file = "C:/Users/weidewind/Documents/CMD/Coevolution/Influenza/debugging/hashes";
+my $file = "/export/home/popova/workspace/evopoisson/testfiles/hashes";
 my $obshash;
 my $exphash;
 open(my $fh, '<', $file) or die "Can't read file '$file' [$!]\n";
