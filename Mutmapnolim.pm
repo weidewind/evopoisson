@@ -3901,6 +3901,30 @@ sub hist_mean_for_hash {
 	return hist_mean(\@hist, $step);
 }
 
+sub tttplot {
+	my $obshist = $_[0];
+	my $exphist = $_[1];
+	my $step = $_[2];
+	
+	my @seen{keys %{$obshist}} = ();
+	my @allbins = (keys %{$obshist}, grep{!exists $seen{$_}} keys %{$exphist});
+	my @sortedbins = sort {$a <=> $b} @allbins;
+	
+	my $totmuts = sum(values %{$obshist});
+	
+	my @ttt;
+	my $ti;
+	my $ni;
+	for my $bin (@sortedbins){
+		$ti += $exphist->{$bin};
+		for (my $muts = 0; $muts < $obshist->{$bin}; $muts++){
+			$ni += 1;
+			push @ttt, [$ni/$totmuts, $ti/$totmuts];
+		}
+	}
+	return @ttt;
+}
+
 
 #takes a hash of probabilities for any distances (including nonintegral)
 sub hist_median_for_hash_nobin{
