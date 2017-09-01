@@ -3906,8 +3906,8 @@ sub tttplot {
 	my $exphist = $_[1];
 	my $step = $_[2];
 	
-	my @seen{keys %{$obshist}} = ();
-	my @allbins = (keys %{$obshist}, grep{!exists $seen{$_}} keys %{$exphist});
+   	my @allbins = keys %{{map {($_ => 1)} (keys %{$exphist}, keys %{$obshist})}};
+	#my @allbins = (keys %{$obshist}, grep{!exists $seen{$_}} keys %{$exphist});
 	my @sortedbins = sort {$a <=> $b} @allbins;
 	
 	my $totmuts = sum(values %{$obshist});
