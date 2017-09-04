@@ -35,6 +35,11 @@ sub test {
 	my $value = $stat->computeStats({obshash=>$obshash, exphash=>$exphash});
 	print "W is $value\n";
 	my $stat = AgeingStat->new("mean");
-	my $value = $stat->computeStats({obshash=>$obshash, exphash=>$exphash});
-	print "W is $value\n";
+	my $value = $stat->computeStats({obshash=>$obshash, exphash=>$exphash, step=>0.5});
+	print "W is $value\n"; #3.59111502824832
+	my $stat = AgeingStat->new("median");
+	my $value = $stat->computeStats({obshash=>$obshash, exphash=>$exphash, step=>0.5});
+	$stat->printStats();
+	print "W is $value\n"; #6
+	print "obs is ".$stat->{obs};#63
 }

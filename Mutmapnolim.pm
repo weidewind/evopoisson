@@ -2712,27 +2712,32 @@ sub count_pvalues{
 			print "Error! data hist sum test for all failed! \n";
 		}
 		
-#		my %statdat;
-#		foreach my $st (@stattypes){
-#				my ($stat, $obs, $exp) = computeStats({obshash => \%flat_obs_hash, exphash => \%flat_exp_hash, stattype => $st, step => $step, zscore =>$zscore});
-#				$statdat{$st} = {'stat' => $stat, 'obs' => $obs, 'exp' => $exp};
-#		}
+		my %statdat;
+		foreach my $stype (@stattypes){
+				my $stat = AgeingStat->new($stype);
+				$stat->computeStats({obshash=>\%flat_obs_hash, exphash=>\%flat_exp_hash, step=>$step, zscore =>$zscore });
+				$stat->printStats($outputfile);
+				$statdat{$stype} = $stat;
+		}
 
 		#print " computing statistics \n"	;
-		my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
-		my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
-		my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step); # 18.03 - added the same statistics based on histogram mean (instead of median)
-		my $exp_mean = hist_mean_for_hash(\%flat_exp_hash, $step);
+
+#		my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
+#		my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
+#		my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step); # 18.03 - added the same statistics based on histogram mean (instead of median)
+#		my $exp_mean = hist_mean_for_hash(\%flat_exp_hash, $step);
 		
-		print $outputfile "\n observed median: $obs_median\n";
-		print $outputfile "\n poisson expected median: $exp_median\n";
-		print $outputfile "\n observed mean: $obs_mean\n";
-		print $outputfile "\n poisson expected mean: $exp_mean\n";
+#		print $outputfile "\n observed median: $obs_median\n";
+#		print $outputfile "\n poisson expected median: $exp_median\n";
+#		print $outputfile "\n observed mean: $obs_mean\n";
+#		print $outputfile "\n poisson expected mean: $exp_mean\n";
 		
-		my $pval_epi;
-		my $pval_env;
-		my $pval_epi_for_mean;
-		my $pval_env_for_mean;
+		my %pvals;
+
+		#my $pval_epi;
+		#my $pval_env;
+		#my $pval_epi_for_mean;
+		#my $pval_env_for_mean;
 	
 	
 		#print "going to read input file\n";	
@@ -2763,24 +2768,38 @@ sub count_pvalues{
 			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
 				print "Error! boot hist sum test for all failed! $test_obs_summ obs, $test_exp_summ exp\n";
 			}
-			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
-			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
-			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
-			my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
+			my %statboot;
+			foreach my $stype (@stattypes){
+				my $stat = AgeingStat->new($stype);
+				$stat->computeStats({obshash=>\%boot_obs_hash, exphash=>\%boot_exp_hash, step=>$step, zscore =>$zscore });
+				$statboot{$stype} = $stat;
+			}
+##			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
+#			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
+#			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
+#			my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
 		#	print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
 		#	print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
-			if (nearest(.00000001,$boot_obs_median - $boot_exp_median) >= nearest(.00000001,$obs_median - $exp_median)){
-				$pval_env += 1;
-			}
-			if (nearest(.00000001, $boot_obs_median - $boot_exp_median) <= nearest(.00000001,$obs_median - $exp_median)){
-				$pval_epi += 1;
-			}
-			if (nearest(.00000001, $boot_obs_mean - $boot_exp_mean) >= nearest(.00000001, $obs_mean - $exp_mean)){
-				$pval_env_for_mean += 1;
-			}
-			if (nearest(.00000001,$boot_obs_mean - $boot_exp_mean) <= nearest(.00000001,$obs_mean - $exp_mean)){
-				$pval_epi_for_mean += 1;
-			}
+			foreach my $stype (@stattypes){
+				if (nearest(.00000001,$statboot{$stype}->{value} >= nearest(.00000001,$statdat{$stype}->{value})){
+					$pvals{$stype}{"env"} += 1;
+				}
+				if (nearest(.00000001,$statboot{$stype}->{value} <= nearest(.00000001,$statdat{$stype}->{value})){
+					$pvals{$stype}{"epi"} += 1;
+				}	
+			} 
+#			if (nearest(.00000001,$boot_obs_median - $boot_exp_median) >= nearest(.00000001,$obs_median - $exp_median)){
+#				$pval_env += 1;
+#			}
+#			if (nearest(.00000001, $boot_obs_median - $boot_exp_median) <= nearest(.00000001,$obs_median - $exp_median)){
+#				$pval_epi += 1;
+#			}
+#			if (nearest(.00000001, $boot_obs_mean - $boot_exp_mean) >= nearest(.00000001, $obs_mean - $exp_mean)){
+#				$pval_env_for_mean += 1;
+#			}
+#			if (nearest(.00000001,$boot_obs_mean - $boot_exp_mean) <= nearest(.00000001,$obs_mean - $exp_mean)){
+#				$pval_epi_for_mean += 1;
+#			}
 			$iteration++;
 		}
 		
@@ -2794,8 +2813,11 @@ sub count_pvalues{
 			print "Error! no valid iterations produced.\n";
 		}
 		else {
-			print $outputfile "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
-			print $outputfile "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
+			foreach my $stype (@stattypes){
+				print $outputfile $stype."_stat ".($pvals{$stype}{"epi"}/$iteration)." ".($pvals{$stype}{"env"}/$iteration)."\n";
+			}
+#			print $outputfile "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
+#			print $outputfile "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
 		}
 		$self->printFooter($outputfile);
 		close $outputfile;	

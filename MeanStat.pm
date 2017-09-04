@@ -4,14 +4,23 @@ use List::Util qw(sum min max);
 
 sub new {
     my $class = shift;
-    return bless {}, $class;
+    my $self = {
+    	name => "mean",
+    };
+    return bless $self, $class;
+}
+
+sub printStats {
+	my $self = shift;
+	my $output = shift;
+	$self->printDiffStats($output);
 }
 
 sub computeStats{
 	my $self = shift;
+	my ($args) = @_;
 	return $self->computeDiff($args);
 }
-
 
 sub hist_stat {
 	my $self = shift;

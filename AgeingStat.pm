@@ -9,7 +9,18 @@ sub new {
 		case "median"	{ $class = "MedianStat";  }
 		case "bp"	{ $class = "BPStat";  }
 	}
-	return bless {}, $class;			
+	my $self = {
+    	name => $type,
+    };
+    return bless $self, $class;			
+}
+
+sub printDiffStats {
+	my $self = shift;
+	my $output = shift;
+	my $str = "\n observed ".$self->{name}.": ".$self->{'obs'}."\n"."\n poisson expected ".$self->{name}.": ".$self->{'exp'}."\n";
+	if ($output) { print $output $str;}
+	else {print $str;}
 }
 
 sub computeDiff {

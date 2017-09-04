@@ -5,7 +5,17 @@ use Data::Dumper;
 
 sub new {
     my $class = shift;
-    return bless {}, $class;
+        my $self = {
+    	name => "bp",
+    };
+}
+
+sub printStats {
+	my $self = shift;
+	my $output = shift;
+	my $str = "\n".$self->{name}." value: ".$self->{value}."\n";
+	if ($output) { print $output $str;}
+	else {print $str;}
 }
 
 sub computeStats{
