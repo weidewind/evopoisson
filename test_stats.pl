@@ -10,11 +10,11 @@ use BPStat;
 use MeanStat;
 use MedianStat;
 
-my $file = "/export/home/popova/workspace/evopoisson/testfiles/hashes";
-test($file); #  '1', '0.97752808988764'
+#my $file = "/export/home/popova/workspace/evopoisson/testfiles/hashes";
+#test($file); #  '1', '0.97752808988764'
 
 my $file = "/export/home/popova/workspace/evopoisson/testfiles/allbins";
-test($file); #  '1', '0.97752808988764'
+test($file); #  
 
 sub test {
 	my $file = shift;
@@ -27,11 +27,11 @@ sub test {
 	    $obshash->{$fields[0]} = $fields[1];
 	    $exphash->{$fields[0]} = $fields[2];
 	}
-	my @plot = BPStat::tttplot($obshash, $exphash, 0.5);
-	foreach my $dot(@plot){
-		print $dot->[0].",".$dot->[1]."\n";
-	} 
-	my $stat = AgeingStat("bp");
-	$stat->computeStats(obshash=>$obshash, exphash=>$exphash);
+#	my @plot = BPStat::tttplot($obshash, $exphash, 0.5);
+#	foreach my $dot(@plot){
+#		print $dot->[0].",".$dot->[1]."\n";
+#	} 
+	my $stat = AgeingStat->new("bp");
+	$stat->computeStats({obshash=>$obshash, exphash=>$exphash});
 	print "W is $stat\n";
 }

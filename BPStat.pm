@@ -1,6 +1,7 @@
 package BPStat;
 use base ("AgeingStat");
 use List::Util qw(sum min max);
+use Data::Dumper;
 
 sub new {
     my $class = shift;
@@ -10,6 +11,9 @@ sub new {
 sub computeStats{
 	my $self = shift;
 	my ($args) = @_;
+	print "obshash\n";
+	print Dumper $args;
+	print "totmuts $totmuts \n ";
 	my @plot = tttplot($args->{obshash}, $args->{exphash});
 	my $value = BPstat(\@plot, $args->{zscore});
 	$self->{'value'} = $value;
@@ -25,6 +29,9 @@ sub tttplot {
 	my @sortedbins = sort {$a <=> $b} @allbins;
 	
 	my $totmuts = sum(values %{$obshist});
+	print "obshist\n";
+	print Dumper $obshist;
+	print "totmuts $totmuts \n ";
 	
 	my @ttt;
 	my $ti;

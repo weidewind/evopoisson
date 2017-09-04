@@ -98,5 +98,5 @@ if (!$mutnum_control){
 else {
 		$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 }
-$mutmap-> count_pvalues(restriction_levels => \@restriction_levels, groups => \@{$groups_and_names[0]}, group_names => \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;
+$mutmap-> count_pvalues({restriction_levels => \@restriction_levels, groups => \@{$groups_and_names[0]}, group_names => \@{$groups_and_names[1]}}); #$self;  @restriction_levels; my @groups; my @group_names;
 
