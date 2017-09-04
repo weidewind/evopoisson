@@ -2604,16 +2604,18 @@ sub group_counter {
 	
 # 19.12 after concat_and_divide	
 sub count_pvalues{	
-	my $self = $_[0];
+	my $self = shift;
+	my ($args) = @_;
+	my @restriction_levels = @{$args->{restriction_levels}};
+	my @groups = @{$args->{groups}};
+	my @group_names = @{$args->{group_names}};
+	my $fake = $args->{fake};
+	my @stattypes = @{$args->{stattypes}}; # "bp" (W,  test statistic of Barlow-Proschan’s test), "mean", "median" 
+	@stattypes = ("mean", "meadian") unless ($args->{stattypes});
+	
 	my $prot = $self -> {static_protein};
-	#my $prot = $_[0];
-	my @restriction_levels = @{$_[1]};
-	my @groups = @{$_[2]};
-	my @group_names = @{$_[3]};
-	my $fake = $_[4];
 	my $dir = $self -> {static_output_base};
 	my $outdir = $self -> {static_output_subfolder};
-	#my $dir = $_[5];
 	
 	my $countfile = File::Spec->catfile($outdir, $prot."_count");
 	if ($fake) {
@@ -2710,7 +2712,15 @@ sub count_pvalues{
 			print "Error! data hist sum test for all failed! \n";
 		}
 		
-		#print " computing hist emdian \n"	;
+		my %statdat;
+		foreach my $st (@stattypes){
+				my ($stat, $obs, $exp) = computeStats({obshash => \%flat_obs_hash, exphash => \%flat_exp_hash, stattype => $st, step => $step, zscore =>$zscore});
+				$statdat{$st} = {'stat' => $stat, 'obs' => $obs, 'exp' => $exp};
+		}
+		computeStats{
+			
+		}
+		#print " computing statistics \n"	;
 		my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
 		my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
 		my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step); # 18.03 - added the same statistics based on histogram mean (instead of median)
@@ -2738,25 +2748,14 @@ sub count_pvalues{
 			my %boot_obs_hash;
 			my %boot_exp_hash;
 			my @splitter = split(/,/, $_);
-			#my @bins = split(/,/, $_);
-			#my $str = <CSVFILE>;
-			#my @splitter = split(/,/, $str);
-			if ($splitter[0] eq "NA"){ # if no appropriate nodes were produced in this iteration, it is skipped
-				next;
-			}
-
+			if ($splitter[0] eq "NA"){ next; } 			# if no appropriate nodes were produced in this iteration, it is skipped
+			
 			for (my $i = 0; $i < scalar @splitter; $i++){ 
 				my $bin = ($i/2)+1;
-				#my $binobs = $bins[$i];
 				my $obs = $splitter[$i];
 				$boot_obs_hash{$bin} = $obs;
-				#$boot_obs_hash{$binobs} = $splitter[$i];
-				#print " i $i bin $bin value  $splitter[$i]\n";
 				$i++;
 				my $exp = $splitter[$i];
-				#my $binexp = $bins[$i];
-				#print "Error! bins for obs and exp don't match: $binobs $binexp in $csvfile \n" unless ($binexp == $binobs);
-				#$boot_exp_hash{$binexp} = $splitter[$i];
 				$boot_exp_hash{$bin} = $exp;
 			}
 			

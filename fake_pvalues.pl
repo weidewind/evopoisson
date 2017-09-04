@@ -54,5 +54,5 @@ $mutmap ->set_tag($tag);
 for (my $i = 0; $i < $bootnum; $i++){
 	my @groups_and_names = $mutmap-> fake_predefined_groups_and_names($exclude);
 	$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
-	$mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}, "fake"); #$self;  @restriction_levels; my @groups; my @group_names;
+	$mutmap-> count_pvalues(restriction_levels => \@restriction_levels, groups => \@{$groups_and_names[0]}, group_names => \@{$groups_and_names[1]}, fake => "fake"); #$self;  @restriction_levels; my @groups; my @group_names;
 }

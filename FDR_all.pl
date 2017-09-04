@@ -66,7 +66,7 @@ $args->{tag} = $tag."_fake_".$number;
 print "Fake no $number : creating mutmap from real_data\n";
 $mutmap = Mutmap->new($args); #fake realdata is taken from subfolder
 $mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
-$mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;	
+$mutmap-> count_pvalues(restriction_levels => \@restriction_levels, groups => \@{$groups_and_names[0]}, group_names => \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;	
 
 #delete files
 my $path = Mutmap::pathFinder($args);
@@ -94,5 +94,5 @@ foreach my $f(@files){
 #	$newargs->{tag} = $tag."_fake_".$i;
 #	$mock_mutmap = Mutmap->new($newargs); #fake realdata is taken from subfolder
 #	$mock_mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
-#	$mock_mutmap-> count_pvalues(\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;	
+#	$mock_mutmap-> count_pvalues(restriction_levels => \@restriction_levels, groups => \@{$groups_and_names[0]}, group_names => \@{$groups_and_names[1]}); #$self;  @restriction_levels; my @groups; my @group_names;	
 #}
