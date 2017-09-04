@@ -13,7 +13,7 @@ use MedianStat;
 #my $file = "/export/home/popova/workspace/evopoisson/testfiles/hashes";
 #test($file); #  '1', '0.97752808988764'
 
-my $file = "/export/home/popova/workspace/evopoisson/testfiles/allbins";
+my $file = "/export/home/popova/workspace/evopoisson/testfiles/allbins48";
 test($file); #  
 
 sub test {
@@ -32,6 +32,9 @@ sub test {
 #		print $dot->[0].",".$dot->[1]."\n";
 #	} 
 	my $stat = AgeingStat->new("bp");
-	$stat->computeStats({obshash=>$obshash, exphash=>$exphash});
-	print "W is $stat\n";
+	my $value = $stat->computeStats({obshash=>$obshash, exphash=>$exphash});
+	print "W is $value\n";
+	my $stat = AgeingStat->new("mean");
+	my $value = $stat->computeStats({obshash=>$obshash, exphash=>$exphash});
+	print "W is $value\n";
 }

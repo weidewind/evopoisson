@@ -11,9 +11,6 @@ sub new {
 sub computeStats{
 	my $self = shift;
 	my ($args) = @_;
-	print "obshash\n";
-	print Dumper $args;
-	print "totmuts $totmuts \n ";
 	my @plot = tttplot($args->{obshash}, $args->{exphash});
 	my $value = BPstat(\@plot, $args->{zscore});
 	$self->{'value'} = $value;
@@ -25,13 +22,8 @@ sub tttplot {
 	my $exphist = $_[1];
 	
    	my @allbins = keys %{{map {($_ => 1)} (keys %{$exphist}, keys %{$obshist})}};
-	#my @allbins = (keys %{$obshist}, grep{!exists $seen{$_}} keys %{$exphist});
 	my @sortedbins = sort {$a <=> $b} @allbins;
-	
 	my $totmuts = sum(values %{$obshist});
-	print "obshist\n";
-	print Dumper $obshist;
-	print "totmuts $totmuts \n ";
 	
 	my @ttt;
 	my $ti;
@@ -60,7 +52,6 @@ sub BPstat {
 	foreach my $dot(@tttplot){
 		$dot->[1] = $dot->[1]/$lastdot->[1];
 		$w += $dot->[1];
-#		print $dot->[0].",".$dot->[1]."\n";
 	} 
 	if ($zscore){
 		my $nminus1 = scalar @tttplot;

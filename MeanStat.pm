@@ -8,6 +8,7 @@ sub new {
 }
 
 sub computeStats{
+	my $self = shift;
 	return $self->computeDiff($args);
 }
 
