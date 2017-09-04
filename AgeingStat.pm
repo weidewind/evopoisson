@@ -49,3 +49,4 @@ sub hist_to_array {
 	return @hist;
 }
 
+1;

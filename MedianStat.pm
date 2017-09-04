@@ -104,3 +104,5 @@ sub hist_median_for_hash_arr{
 	}
 	return hist_median(\@hist);
 }
+
+1;

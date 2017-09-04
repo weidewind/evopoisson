@@ -68,3 +68,4 @@ sub hist_mean_for_hash_arr{
 	return hist_mean(\@hist);
 }
 
+1;
