@@ -1,5 +1,6 @@
 package MeanStat;
 use base ("AgeingStat");
+use List::Util qw(sum min max);
 
 sub new {
     my $class = shift;

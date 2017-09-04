@@ -1,5 +1,6 @@
 package AgeingStat;
 use Switch;
+use List::Util qw(sum min max);
 
 sub new {
 	my ($class, $type) = @_;
