@@ -29,4 +29,6 @@ sub test {
 	} 
 	my $w = Mutmapnolim::BPstat(\@plot);
 	print "W is $w\n";
+	my $z = Mutmapnolim::BPstat(\@plot, 1);
+	print "Zscore is $z\n";
 }

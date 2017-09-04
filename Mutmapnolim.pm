@@ -3927,6 +3927,7 @@ sub tttplot {
 
 sub BPstat {
 	my @tttplot = @{$_[0]};
+	my $zscore = $_[1];
 	my $lastdot;
 	if ($tttplot[0][0] == 1){
 			print "Single mutation, cannot compute BP statistics!\n";
@@ -3939,7 +3940,14 @@ sub BPstat {
 		$w += $dot->[1];
 #		print $dot->[0].",".$dot->[1]."\n";
 	} 
-	return $w;
+	if ($zscore){
+		my $nminus1 = scalar @tttplot;
+		my $z = ($w - $nminus1/2)/($nminus1/12)**0.5;
+		return $z;
+	}
+	else {
+		return $w;
+	}
 }
 
 
