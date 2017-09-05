@@ -2612,6 +2612,7 @@ sub count_pvalues{
 	my $fake = $args->{fake};
 	my @stattypes = @{$args->{stattypes}}; # "bp" (W,  test statistic of Barlow-Proschan’s test), "mean", "median" 
 	@stattypes = ("mean", "median") unless ($args->{stattypes});
+	my $zscore = $args->{zscore};
 	
 	my $prot = $self -> {static_protein};
 	my $dir = $self -> {static_output_base};
@@ -2742,7 +2743,7 @@ sub count_pvalues{
 	
 		#print "going to read input file\n";	
 		
-		if ($obs_mean ne "NaN"){
+		if ($statdat{$stattypes[0]}->{'obs'} ne "NaN"){
 		
 		my $csvfile = File::Spec->catfile($outdir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 		open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
@@ -2781,10 +2782,10 @@ sub count_pvalues{
 		#	print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
 		#	print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
 			foreach my $stype (@stattypes){
-				if (nearest(.00000001,$statboot{$stype}->{value} >= nearest(.00000001,$statdat{$stype}->{value})){
+				if (nearest(.00000001,$statboot{$stype}->{value}) >= nearest(.00000001,$statdat{$stype}->{value})){
 					$pvals{$stype}{"env"} += 1;
 				}
-				if (nearest(.00000001,$statboot{$stype}->{value} <= nearest(.00000001,$statdat{$stype}->{value})){
+				if (nearest(.00000001,$statboot{$stype}->{value}) <= nearest(.00000001,$statdat{$stype}->{value})){
 					$pvals{$stype}{"epi"} += 1;
 				}	
 			} 
