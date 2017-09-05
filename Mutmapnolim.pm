@@ -2611,7 +2611,7 @@ sub count_pvalues{
 	my @group_names = @{$args->{group_names}};
 	my $fake = $args->{fake};
 	my @stattypes = @{$args->{stattypes}}; # "bp" (W,  test statistic of Barlow-Proschan’s test), "mean", "median" 
-	@stattypes = ("mean", "meadian") unless ($args->{stattypes});
+	@stattypes = ("mean", "median") unless ($args->{stattypes});
 	
 	my $prot = $self -> {static_protein};
 	my $dir = $self -> {static_output_base};
