@@ -37,7 +37,10 @@ use File::Path qw(make_path remove_tree);
 use autodie;
 use Math::Round;
 use Storable qw(dclone);
-
+use AgeingStat;
+use MeanStat;
+use MedianStat;
+use BPStat;
 #use DnaUtilities::observation_vector qw(make_observation_vector shuffle_obsv);
 use observation_vector qw(make_observation_vector shuffle_obsv);
 #use DnaUtilities::compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing);
@@ -2610,10 +2613,11 @@ sub count_pvalues{
 	my @groups = @{$args->{groups}};
 	my @group_names = @{$args->{group_names}};
 	my $fake = $args->{fake};
-	my @stattypes = @{$args->{stattypes}}; # "bp" (W,  test statistic of Barlow-Proschan’s test), "mean", "median" 
-	@stattypes = ("mean", "median") unless ($args->{stattypes});
+	my @stattypes = ("mean", "median");
+	if ($args->{stattypes}){
+		my @stattypes = @{$args->{stattypes}}; # "bp" (W,  test statistic of Barlow-Proschan’s test), "mean", "median" 
+	}
 	my $zscore = $args->{zscore};
-	
 	my $prot = $self -> {static_protein};
 	my $dir = $self -> {static_output_base};
 	my $outdir = $self -> {static_output_subfolder};
@@ -3149,7 +3153,7 @@ sub count_pvalues{
 			
 			print "Number of meaningful iterations (used for pvalue estimation) for stats ".$group_stattypes[0]." for group ".$group_names[$group_number]." is ".$ccount." or ".$gcount." first one is used for division, second - for iterating through simulations\n";
 			
-			my $updated_iteration_number = scalar @complement_boot_medians;
+			my $updated_iteration_number = $ccount;
 			if ($ccount != $gcount){
 				print "Error! complement_boot ".$group_stattypes[0]." size is not equal to group_boot  size: ".$ccount." != ".$gcount."\n";
 				print "It's ok, if you mix iterations and don't print NAs in .csv. I'll just compute the difference between all full arrays\n";
@@ -3159,26 +3163,26 @@ sub count_pvalues{
 			my %pvals;
 			for (my $i = 0; $i < $updated_iteration_number; $i++){
 				foreach my $stype (@group_stattypes){
-					if (nearest(0.00000001, ($statboot{$stype}{'value'}) - ($complement_statboot{$stype}{'value'}))
-						>= nearest(0.00000001, ($statdat{$stype}{'value'}) - ($complement_statdat{$stype}{'value'}))){
+					if (nearest(0.00000001, ($statboot{$stype}->[$i]->{'value'}) - ($complement_statboot{$stype}->[$i]->{'value'}))
+						>= nearest(0.00000001, ($statdat{$stype}->[$i]->{'value'}) - ($complement_statdat{$stype}->[$i]->{'value'}))){
 						$pvals{$stype}{"env"}{"enrichment"} += 1;
 					}
-					if (nearest(0.00000001, ($statboot{$stype}{'value'}) - ($complement_statboot{$stype}{'value'}))
-						<= nearest(0.00000001, ($statdat{$stype}{'value'}) - ($complement_statdat{$stype}{'value'}))){
+					if (nearest(0.00000001, ($statboot{$stype}->[$i]->{'value'}) - ($complement_statboot{$stype}->[$i]->{'value'}))
+						<= nearest(0.00000001, ($statdat{$stype}->[$i]->{'value'}) - ($complement_statdat{$stype}->[$i]->{'value'}))){
 						$pvals{$stype}{"env"}{"depletion"} += 1;
 					}
-					if (nearest(0.00000001, -($statboot{$stype}{'value'}) + ($complement_statboot{$stype}{'value'}))
-						>= nearest(0.00000001, -($statdat{$stype}{'value'}) + ($complement_statdat{$stype}{'value'}))){
+					if (nearest(0.00000001, -($statboot{$stype}->[$i]->{'value'}) + ($complement_statboot{$stype}->[$i]->{'value'}))
+						>= nearest(0.00000001, -($statdat{$stype}->[$i]->{'value'}) + ($complement_statdat{$stype}->[$i]->{'value'}))){
 						$pvals{$stype}{"epi"}{"enrichment"} += 1;
 					}
-					if (nearest(0.00000001, -($statboot{$stype}{'value'}) + ($complement_statboot{$stype}{'value'}))
-						<= nearest(0.00000001, -($statdat{$stype}{'value'}) + ($complement_statdat{$stype}{'value'}))){
+					if (nearest(0.00000001, -($statboot{$stype}->[$i]->{'value'}) + ($complement_statboot{$stype}->[$i]->{'value'}))
+						<= nearest(0.00000001, -($statdat{$stype}->[$i]->{'value'}) + ($complement_statdat{$stype}->[$i]->{'value'}))){
 						$pvals{$stype}{"epi"}{"depletion"} += 1;
 					}
-					if (nearest(0.00000001, $statboot{$stype}{'value'}) >= nearest(0.00000001,$statdat{$stype}{'value'})){
+					if (nearest(0.00000001, $statboot{$stype}->[$i]->{'value'}) >= nearest(0.00000001,$statdat{$stype}->[$i]->{'value'})){
 						$pvals{$stype}{"env"}{"group"} += 1;
 					}
-					if (nearest(0.00000001, $statboot{$stype}{'value'}) <= nearest(0.00000001,$statdat{$stype}{'value'})){
+					if (nearest(0.00000001, $statboot{$stype}->[$i]->{'value'}) <= nearest(0.00000001,$statdat{$stype}->[$i]->{'value'})){
 						$pvals{$stype}{"epi"}{"group"} += 1;
 					}
 				}
