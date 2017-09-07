@@ -49,6 +49,14 @@ sub tttplot {
 	return @ttt;
 }
 
+sub norm_plot{
+	my @plot = @{$_[0]};
+	foreach my  $dot(@plot){
+		$dot->[1] = $dot->[1]/$plot[-1][1];
+	} 
+	return @plot;
+}
+
 sub BPstat {
 	my @tttplot = @{$_[0]};
 	my $zscore = $_[1];

@@ -1677,10 +1677,7 @@ sub count_iterations {
 	my $prot = $self->{static_protein};
 	my $dir = $self->{static_output_base};
 	my $dirname = File::Spec->catdir($dir, $prot); 
-	make_path ($dirname);
-	opendir(DH, $dirname);
-	my @files = grep { /.*_[0-9]+/ }readdir(DH);
-	closedir(DH);
+	my @files = iterationFiles($dirname);
 	unless (scalar @files > 0){
 		return 0;
 	}
@@ -1771,11 +1768,7 @@ sub concat_and_divide_simult {
 	my %hash;
 	
 	my $dirname = File::Spec->catdir($dir, $prot); 
-	make_path ($dirname);
-	opendir(DH, $dirname);
-	my @files = grep { /.*_[0-9]+/ }readdir(DH);
-	unless (scalar @files > 0){die "No simulation files found in folder $dirname\n";}
-	closedir(DH);
+	my @files = iterationFiles($dirname);
 	
 	my %filehandles;
 
@@ -2058,11 +2051,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 	my %hash;
 	
 	my $dirname = File::Spec->catdir($dir, $prot); 
-	make_path ($dirname);
-	opendir(DH, $dirname);
-	my @files = grep { /.*_[0-9]+/ }readdir(DH);
-	unless (scalar @files > 0){die "No simulation files found in folder $dirname\n";}
-	closedir(DH);
+	my @files = iterationFiles($dirname);
 	
 	my %filehandles;
 
@@ -2309,11 +2298,7 @@ sub concat_and_divide_simult_single_sites {
 	
 	
 	my $dirname = File::Spec->catdir($dir, $prot); 
-	make_path ($dirname);
-	opendir(DH, $dirname);
-	my @files = grep { /.*_[0-9]+$/ }readdir(DH); 
-	unless (scalar @files > 0){die "No simulation files found in folder $dirname\n";}
-	closedir(DH);
+	my @files = iterationFiles($dirname);
 	
 	my %filehandles;
 
@@ -2615,7 +2600,8 @@ sub count_pvalues{
 	my $fake = $args->{fake};
 	my @stattypes = ("mean", "median");
 	if ($args->{stattypes}){
-		my @stattypes = @{$args->{stattypes}}; # "bp" (W,  test statistic of Barlow-Proschan’s test), "mean", "median" 
+		print " have stattypes!\n";
+		@stattypes = @{$args->{stattypes}}; # "bp" (W,  test statistic of Barlow-Proschan’s test), "mean", "median" 
 	}
 	my $zscore = $args->{zscore};
 	my $prot = $self -> {static_protein};
@@ -2719,33 +2705,14 @@ sub count_pvalues{
 		
 		my %statdat;
 		foreach my $stype (@stattypes){
+			print "stype $stype\n";
 				my $stat = AgeingStat->new($stype);
 				$stat->computeStats({obshash=>\%flat_obs_hash, exphash=>\%flat_exp_hash, step=>$step, zscore =>$zscore });
 				$stat->printStats($outputfile);
 				$statdat{$stype} = $stat;
 		}
-
-		#print " computing statistics \n"	;
-
-#		my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
-#		my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
-#		my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step); # 18.03 - added the same statistics based on histogram mean (instead of median)
-#		my $exp_mean = hist_mean_for_hash(\%flat_exp_hash, $step);
 		
-#		print $outputfile "\n observed median: $obs_median\n";
-#		print $outputfile "\n poisson expected median: $exp_median\n";
-#		print $outputfile "\n observed mean: $obs_mean\n";
-#		print $outputfile "\n poisson expected mean: $exp_mean\n";
-		
-		my %pvals;
-
-		#my $pval_epi;
-		#my $pval_env;
-		#my $pval_epi_for_mean;
-		#my $pval_env_for_mean;
-	
-	
-		#print "going to read input file\n";	
+		my %pvals;	
 		
 		if ($statdat{$stattypes[0]}->{'obs'} ne "NaN"){
 		
@@ -2779,12 +2746,7 @@ sub count_pvalues{
 				$stat->computeStats({obshash=>\%boot_obs_hash, exphash=>\%boot_exp_hash, step=>$step, zscore =>$zscore });
 				$statboot{$stype} = $stat;
 			}
-##			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
-#			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
-#			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
-#			my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
-		#	print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
-		#	print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
+
 			foreach my $stype (@stattypes){
 				if (nearest(.00000001,$statboot{$stype}->{value}) >= nearest(.00000001,$statdat{$stype}->{value})){
 					$pvals{$stype}{"env"} += 1;
@@ -2793,23 +2755,9 @@ sub count_pvalues{
 					$pvals{$stype}{"epi"} += 1;
 				}	
 			} 
-#			if (nearest(.00000001,$boot_obs_median - $boot_exp_median) >= nearest(.00000001,$obs_median - $exp_median)){
-#				$pval_env += 1;
-#			}
-#			if (nearest(.00000001, $boot_obs_median - $boot_exp_median) <= nearest(.00000001,$obs_median - $exp_median)){
-#				$pval_epi += 1;
-#			}
-#			if (nearest(.00000001, $boot_obs_mean - $boot_exp_mean) >= nearest(.00000001, $obs_mean - $exp_mean)){
-#				$pval_env_for_mean += 1;
-#			}
-#			if (nearest(.00000001,$boot_obs_mean - $boot_exp_mean) <= nearest(.00000001,$obs_mean - $exp_mean)){
-#				$pval_epi_for_mean += 1;
-#			}
+
 			$iteration++;
 		}
-		
-	
-	
 	
 		close CSVFILE;
 		print $outputfile "Number of iterations: $iteration\n";
@@ -2821,8 +2769,7 @@ sub count_pvalues{
 			foreach my $stype (@stattypes){
 				print $outputfile $stype."_stat ".($pvals{$stype}{"epi"}/$iteration)." ".($pvals{$stype}{"env"}/$iteration)."\n";
 			}
-#			print $outputfile "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
-#			print $outputfile "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
+
 		}
 		$self->printFooter($outputfile);
 		close $outputfile;	
@@ -2921,12 +2868,7 @@ sub count_pvalues{
 				$stat->printStats($outputfile);
 				$statdat{$stype} = $stat;
 			}
-		#	my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
-		#	my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
-		#	my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step);
-		#	my $exp_mean = hist_mean_for_hash(\%flat_exp_hash, $step);
 			
-		#	print $outputfile "\n observed median: $obs_median expected poisson median $exp_median observed mean: $obs_mean expected poisson mean $exp_mean\n";
 			if($statdat{$group_stattypes[0]}->{'obs'} eq "NaN" || $statdat{$group_stattypes[0]}->{'exp'} eq "NaN") {
 				print $outputfile " hist sum is 0";
 				close $outputfile;
@@ -2938,8 +2880,6 @@ sub count_pvalues{
 			my $csvfile = File::Spec->catfile($outdir,temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 			open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 			my $iteration = 0; # counter for meaningful iterations
-			#my @group_boot_medians;
-			#my @group_boot_means;
 			my %statboot;
 			my $itnumber = 0; # tracks iteration number, so that group and its complement are taken from the same iteration
 			while(<CSVFILE>){
@@ -2972,18 +2912,7 @@ sub count_pvalues{
 					$stat->computeStats({obshash=>\%boot_obs_hash, exphash=>\%boot_exp_hash, step=>$step, zscore =>$zscore });
 					$statboot{$stype}[$itnumber] = $stat;
 				}
-			#	my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
-			#	my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
-			#	my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
-			#	my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
-				
-			#	$group_boot_medians[$itnumber][0] = $boot_obs_median;
-			#	$group_boot_medians[$itnumber][1] = $boot_exp_median;
-			#	$group_boot_means[$itnumber][0] = $boot_obs_mean;
-			#	$group_boot_means[$itnumber][1] = $boot_exp_mean;			
-			#	unless ($fake) {
-				#	print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";
-			#	}
+
 				$itnumber++;
 				$iteration++;
 			}
@@ -3061,10 +2990,6 @@ sub count_pvalues{
 				$stat->printStats($outputfile);
 				$complement_statdat{$stype} = $stat;
 			}
-	#		my $complement_obs_median = hist_median_for_hash(\%complement_flat_obs_hash, $step);
-	#		my $complement_exp_median = hist_median_for_hash(\%complement_flat_exp_hash, $step);
-	#		my $complement_obs_mean = hist_mean_for_hash(\%complement_flat_obs_hash, $step);
-	#		my $complement_exp_mean = hist_mean_for_hash(\%complement_flat_exp_hash, $step);
 			
 	#		print $outputfile "\n observed median: $complement_obs_median expected median: $complement_exp_median observed mean: $complement_obs_mean expected mean: $complement_exp_mean\n";
 			if($complement_statdat{$group_stattypes[0]}->{'obs'} eq "NaN" || $complement_statdat{$group_stattypes[0]}->{'exp'} eq "NaN") {
@@ -3076,8 +3001,6 @@ sub count_pvalues{
 			my $csvfile = File::Spec->catfile($outdir,temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$group_names[$group_number].".csv");
 			open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 			my $iteration = 0;
-	#		my @complement_boot_medians;
-	#		my @complement_boot_means;
 			my %complement_statboot;
 
 			my $itnumber = 0;
@@ -3112,17 +3035,6 @@ sub count_pvalues{
 					$complement_statboot{$stype}[$itnumber] = $stat;
 				}
 				
-		#		my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
-		#		my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
-		#		my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
-		#		my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);			
-		#		$complement_boot_medians[$itnumber][0] = $boot_obs_median;
-		#		$complement_boot_medians[$itnumber][1] = $boot_exp_median;
-		#		$complement_boot_means[$itnumber][0] = $boot_obs_mean;
-		#		$complement_boot_means[$itnumber][1] = $boot_exp_mean;
-		#		unless ($fake) {
-					#print $outputfile "\n boot obs median: $boot_obs_median boot exp median $boot_exp_median  boot obs mean: $boot_obs_mean boot exp mean $boot_exp_mean\n";
-		#		}
 				$itnumber++;
 				$iteration++;
 			}
@@ -3140,14 +3052,10 @@ sub count_pvalues{
 			}
 			# now group and complement contain undefs at the same indices
 			foreach my $stype (@group_stattypes){
-				 $complement_statboot{$stype} = [ grep defined, @{$complement_statboot{$stype}} ];
-				 $statboot{$stype} = [ grep defined, @{$statboot{$stype}} ];
+				$complement_statboot{$stype} = [ grep defined, @{$complement_statboot{$stype}} ] ;
+				$statboot{$stype} = [ grep defined, @{$statboot{$stype}} ];
 			}
-		#	@complement_boot_medians = grep defined, @complement_boot_medians;
-		#	@complement_boot_means = grep defined, @complement_boot_means;
-		#	@group_boot_medians = grep defined, @group_boot_medians;
-		#	@group_boot_means = grep defined, @group_boot_means;
-			##
+
 			my $gcount = scalar @{$statboot{$group_stattypes[0]}};
 			my $ccount = scalar @{$complement_statboot{$group_stattypes[0]}};
 			
@@ -3163,26 +3071,26 @@ sub count_pvalues{
 			my %pvals;
 			for (my $i = 0; $i < $updated_iteration_number; $i++){
 				foreach my $stype (@group_stattypes){
-					if (nearest(0.00000001, ($statboot{$stype}->[$i]->{'value'}) - ($complement_statboot{$stype}->[$i]->{'value'}))
-						>= nearest(0.00000001, ($statdat{$stype}->[$i]->{'value'}) - ($complement_statdat{$stype}->[$i]->{'value'}))){
+					if (nearest(0.00000001, $statboot{$stype}[$i]{'value'} - $complement_statboot{$stype}[$i]{'value'})
+						>= nearest(0.00000001, $statdat{$stype}{'value'} - $complement_statdat{$stype}{'value'})){
 						$pvals{$stype}{"env"}{"enrichment"} += 1;
 					}
-					if (nearest(0.00000001, ($statboot{$stype}->[$i]->{'value'}) - ($complement_statboot{$stype}->[$i]->{'value'}))
-						<= nearest(0.00000001, ($statdat{$stype}->[$i]->{'value'}) - ($complement_statdat{$stype}->[$i]->{'value'}))){
+					if (nearest(0.00000001, ($statboot{$stype}->[$i]->{'value'} - $complement_statboot{$stype}->[$i]->{'value'}))
+						<= nearest(0.00000001, ($statdat{$stype}->{'value'} - $complement_statdat{$stype}->{'value'}))){
 						$pvals{$stype}{"env"}{"depletion"} += 1;
 					}
-					if (nearest(0.00000001, -($statboot{$stype}->[$i]->{'value'}) + ($complement_statboot{$stype}->[$i]->{'value'}))
-						>= nearest(0.00000001, -($statdat{$stype}->[$i]->{'value'}) + ($complement_statdat{$stype}->[$i]->{'value'}))){
+					if (nearest(0.00000001, -($statboot{$stype}->[$i]->{'value'}) + $complement_statboot{$stype}->[$i]->{'value'})
+						>= nearest(0.00000001, -($statdat{$stype}->{'value'}) + $complement_statdat{$stype}->{'value'})){
 						$pvals{$stype}{"epi"}{"enrichment"} += 1;
 					}
-					if (nearest(0.00000001, -($statboot{$stype}->[$i]->{'value'}) + ($complement_statboot{$stype}->[$i]->{'value'}))
-						<= nearest(0.00000001, -($statdat{$stype}->[$i]->{'value'}) + ($complement_statdat{$stype}->[$i]->{'value'}))){
+					if (nearest(0.00000001, -($statboot{$stype}->[$i]->{'value'}) + $complement_statboot{$stype}->[$i]->{'value'})
+						<= nearest(0.00000001, -($statdat{$stype}->{'value'}) + $complement_statdat{$stype}->{'value'})){
 						$pvals{$stype}{"epi"}{"depletion"} += 1;
 					}
-					if (nearest(0.00000001, $statboot{$stype}->[$i]->{'value'}) >= nearest(0.00000001,$statdat{$stype}->[$i]->{'value'})){
+					if (nearest(0.00000001, $statboot{$stype}->[$i]->{'value'}) >= nearest(0.00000001,$statdat{$stype}->{'value'})){
 						$pvals{$stype}{"env"}{"group"} += 1;
 					}
-					if (nearest(0.00000001, $statboot{$stype}->[$i]->{'value'}) <= nearest(0.00000001,$statdat{$stype}->[$i]->{'value'})){
+					if (nearest(0.00000001, $statboot{$stype}->[$i]->{'value'}) <= nearest(0.00000001,$statdat{$stype}->{'value'})){
 						$pvals{$stype}{"epi"}{"group"} += 1;
 					}
 				}
@@ -3193,11 +3101,9 @@ sub count_pvalues{
 			}
 			else {
 				print $outputfile "- pvalue_epistasis_enrichment pvalue_environment_enrichment pvalue_epistasis pvalue_environment\n";
-				foreach my $stype (@stattypes){
+				foreach my $stype (@group_stattypes){
 					print $outputfile $stype."_stat ".($pvals{$stype}{"epi"}{"enrichment"}/$updated_iteration_number)." ".($pvals{$stype}{"env"}{"enrichment"}/$updated_iteration_number)." ".($pvals{$stype}{"epi"}{"group"}/$updated_iteration_number)." ".($pvals{$stype}{"env"}{"group"}/$updated_iteration_number)."\n";
 				}
-			#	print $outputfile "median_stat ".($pval_epi_enrichment/$updated_iteration_number)." ".($pval_env_enrichment/$updated_iteration_number)." ".($pval_epi/$updated_iteration_number)." ".($pval_env/$updated_iteration_number)."\n";
-			#	print $outputfile "mean_stat ".($pval_epi_enrichment_for_mean/$updated_iteration_number)." ".($pval_env_enrichment_for_mean/$updated_iteration_number)." ".($pval_epi_for_mean/$updated_iteration_number)." ".($pval_env_for_mean/$updated_iteration_number)."\n";
 			}
 			$self->printFooter($outputfile);
 			close $outputfile;	
@@ -4480,6 +4386,16 @@ sub get_sequential_distance {
 	sub cleave {
 		my $site_node = shift;
 		return split(/:/, $site_node);
+	}
+	
+	sub iterationFiles {
+		my $dirname = shift;
+		make_path ($dirname);
+		opendir(DH, $dirname);
+		my @files = grep { /.*_[0-9]+$/ }readdir(DH); 
+		unless (scalar @files > 0){die "No simulation files found in folder $dirname\n";}
+		closedir(DH);
+		return @files;
 	}
    
 
