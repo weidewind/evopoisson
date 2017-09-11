@@ -47,6 +47,7 @@ my $syn_lengths;
 my $skip_stoppers_in_simulation;
 
 my $onlysim; # do not launch concat_and_divide and count_pvalue
+my $fails_threshold;
 
 
 GetOptions (	
@@ -76,6 +77,7 @@ GetOptions (
 		'syn_lengths' => \$syn_lengths,
 		'onlysim' => \$onlysim,
 		'skip_stoppers_in_simulation' => \$skip_stoppers_in_simulation,
+		'fails_threshold=s' => \$fails_threshold, # 0 - keep all subtrees (supposed to be equal to option's absence). 0.9 - only take into account subtrees with more than 90% valid simulations
 	);
 
 $| = 1;
@@ -219,6 +221,7 @@ if ($sim > 0){
 }
 ## 25.01 Procedure for obtaining p-values
 unless ($onlysim){
+	$mutmap->set_weeds($fails_threshold)  if $fails_threshold;;
 	my @groups_and_names;
 	if ($no_groups){
 		@groups_and_names = $mutmap-> protein_no_group();
@@ -227,7 +230,7 @@ unless ($onlysim){
 		@groups_and_names = $mutmap-> predefined_groups_and_names();
 	}
 	if (!$mutnum_control){
-		$mutmap-> concat_and_divide_simult_for_mutnum_controlled (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+		$mutmap-> concat_and_divide_simult_for_mutnum_controlled ({restriction_levels => \@restriction_levels, groups => \@{$groups_and_names[0]}, group_names => \@{$groups_and_names[1]}});
 	}
 	else {
 		$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});

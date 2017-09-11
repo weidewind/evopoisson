@@ -28,6 +28,7 @@ my $skip_stoppers;
 my $mutnum_control = 0.2;
 my $syn_lengths;
 my $overwrite;
+my $fails_threshold;
 
 
 GetOptions (	
@@ -46,6 +47,8 @@ GetOptions (
 		'mutnum_control=s' => \$mutnum_control,
 		'syn_lengths' => \$syn_lengths,
 		'overwrite' => \$overwrite,
+		'fails_threshold=s' => \$fails_threshold, # 0 - keep all subtrees (supposed to be equal to option's absence). 0.9 - only take into account subtrees with more than 90% valid simulations
+		
 	);
 
 $| = 1;
@@ -85,6 +88,7 @@ print "We have $ready iterations here (know nothing about their restriction, min
 
 ## 25.01 Procedure for obtaining p-values
 my @groups_and_names;
+$mutmap->set_weeds($fails_threshold) if $fails_threshold;
 if ($no_groups){
 	@groups_and_names = $mutmap-> protein_no_group();
 }
@@ -93,7 +97,7 @@ else {
 }
 
 if (!$mutnum_control){
-		$mutmap-> concat_and_divide_simult_for_mutnum_controlled (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
+		$mutmap-> concat_and_divide_simult_for_mutnum_controlled ({restriction_levels => \@restriction_levels, groups => \@{$groups_and_names[0]}, group_names => \@{$groups_and_names[1]}});
 }
 else {
 		$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});

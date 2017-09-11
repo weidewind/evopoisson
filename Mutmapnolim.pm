@@ -41,6 +41,7 @@ use AgeingStat;
 use MeanStat;
 use MedianStat;
 use BPStat;
+use Weeds;
 #use DnaUtilities::observation_vector qw(make_observation_vector shuffle_obsv);
 use observation_vector qw(make_observation_vector shuffle_obsv);
 #use DnaUtilities::compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing);
@@ -1319,7 +1320,7 @@ sub get_strip_constraints {
 		$group_hash{$site} = 1;
 	}
 	my $realdata = $self->{realdata};
-	my $obs_hash = get_obshash($realdata, $restriction);
+	my $obs_hash = $self->get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	my $constraints;
 	
@@ -1364,7 +1365,7 @@ sub get_constraints {
 		$group_hash{$site} = 1;
 	}
 	my $realdata = $self->{realdata};
-	my $obs_hash = get_obshash($realdata, $restriction);
+	my $obs_hash = $self->get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	my $constraints;
 	
@@ -1404,6 +1405,7 @@ sub get_constraints {
 
 
 sub get_obshash {
+	my $self = shift;
 	my $realdata = shift;
 	my $restriction = shift;
 	my $rr = get_realdata_restriction($realdata);
@@ -1411,7 +1413,12 @@ sub get_obshash {
 	unless(defined $rr && $rr <= $restriction ){
 			die "realdata restriction is undefined or is greater than get_obshash restriction: ".$rr." > $restriction \n";
 	}
-	my $obs_hash = $realdata->{"obs_hash".$rr};
+	my $obs_hash = \%{$realdata->{"obs_hash".$rr}};
+	if ($self->{weeds}){
+		foreach my $site_node(keys %{$self->{weeds}} ){
+			delete $obs_hash->{$site_node};
+		}
+	}
 	return $obs_hash;
 }
 
@@ -1442,7 +1449,7 @@ sub compute_norm {
 	
 #	$real_data = lock_retrieve("/export/home/popova/workspace/perlCoevolution/TreeUtils/Phylo/MutMap/".$prot."_realdata") or die "Cannot retrieve real_data";
 	my $realdata = $self->{realdata};
-	my $obs_hash = get_obshash($realdata, $restriction);
+	my $obs_hash = $self->get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	
 	my $norm;
@@ -1470,7 +1477,7 @@ sub compute_norm_single_site {
 	my $site_node = shift;
 
 	my $realdata = $self->{realdata};
-	my $obs_hash = get_obshash($realdata, 1000); # 1000 is supposed to be bigger than any restriction in realdata, so this will just silently give you obshash from realdata
+	my $obs_hash = $self->get_obshash($realdata, 1000); # 1000 is supposed to be bigger than any restriction in realdata, so this will just silently give you obshash from realdata
 	my $subtree_info = $realdata->{"subtree_info"};
 	
 	my $norm;
@@ -1624,7 +1631,7 @@ sub select_ancestor_nodes {
 		$group_hash{$site} = 1;
 	}
 	my $realdata = $self->{realdata};
-	my $obs_hash = get_obshash($realdata, $restriction);
+	my $obs_hash = $self->get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	my %group_nodes;
 	#my $debugnum = scalar keys %{$obs_hash};
@@ -1651,17 +1658,15 @@ sub select_ancestor_nodes_and_sites {
 	my $self = shift;
 	my $restriction = $_[0];
 	my @group = @{$_[1]};
-	my %exclude = %{$_[2]}; ##
 	my %group_hash;
 	foreach my $site(@group){
 		$group_hash{$site} = 1;
 	}
 	my $realdata = $self->{realdata};
-	my $obs_hash = get_obshash($realdata, $restriction);
+	my $obs_hash = $self->get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	my %group_nodes;
 	foreach my $site_node(keys %{$obs_hash}){
-			next if exists $exclude{$site_node}; ##
 			my ($site, $node_name) = cleave( $site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
@@ -1672,8 +1677,18 @@ sub select_ancestor_nodes_and_sites {
 	return %group_nodes;
 }		
 
-	
-
+ 
+ sub set_weeds {
+ 	my $self = shift;
+ 	my $fails_threshold = shift;
+ 	my $file = File::Spec->catfile($self->{static_output_base},$self->{static_protein}."_weeds");
+ 	my $weeds = Weeds->new(File::Spec->catdir($self->{static_output_base}, $self->{static_protein}));
+ 	my $wweeds = $weeds->worstWeeds({fails_threshold => $fails_threshold});
+ 	$self->{weeds} = $wweeds;
+ 	$wweeds->print($file);
+ 	return $wweeds;
+ }
+ 
 sub count_iterations {
 	my $self = shift;
 	my $prot = $self->{static_protein};
@@ -2010,9 +2025,10 @@ sub concat_and_divide_simult {
 sub concat_and_divide_simult_for_mutnum_controlled {
 	my $self = shift;
 	my $prot = $self->{static_protein};
-	my @maxdepths = @{$_[0]};
-	my @groups = @{$_[1]};
-	my @group_names = @{$_[2]};
+	my ($args) = @_;
+	my @restriction_levels = @{$args->{restriction_levels}};
+	my @groups = @{$args->{groups}};
+	my @group_names = @{$args->{group_names}};
 	my $mutnum_control = $self->{static_mutnum_control};
 	my $subtract_maxpath = $self->{static_subtract_tallest};
 	my $dir = $self->{static_output_base};
@@ -2039,7 +2055,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 	my %group_hashes;
 	foreach my $md(@maxdepths){
 		foreach my $group_number(0.. scalar @groups - 1){
-			my %node_hash = $self->select_ancestor_nodes_and_sites($md, \@{$groups[$group_number]}); #, \%exclude
+			my %node_hash = $self->select_ancestor_nodes_and_sites($md, \@{$groups[$group_number]}); #
 			foreach my $node_name (keys %node_hash){
 				$group_hashes{$md}[$group_number]{$node_name} = $node_hash{$node_name}; # $hash{$site}= totmut, now $group_hashes{$md}[$group_number]{$node_name}{$site} = totmut
 			}
@@ -2280,7 +2296,7 @@ sub concat_and_divide_simult_single_sites {
 		$subdir = $dir;
 	}
 	my $realdata = $self->{realdata};
-	my $obs_hash = get_obshash($realdata, List::Util::min(@maxdepths));
+	my $obs_hash = $self->get_obshash($realdata, List::Util::min(@maxdepths));
 	my $subtree_info = $realdata->{"subtree_info"};
 	
 	my %hash;
@@ -2516,7 +2532,7 @@ sub group_counter {
 	#print "before cycle\n";
 	
 	
-	my $obs_hash = get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
+	my $obs_hash = $self->get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
 	my $subtree_info = $realdata->{"subtree_info"};
 	for my $restriction(@restriction_levels){
 		print "level $restriction\n";
@@ -2626,7 +2642,7 @@ sub count_pvalues{
 	#print "before cycle\n";
 	
 	
-	my $obs_hash = get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
+	my $obs_hash = $self->get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
 	#my $obs_hash = $realdata->{"obs_hash50"}; 
 	my $subtree_info = $realdata->{"subtree_info"};
 	for my $restriction(@restriction_levels){
@@ -3130,7 +3146,7 @@ sub count_single_site_pvalues{
 	unless (defined $step) {die "Oh no, bin size in realdata is not defined. Won't proceed with counting pvalues.\n";}
 	#print "before cycle\n";
 	
-	my $obs_hash = get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
+	my $obs_hash = $self->get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
 	my $subtree_info = $realdata->{"subtree_info"};
 
 		print "level $restriction\n";
@@ -4348,7 +4364,6 @@ sub get_sequential_distance {
    
    sub fake_predefined_groups_and_names {
    	 	my $self = shift;
-   	 	my $exclude = shift;
  		my $prot = $self->{static_protein};
  		my $state = $self->{static_state};
  		return Groups::get_fake_predefined_groups_and_names_for_protein($prot, $self->mylength(), $exclude, $state);

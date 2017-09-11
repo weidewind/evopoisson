@@ -8,6 +8,7 @@ sub new {
         my $self = {
     	name => "bp",
     };
+    return bless $self, $class;	
 }
 
 sub printStats {
