@@ -1651,6 +1651,7 @@ sub select_ancestor_nodes_and_sites {
 	my $self = shift;
 	my $restriction = $_[0];
 	my @group = @{$_[1]};
+	my %exclude = %{$_[2]}; ##
 	my %group_hash;
 	foreach my $site(@group){
 		$group_hash{$site} = 1;
@@ -1660,6 +1661,7 @@ sub select_ancestor_nodes_and_sites {
 	my $subtree_info = $realdata->{"subtree_info"};
 	my %group_nodes;
 	foreach my $site_node(keys %{$obs_hash}){
+			next if exists $exclude{$site_node}; ##
 			my ($site, $node_name) = cleave( $site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
@@ -2037,7 +2039,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 	my %group_hashes;
 	foreach my $md(@maxdepths){
 		foreach my $group_number(0.. scalar @groups - 1){
-			my %node_hash = $self->select_ancestor_nodes_and_sites($md, \@{$groups[$group_number]});
+			my %node_hash = $self->select_ancestor_nodes_and_sites($md, \@{$groups[$group_number]}); #, \%exclude
 			foreach my $node_name (keys %node_hash){
 				$group_hashes{$md}[$group_number]{$node_name} = $node_hash{$node_name}; # $hash{$site}= totmut, now $group_hashes{$md}[$group_number]{$node_name}{$site} = totmut
 			}
@@ -4393,7 +4395,7 @@ sub get_sequential_distance {
 		make_path ($dirname);
 		opendir(DH, $dirname);
 		my @files = grep { /.*_[0-9]+$/ }readdir(DH); 
-		unless (scalar @files > 0){die "No simulation files found in folder $dirname\n";}
+		unless (scalar @files > 0){print "No simulation files found in folder $dirname\n";}
 		closedir(DH);
 		return @files;
 	}
