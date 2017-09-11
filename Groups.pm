@@ -166,20 +166,21 @@ sub best_sites {
 sub get_fake_predefined_groups_and_names_for_protein {
 	my $prot = shift;
 	my $length = shift;
-	my $exclude = shift;
+#	my $exclude = shift;
 	my $state = shift;
 	my @groups;
 	my @real_groups_and_names = only_groups($prot);
 	my @allsites = (1..$length);
 	my @sites;
-	if ($exclude){
-		my @sites_to_exclude = best_sites($prot, $state);
-		my %exclude_map = map {$_ => 1} @sites_to_exclude;
-		@sites = grep {not $exclude_map{$_}} @allsites;
-	}
-	else {
+#	if ($exclude){
+#		my @sites_to_exclude = best_sites($prot, $state);
+#		my %exclude_map = map {$_ => 1} @sites_to_exclude;
+#		@sites = grep {not $exclude_map{$_}} @allsites;
+#	}
+
+#	else {
 		@sites = @allsites;
-	}
+#	}
 	my @heap_of_sites = @sites; # it's a copy, yes
 	foreach my $g(@{$real_groups_and_names[0]}){
 		my $group_size = scalar @{$g};

@@ -4367,7 +4367,7 @@ sub get_sequential_distance {
    	 	my $self = shift;
  		my $prot = $self->{static_protein};
  		my $state = $self->{static_state};
- 		return Groups::get_fake_predefined_groups_and_names_for_protein($prot, $self->mylength(), $exclude, $state);
+ 		return Groups::get_fake_predefined_groups_and_names_for_protein($prot, $self->mylength(), $state);
    }
 
 	sub protein_no_group {
