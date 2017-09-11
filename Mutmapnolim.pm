@@ -2027,7 +2027,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 	my $self = shift;
 	my $prot = $self->{static_protein};
 	my ($args) = @_;
-	my @restriction_levels = @{$args->{restriction_levels}};
+	my @maxdepths = @{$args->{restriction_levels}};
 	my @groups = @{$args->{groups}};
 	my @group_names = @{$args->{group_names}};
 	my $mutnum_control = $self->{static_mutnum_control};
