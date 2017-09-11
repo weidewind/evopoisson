@@ -42,6 +42,7 @@ use MeanStat;
 use MedianStat;
 use BPStat;
 use Weeds;
+use Textbits qw(concat cleave iterationFiles);
 #use DnaUtilities::observation_vector qw(make_observation_vector shuffle_obsv);
 use observation_vector qw(make_observation_vector shuffle_obsv);
 #use DnaUtilities::compare qw(nsyn_substitutions syn_substitutions nsyn_substitutions_codons is_neighbour_changing);
@@ -4394,26 +4395,6 @@ sub get_sequential_distance {
    		return $depth;
    }
 
-	sub concat {
-		my $site = shift;
-		my $node = shift;
-		return $site.":".$node;
-	}
-	
-	sub cleave {
-		my $site_node = shift;
-		return split(/:/, $site_node);
-	}
-	
-	sub iterationFiles {
-		my $dirname = shift;
-		make_path ($dirname);
-		opendir(DH, $dirname);
-		my @files = grep { /.*_[0-9]+$/ }readdir(DH); 
-		unless (scalar @files > 0){print "No simulation files found in folder $dirname\n";}
-		closedir(DH);
-		return @files;
-	}
    
 
     

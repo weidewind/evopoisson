@@ -6,7 +6,7 @@ use Data::Dumper;
 use Getopt::Long;
 use Getopt::ArgvFile;
 use File::Spec;
-use Mutmapnolim qw(tttplot, concat, iterationFiles);
+use Textbits qw(concat cleave iterationFiles);
 
 my $input = "/export/home/popova/workspace/evopoisson/output/h1test_no_mutnum_branch_skipnoskip_mutscontrolled_fixed/nsyn/maxpath_not_subtracted/h1/h1_for_enrichment_7";
 my $fails = 0.5;
@@ -19,10 +19,7 @@ GetOptions (
 my $weeds = Weeds->new($input);
 $weeds->print("/export/home/popova/workspace/evopoisson/testfiles/weeds0");
 $weeds->worstWeeds({fails_threshold => $fails})->print("/export/home/popova/workspace/evopoisson/testfiles/weeds");
-print "going to read\n";
 my $ww = Weeds->read("/export/home/popova/workspace/evopoisson/testfiles/weeds");
-print "read\n";
-print Dumper $ww;
 $ww->print("/export/home/popova/workspace/evopoisson/testfiles/weeds2");
 
 sub new {
@@ -39,7 +36,7 @@ sub new {
 
 sub findWeedsInDir {
 	my $dir = shift;
-	my @files = Mutmapnolim::iterationFiles($dir);
+	my @files = Textbits::iterationFiles($dir);
 	my $iterations;
 	my %weeds;
 	foreach my $file (@files){
@@ -61,7 +58,8 @@ sub findWeedsInFile {
 		if ($_ =~ /^>/){$iterations++;}
 		if ($_ =~ /^s/){
 			my %subtree = (split (/\s+/, $_));
-			$weeds{Mutmapnolim::concat($subtree{site},$subtree{node})} += 1 if $subtree{muts} == 0;
+			my $sn = Textbits::concat($subtree{site},$subtree{node});
+			$weeds{$sn} += 1 if $subtree{muts} == 0;
 		}
 	}
 	close FILE;
