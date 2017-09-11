@@ -21,3 +21,4 @@ use File::Path qw(make_path);
 		closedir(DH);
 		return @files;
 	}
+	1;
