@@ -66,6 +66,10 @@ sub BPstat {
 			print "Single mutation, cannot compute BP statistics!\n";
 			return undef;
 	}
+	print "---------\n";
+	foreach my $dot(@tttplot){
+		print $dot->[0].",".$dot->[1]."\n";
+	}
 	while ($tttplot[-1][0] == 1){$lastdot = pop @tttplot;}
 	my $w;
 	foreach my $dot(@tttplot){

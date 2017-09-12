@@ -1447,29 +1447,25 @@ sub compute_norm {
 	foreach my $ind(@group){
 		$group_hash{$ind} = 1;
 	}
-	
-#	$real_data = lock_retrieve("/export/home/popova/workspace/perlCoevolution/TreeUtils/Phylo/MutMap/".$prot."_realdata") or die "Cannot retrieve real_data";
 	my $realdata = $self->{realdata};
 	my $obs_hash = $self->get_obshash($realdata, $restriction);
 	my $subtree_info = $realdata->{"subtree_info"};
 	
 	my $norm;
-	
 	foreach my $site_node(keys %{$obs_hash}){
 		my ($site, $node_name) = Textbits::cleave($site_node);
 		if ($group_hash{$site}){
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
-			foreach my $bin(keys %{$obs_hash->{$site_node}}){
-			
-				if ($maxdepth > $restriction){
+			if ($maxdepth > $restriction){
+				foreach my $bin(keys %{$obs_hash->{$site_node}}){
 					$norm += $obs_hash->{$site_node}->{$bin}->[0];
 				}
-
 			}
 		}
 	}
 	return $norm;
 }
+
 
 
 # 13.09.2016 compute_norm for one site_node (for single site poisson analysis)
@@ -1554,10 +1550,8 @@ sub prepare_real_data {
 		my ($site, $node_name) = Textbits::cleave($site_node);
 		my $maxdepth = $self -> {static_subtree_info}{$node_name}{$site}{"maxdepth"};
 		#print "site $site nodename $node_name maxdepth $maxdepth \n";
-		foreach my $bin(keys %{$full_obs_hash{$site_node}}){
-			#$bins{$bin} = 1;
-			#print "bin $bin\n";
-			if ($maxdepth > $restriction){
+		if ($maxdepth > $restriction){
+			foreach my $bin(keys %{$full_obs_hash{$site_node}}){
 				$restricted_norm += $full_obs_hash{$site_node}{$bin}[0];
 				$restricted_obs_hash{$site_node}{$bin}[0] = $full_obs_hash{$site_node}{$bin}[0];
 				$restricted_obs_hash{$site_node}{$bin}[1] = $full_obs_hash{$site_node}{$bin}[1];
@@ -1704,8 +1698,8 @@ sub select_ancestor_nodes_and_sites {
 		$file =~ /.*_([0-9\.]+)_single_sites/;
 		push @restr, $1;
 	}
-	@sorted = sort { $a <=> $b } @restr;
- 	my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$sorted[0]."_single_sites");
+	my @sorted = sort { $a <=> $b } @restr;
+ 	my $file = File::Spec->catfile($self->{static_output_base}, $prot."_gulpselector_vector_boot_median_test_".$sorted[0]."_single_sites");
  	my $weeds = Weeds->readWeeds($self->weeds_file());
  	open FILE, "<$file" or die "Cannot open single sites file $file for reading: $!\n";
  	while (<FILE>){
@@ -2078,6 +2072,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 	foreach my $md(@maxdepths){
 		foreach my $group_number(0.. scalar @groups - 1){
 			$norms{$md}[$group_number] = $self->compute_norm($md, $groups[$group_number]);
+			print "norm for $md $group_names[$group_number] ".$norms{$md}[$group_number]."\n";
 		}
 		
 	}
@@ -2086,6 +2081,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 	foreach my $md(@maxdepths){
 		foreach my $group_number(0.. scalar @groups - 1){
 			my %node_hash = $self->select_ancestor_nodes_and_sites($md, \@{$groups[$group_number]}); #
+			my $sas;
 			foreach my $node_name (keys %node_hash){
 				$group_hashes{$md}[$group_number]{$node_name} = $node_hash{$node_name}; # $hash{$site}= totmut, now $group_hashes{$md}[$group_number]{$node_name}{$site} = totmut
 			}
@@ -2136,9 +2132,10 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 										}
 									}
 									else {
-										#print "CONC "."norm ".$norms{$md}[$group_number]."\n";
-										#print "CONC "."sum ".$sums{$md}[$group_number]{$label}."\n";
-										#print "CONC "."in hash, bin 12: ".$hash{$md}[$group_number]{$label}{12}[0]."\n";
+										print "For $group_names[$group_number]\n";
+										print "CONC "."norm ".$norms{$md}[$group_number]."\n";
+										print "CONC "."sum ".$sums{$md}[$group_number]{$label}."\n";
+										print "CONC "."in hash, bin 12: ".$hash{$md}[$group_number]{$label}{12}[0]."\n";
 										
 										foreach my $bin(@bins){
 											$hash{$md}[$group_number]{$label}{$bin}[0] = $hash{$md}[$group_number]{$label}{$bin}[0]*$norms{$md}[$group_number]/$sums{$md}[$group_number]{$label};
@@ -2233,7 +2230,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 										print "Error! simmutnum for $simnode $simsite $simmutnum , expected ".$counter_hashes{$md}[$group_number]{$simnode}{$simsite}."\n";
 								}
 								if ($simmutnum){
-									#print "found data for $simsite $simnode $md $group_names[$group_number]\n";
+									#print "found data for $simsite,$simnode $md $group_names[$group_number]\n";
 										foreach my $bindat (@bin_data){
 											$sums{$md}[$group_number]{$label} += $bindat->[1];
 											$hash{$md}[$group_number]{$label}{$bindat->[0]}[1] += $bindat->[2];

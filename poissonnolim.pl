@@ -35,7 +35,7 @@ my $no_leaves;
 my $include_tips;
 my $skip_stoppers;
 my $switch;
-my $mutnum_control = 0.2;
+my $mutnum_control = 0;
 my $fake;
 
 my $lifetime_restr;
