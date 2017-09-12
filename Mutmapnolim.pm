@@ -819,7 +819,7 @@ sub print_subtree_with_mutations {
 	$self->visitor_coat ($root, \@array,\&lrt_visitor,\&no_check,\@args,0);
 	my @output_files;
 	for (my $i = 0; $i < scalar @muts; $i++){
-		my ($ind, $ancnodename) = cleave($muts[$i]);
+		my ($ind, $ancnodename) = Textbits::cleave($muts[$i]);
 		#my $ind = $muts[$i];
 		#$i++;
 		#my $ancnodename = $muts[$i];
@@ -1338,7 +1338,7 @@ sub get_strip_constraints {
 	}
 
 	foreach my $site_node(keys %{$obs_hash}){
-			my ($site, $node_name) = cleave($site_node);
+			my ($site, $node_name) = Textbits::cleave($site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 				if ($maxdepth > $restriction && $group_hash{$site}){
 					my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
@@ -1385,7 +1385,7 @@ sub get_constraints {
 	}
 
 	foreach my $site_node(keys %{$obs_hash}){
-			my ($site, $node_name) = cleave($site_node);
+			my ($site, $node_name) = Textbits::cleave($site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			print "maxdepth for $site $node_name is $maxdepth\n";
 				if ($maxdepth > $restriction && $group_hash{$site}){
@@ -1416,7 +1416,7 @@ sub get_obshash {
 	}
 	my $obs_hash = \%{$realdata->{"obs_hash".$rr}};
 	if ($self->{weeds}){
-		foreach my $site_node(keys %{$self->{weeds}} ){
+		foreach my $site_node(keys %{$self->{weeds}{weeds}} ){
 			delete $obs_hash->{$site_node};
 		}
 	}
@@ -1456,7 +1456,7 @@ sub compute_norm {
 	my $norm;
 	
 	foreach my $site_node(keys %{$obs_hash}){
-		my ($site, $node_name) = cleave($site_node);
+		my ($site, $node_name) = Textbits::cleave($site_node);
 		if ($group_hash{$site}){
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			foreach my $bin(keys %{$obs_hash->{$site_node}}){
@@ -1538,7 +1538,7 @@ sub prepare_real_data {
 	my %full_obs_hash = $self -> depth_groups_entrenchment_optimized_selector_alldepths_2($step, $restriction); # bin size
 	my %ancestor_nodes;
 	foreach my $ancnode(keys %full_obs_hash){
-		my ($site, $node_name) = cleave($ancnode);
+		my ($site, $node_name) = Textbits::cleave($ancnode);
 		$ancestor_nodes{$node_name}{$site} = 1;
 		#my @splitter = split(/_/, $ancnode);
 		#$ancestor_nodes{$splitter[-1]} = 1;
@@ -1551,7 +1551,7 @@ sub prepare_real_data {
 	print "Early news from prepare: there are $debugnum keys in full_obs_hash\n";
 	print "Will restrict to subtrees longer than $restriction \n";
 	foreach my $site_node(keys %full_obs_hash){
-		my ($site, $node_name) = cleave($site_node);
+		my ($site, $node_name) = Textbits::cleave($site_node);
 		my $maxdepth = $self -> {static_subtree_info}{$node_name}{$site}{"maxdepth"};
 		#print "site $site nodename $node_name maxdepth $maxdepth \n";
 		foreach my $bin(keys %{$full_obs_hash{$site_node}}){
@@ -1638,7 +1638,7 @@ sub select_ancestor_nodes {
 	#my $debugnum = scalar keys %{$obs_hash};
 	#print "there are $debugnum keys in obshash\n";
 	foreach my $site_node(keys %{$obs_hash}){
-			my ($site, $node_name) = cleave($site_node);
+			my ($site, $node_name) = Textbits::cleave($site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
 			#my $stoppers = $subtree_info->{$node_name}->{$site}->{"stoppers"}; # array of nodes
@@ -1668,7 +1668,7 @@ sub select_ancestor_nodes_and_sites {
 	my $subtree_info = $realdata->{"subtree_info"};
 	my %group_nodes;
 	foreach my $site_node(keys %{$obs_hash}){
-			my ($site, $node_name) = cleave( $site_node);
+			my ($site, $node_name) = Textbits::cleave( $site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			my $mutnum = $subtree_info->{$node_name}->{$site}->{"totmuts"};
 			if ($maxdepth > $restriction && $group_hash{$site}){
@@ -1679,23 +1679,52 @@ sub select_ancestor_nodes_and_sites {
 }		
 
  
+
+ 
  sub set_weeds {
  	my $self = shift;
  	my $fails_threshold = shift;
- 	my $file = File::Spec->catfile($self->{static_output_base},$self->{static_protein}."_weeds");
+ 	my $file = $self->weeds_file();
  	my $weeds = Weeds->new(File::Spec->catdir($self->{static_output_base}, $self->{static_protein}));
  	my $wweeds = $weeds->worstWeeds({fails_threshold => $fails_threshold});
  	$self->{weeds} = $wweeds;
- 	$wweeds->print($file);
+ 	$wweeds->printWeeds($file);
  	return $wweeds;
  }
+ 
+ sub describe_weeds {
+ 	my $self = shift;
+ 	return unless -e $self->weeds_file();
+ 	opendir(DH, $self->{static_output_base});
+	my $prot = $self->{static_protein};
+	my @files = grep { /^${prot}_gulpselector_vector_boot_median_test_[0-9\.]+_single_sites/ } readdir(DH);
+	closedir(DH);
+	my @restr;
+	foreach my $file(@files){
+		$file =~ /.*_([0-9\.]+)_single_sites/;
+		push @restr, $1;
+	}
+	@sorted = sort { $a <=> $b } @restr;
+ 	my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$sorted[0]."_single_sites");
+ 	my $weeds = Weeds->readWeeds($self->weeds_file());
+ 	open FILE, "<$file" or die "Cannot open single sites file $file for reading: $!\n";
+ 	while (<FILE>){
+ 	}
+
+ }
+ 
+ sub weeds_file {
+ 	my $self = shift;
+ 	return File::Spec->catfile($self->{static_output_base},$self->{static_protein}."_weeds");
+ }
+
  
 sub count_iterations {
 	my $self = shift;
 	my $prot = $self->{static_protein};
 	my $dir = $self->{static_output_base};
 	my $dirname = File::Spec->catdir($dir, $prot); 
-	my @files = iterationFiles($dirname);
+	my @files = Textbits::iterationFiles($dirname);
 	unless (scalar @files > 0){
 		return 0;
 	}
@@ -1786,7 +1815,7 @@ sub concat_and_divide_simult {
 	my %hash;
 	
 	my $dirname = File::Spec->catdir($dir, $prot); 
-	my @files = iterationFiles($dirname);
+	my @files = Textbits::iterationFiles($dirname);
 	
 	my %filehandles;
 
@@ -2070,7 +2099,7 @@ sub concat_and_divide_simult_for_mutnum_controlled {
 	my %hash;
 	
 	my $dirname = File::Spec->catdir($dir, $prot); 
-	my @files = iterationFiles($dirname);
+	my @files = Textbits::iterationFiles($dirname);
 	
 	my %filehandles;
 
@@ -2306,7 +2335,7 @@ sub concat_and_divide_simult_single_sites {
 	my %norms; #previous: $norms{$md}[$group_number] = norm
 #	foreach my $md(@maxdepths){
 	foreach my $site_node(keys %{$obs_hash}){
-			my ($site, $node_name) = cleave($site_node);
+			my ($site, $node_name) = Textbits::cleave($site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			if ($maxdepth > $md){
 				$norms{$site_node} = $self->compute_norm_single_site($site_node);
@@ -2317,7 +2346,7 @@ sub concat_and_divide_simult_single_sites {
 	
 	
 	my $dirname = File::Spec->catdir($dir, $prot); 
-	my @files = iterationFiles($dirname);
+	my @files = Textbits::iterationFiles($dirname);
 	
 	my %filehandles;
 
@@ -2371,7 +2400,7 @@ sub concat_and_divide_simult_single_sites {
 					# $str_array[0] is bin number
 					$simsite = $str_array[1]; # careful 
 					$simnode = $str_array[3];
-					$sim_site_node = concat($simsite, $simnode);
+					$sim_site_node = Textbits::concat($simsite, $simnode);
 					$max_depth = $str_array[5];
 					
 					
@@ -2553,7 +2582,7 @@ sub group_counter {
 		# Beware! obs_hash50 from real_data really contains restricted data (maxdepth>50)
 		my $mutcounter;
 		foreach my $site_node(keys %{$obs_hash}){
-			my ($site, $node_name) = cleave($site_node);
+			my ($site, $node_name) = Textbits::cleave($site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			if ($maxdepth > $restriction && $group_hash{$site}){ #15.02 moved here
 			foreach my $bin(keys %{$obs_hash->{$site_node}}){
@@ -2581,7 +2610,7 @@ sub group_counter {
 			## copyaste from prepare: create restricted hash	
 			# Beware! obs_hash50 from real_data really contains restricted data (maxdepth>50)
 			foreach my $site_node(keys %{$obs_hash}){
-				my ($site, $node_name) = cleave($site_node);
+				my ($site, $node_name) = Textbits::cleave($site_node);
 				my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 				foreach my $bin(keys %{$obs_hash->{$site_node}}){
 					if ($maxdepth > $restriction && $group_hash{$site}){
@@ -2663,7 +2692,7 @@ sub count_pvalues{
 		## copypaste from prepare: create restricted hash	
 		# Beware! obs_hash50 from real_data really contains restricted data (maxdepth>50)
 		foreach my $site_node(keys %{$obs_hash}){
-			my ($site, $node_name) = cleave($site_node);
+			my ($site, $node_name) = Textbits::cleave($site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 		#	if (compare::is_neighbour_changing($self->$static_subs_on_node{$node_name}{$site}, 1) == 1) # fisk
 			if ($maxdepth > $restriction && $group_hash{$site}){ #15.02 moved here
@@ -2817,7 +2846,7 @@ sub count_pvalues{
 			## copyaste from prepare: create restricted hash	
 			# Beware! obs_hash50 from real_data really contains restricted data (maxdepth>50)
 			foreach my $site_node(keys %{$obs_hash}){
-				my ($site, $node_name) = cleave($site_node);
+				my ($site, $node_name) = Textbits::cleave($site_node);
 				my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 				foreach my $bin(keys %{$obs_hash->{$site_node}}){
 					if ($maxdepth > $restriction && $group_hash{$site}){
@@ -2956,7 +2985,7 @@ sub count_pvalues{
 			## copypaste from prepare: create restricted hash	
 			# Beware! obs_hash50 from real_data really contains restricted data (maxdepth>50)
 			foreach my $site_node(keys %{$obs_hash}){
-				my ($site, $node_name) = cleave($site_node);
+				my ($site, $node_name) = Textbits::cleave($site_node);
 				my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 				foreach my $bin(keys %{$obs_hash->{$site_node}}){
 					if ($maxdepth > $restriction && $complement_hash{$site}){
@@ -3156,7 +3185,7 @@ sub count_single_site_pvalues{
 		
 		## create restricted hash	
 		foreach my $site_node(keys %{$obs_hash}){
-			my ($site, $node_name) = cleave($site_node);
+			my ($site, $node_name) = Textbits::cleave($site_node);
 			my $maxdepth = $subtree_info->{$node_name}->{$site}->{"maxdepth"};
 			if ($maxdepth > $restriction){ 
 			foreach my $bin(keys %{$obs_hash->{$site_node}}){
@@ -3282,7 +3311,7 @@ sub count_single_site_pvalues{
 		#print FILE "- pvalue_epistasis  pvalue_environment\n";
 		#print FILE "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
 		#print FILE "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
-		my ($psite, $pnode_name) = cleave($site_node);
+		my ($psite, $pnode_name) = Textbits::cleave($site_node);
 		my $pmaxdepth = $subtree_info->{$pnode_name}->{$psite}->{"maxdepth"};
 		my $pmutcount = sum(values %flat_obs_hash);
 		print $outputfile "Number of iterations: $iteration\n";
@@ -3386,7 +3415,7 @@ sub entrenchment_for_subtrees{
 		#subtree info is fresh and clean
 		$self->my_visit_depth_first ($node, \@array,\&subtree_info,\&no_check,\@args,0);
 		foreach my $site (keys %{$rh_out_subtree->{$nodename}}){
-			my $site_node = concat($site, $nodename);
+			my $site_node = Textbits::concat($site, $nodename);
 			my $exits = scalar @{$rh_out_subtree->{$nodename}{$site}};
 			if ($exits != $subtree_info{$site}{"totmuts"}){
 				print "Error! for $site $nodename entrenchment found ".$subtree_info{$site}{"totmuts"}.", and shuffler planted $exits (not an error in debugmode, because in that case exits comprise all mutations in site (including those before ancestor and after stoppers)\n";
@@ -3580,7 +3609,7 @@ sub depth_groups_entrenchment_optimized_selector_alldepths_2 {
 				$node = ${$nod};
 			}
 			else {$node = $nod;}
-			my $site_node = concat($ind,$node->get_name());
+			my $site_node = Textbits::concat($ind,$node->get_name());
 			#print "site_node $site_node \n";
 			my $total_muts = $self ->{static_subtree_info}{$node->get_name()}{$ind}{"totmuts"};
 			my $total_length= $self ->{static_subtree_info}{$node->get_name()}{$ind}{"totlengths"};
@@ -3687,7 +3716,7 @@ sub nodeselector {
 				$node = ${$nod};
 			}
 			else {$node = $nod;}
-			my $site_node = concat($ind, $node->get_name());
+			my $site_node = Textbits::concat($ind, $node->get_name());
 			my $total_muts = $self->{static_subtree_info}{$node->get_name()}{$ind}{"totmuts"};
 			my $total_length = $self->{static_subtree_info}{$node->get_name()}{$ind}{"totlengths"};
 			

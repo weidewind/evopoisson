@@ -8,19 +8,7 @@ use Getopt::ArgvFile;
 use File::Spec;
 use Textbits qw(concat cleave iterationFiles);
 
-my $input = "/export/home/popova/workspace/evopoisson/output/h1test_no_mutnum_branch_skipnoskip_mutscontrolled_fixed/nsyn/maxpath_not_subtracted/h1/h1_for_enrichment_7";
-my $fails = 0.5;
 
-GetOptions (	
-		'input=s' => \$input,
-		'fails=s'=> \$fails,
-	);
-
-my $weeds = Weeds->new($input);
-$weeds->print("/export/home/popova/workspace/evopoisson/testfiles/weeds0");
-$weeds->worstWeeds({fails_threshold => $fails})->print("/export/home/popova/workspace/evopoisson/testfiles/weeds");
-my $ww = Weeds->read("/export/home/popova/workspace/evopoisson/testfiles/weeds");
-$ww->print("/export/home/popova/workspace/evopoisson/testfiles/weeds2");
 
 sub new {
 	my $class = shift;
@@ -40,10 +28,10 @@ sub findWeedsInDir {
 	my $iterations;
 	my %weeds;
 	foreach my $file (@files){
-			my %file_weeds = findWeedsInFile(File::Spec->catfile($dir,$file));
-			$iterations += $file_weeds{iterations};
-			foreach my $subtree (keys %{$file_weeds{weeds}}){
-				$weeds{$subtree} += $file_weeds{weeds}{$subtree};
+			my $file_weeds = findWeedsInFile(File::Spec->catfile($dir,$file));
+			$iterations += $file_weeds->{iterations};
+			foreach my $subtree (keys %{$file_weeds->{weeds}}){
+				$weeds{$subtree} += $file_weeds->{weeds}{$subtree};
 			}
 	}
 	return {iterations => $iterations, weeds => \%weeds};
@@ -66,7 +54,7 @@ sub findWeedsInFile {
 	return {iterations => $iterations, weeds => \%weeds};
 }
 
-sub print{
+sub printWeeds{
 	my $weeds = shift;
 	my $outfile = shift;
    	open(OUTPUT, '>', $outfile) or die "Cannot open $outfile for writing: $!\n";
@@ -79,7 +67,7 @@ sub print{
 	close OUTPUT;
 }
 
-sub read{
+sub readWeeds{
 	my $class = shift;
 	my $weeds_file = shift;
 	my $weeds;

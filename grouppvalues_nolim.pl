@@ -86,8 +86,8 @@ my $ready = $mutmap-> count_iterations();
 print "We have $ready iterations here (know nothing about their restriction, mind you)\n";
 
 ## 25.01 Procedure for obtaining p-values
-my @groups_and_names;
 $mutmap->set_weeds($fails_threshold) if $fails_threshold;
+my @groups_and_names;
 if ($no_groups){
 	@groups_and_names = $mutmap-> protein_no_group();
 }
@@ -95,11 +95,5 @@ else {
 	@groups_and_names = $mutmap-> predefined_groups_and_names();
 }
 
-if (!$mutnum_control){
-		$mutmap-> concat_and_divide_simult_for_mutnum_controlled ({restriction_levels => \@restriction_levels, groups => \@{$groups_and_names[0]}, group_names => \@{$groups_and_names[1]}});
-}
-else {
-		$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
-}
 $mutmap-> count_pvalues({restriction_levels => \@restriction_levels, groups => \@{$groups_and_names[0]}, group_names => \@{$groups_and_names[1]}, stattypes => ["mean", "median", "bp"]}); #$self;  @restriction_levels; my @groups; my @group_names;
 

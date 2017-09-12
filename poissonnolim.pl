@@ -47,7 +47,8 @@ my $syn_lengths;
 my $skip_stoppers_in_simulation;
 
 my $onlysim; # do not launch concat_and_divide and count_pvalue
-my $fails_threshold;
+my $fails_threshold; # 0 - keep all subtrees (supposed to be equal to option's absence). 0.9 - only take into account subtrees with more than 90% valid simulations
+
 
 
 GetOptions (	
@@ -77,8 +78,8 @@ GetOptions (
 		'syn_lengths' => \$syn_lengths,
 		'onlysim' => \$onlysim,
 		'skip_stoppers_in_simulation' => \$skip_stoppers_in_simulation,
-		'fails_threshold=s' => \$fails_threshold, # 0 - keep all subtrees (supposed to be equal to option's absence). 0.9 - only take into account subtrees with more than 90% valid simulations
-	);
+		'fails_threshold=s' => \$fails_threshold, 
+			);
 
 $| = 1;
 
