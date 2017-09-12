@@ -1297,7 +1297,7 @@ sub iterations_gulp_subtree_shuffling {
 		# $rh_out_subtree->{$name}->{$site}= массив уходов (имен узлов)) #todo
 		my %hash;
 		print " finished shuffling\n";
-		$self->entrenchment_for_subtrees($rh_out_subtree, $step, $tag, $verbose, $lifetime) 
+		$self->entrenchment_for_subtrees($rh_out_subtree, $step, $tag, $verbose, $lifetime, $skip_stoppers_in_simulation) 
 		# >new iteration string and all the corresponding data  are printed inside this sub:
 		# we used to launch visitor_coat in this sub (depth_groups_entrenchment_optimized_selection_alldepths) and take subtree_info from self. 
 		# But now we have no tree - only a set of overlapping subtrees which cannot be converted into a tree.
@@ -3408,7 +3408,7 @@ sub entrenchment_for_subtrees{
 			#print "\n";
 		}
 		
-		my @args = (undef, $step, $node, \%subtree_info, $mutations, $lifetime); # undef - site_index
+		my @args = (undef, $step, $node, \%subtree_info, $mutations, $lifetime, $skip_stoppers_in_simulation); # undef - site_index
 		#subtree info is fresh and clean
 		$self->my_visit_depth_first ($node, \@array,\&subtree_info,\&no_check,\@args,0);
 		foreach my $site (keys %{$rh_out_subtree->{$nodename}}){
@@ -3508,6 +3508,7 @@ sub entrenchment_for_subtrees{
 		my $subtree_info = $_[2]->[3];
 		my $mutations = $_[2]->[4];
 		my $lifetime = $_[2]->[5];
+		my $skip_stoppers_in_simulation = $_[2]->[6];
 		if ($node eq $starting_node){
 			#print " \n equality: ".$starting_node ->get_name."\t".$node ->get_name."\n";
 			return;
@@ -3528,7 +3529,7 @@ sub entrenchment_for_subtrees{
  		#print "depth $depth step $step bin ".(bin($depth,$step))."\n";
  		foreach my $site_index(keys %alive){
  			#print "$site_index is alive at ".$node->get_name()."!\n";
- 				if (!($self->has_no_background_mutation($nname, $site_index))){
+ 				if (!$skip_stoppers_in_simulation && !($self->has_no_background_mutation($nname, $site_index))){
  				#	print "deleting $site_index ".$starting_node->get_name()."from alive: background mutation found at ".$node->get_name()."\n";
  					my $found;
  					foreach my $stopper (@{$self->{realdata}{subtree_info}{$startnname}{$site_index}{"stoppers"}}){
