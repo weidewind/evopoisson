@@ -3162,9 +3162,16 @@ sub count_pvalues{
 
 # 13.09.2016 pvalues for every ancestor node in the tree	
 sub count_single_site_pvalues{	
-	my $self = $_[0];
+	my $self = shift;
+	my ($args) = @_;
+	my @restriction_levels = @{$args->{restriction_levels}};
+	my @stattypes = ("mean", "median");
+	if ($args->{stattypes}){
+		@stattypes = @{$args->{stattypes}}; # "bp" (W,  test statistic of Barlow-Proschan’s test), "mean", "median" 
+	}
+	my $zscore = $args->{zscore};
+	
 	my $prot = $self -> {static_protein};
-	my @restriction_levels = @{$_[1]};
 	my $restriction = min(@restriction_levels);
 	my $dir = $self -> {static_output_base};
 	my $outdir = $self -> {static_output_subfolder};
@@ -3172,6 +3179,10 @@ sub count_single_site_pvalues{
 	my $step = $realdata->{"step"}; #bin size
 	unless (defined $step) {die "Oh no, bin size in realdata is not defined. Won't proceed with counting pvalues.\n";}
 	#print "before cycle\n";
+	
+	
+
+	
 	
 	my $obs_hash = $self->get_obshash($realdata, List::Util::min(@restriction_levels)); # if min $restriction is less than restriction in realdata, it will die
 	my $subtree_info = $realdata->{"subtree_info"};
@@ -3210,116 +3221,102 @@ sub count_single_site_pvalues{
 				$flat_obs_hash{$bin} += $obs_hash_restricted{$site_node}{$bin}[0]; 
 				$flat_exp_hash{$bin} += $obs_hash_restricted{$site_node}{$bin}[1]; 
 			}
-			
-			my $obs_median = hist_median_for_hash(\%flat_obs_hash, $step);
-			my $exp_median = hist_median_for_hash(\%flat_exp_hash, $step);
-			my $obs_mean = hist_mean_for_hash(\%flat_obs_hash, $step); # 18.03 - added the same statistics based on histogram mean (instead of median)
-			my $exp_mean = hist_mean_for_hash(\%flat_exp_hash, $step);
-			
-
 			print $outputfile "site_node\tbin\tobs\texp\n";
-				my @sorted_bins = sort { $a <=> $b } keys $obs_hash_restricted{$site_node};
-				foreach my $bin (@sorted_bins){
-					if (defined $obs_hash_restricted{$site_node}{$bin}[0] && defined $obs_hash_restricted{$site_node}{$bin}[1]){
-						print $outputfile $site_node."\t".$bin."\t".$obs_hash_restricted{$site_node}{$bin}[0]."\t".$obs_hash_restricted{$site_node}{$bin}[1]."\n";
-					}
+			my @sorted_bins = sort { $a <=> $b } keys $obs_hash_restricted{$site_node};
+			foreach my $bin (@sorted_bins){
+				if (defined $obs_hash_restricted{$site_node}{$bin}[0] && defined $obs_hash_restricted{$site_node}{$bin}[1]){
+					print $outputfile $site_node."\t".$bin."\t".$obs_hash_restricted{$site_node}{$bin}[0]."\t".$obs_hash_restricted{$site_node}{$bin}[1]."\n";
 				}
-
-			
-			
+			}
 			print $outputfile "\n site_node: $site_node\n";
-			print $outputfile "\n observed median: $obs_median\n";
-			print $outputfile "\n poisson expected median: $exp_median\n";
-			print $outputfile "\n observed mean: $obs_mean\n";
-			print $outputfile "\n poisson expected mean: $exp_mean\n";
+			my %statdat;
+			foreach my $stype (@stattypes){
+				my $stat = AgeingStat->new($stype);
+				$stat->computeStats({obshash=>\%flat_obs_hash, exphash=>\%flat_exp_hash, step=>$step, zscore =>$zscore });
+				$stat->printStats($outputfile);
+				$statdat{$stype} = $stat;
+			}
+				
+			my %pvals;	
 			
-			my $pval_epi;
-			my $pval_env;
-			my $pval_epi_for_mean;
-			my $pval_env_for_mean;
+			if ($statdat{$stattypes[0]}->{'obs'} ne "NaN"){
 			
-		
-		if ($obs_mean ne "NaN"){
-		
-		my $csvfile = File::Spec->catfile($outdir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$site_node.".csv");
-		open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
-		my $iteration = 0;
-		my @array_obs_minus_exp;
-		while(<CSVFILE>){
-			my %boot_obs_hash;
-			my %boot_exp_hash;
-			my @splitter = split(/,/, $_);
-			#my @bins = split(/,/, $_);
-			#my $str = <CSVFILE>;
-			#my @splitter = split(/,/, $str);
-			if ($splitter[0] eq "NA"){ # if no appropriate nodes were produced in this iteration, it is skipped
-				next;
-			}
-
-			for (my $i = 0; $i < scalar @splitter; $i++){
-				my $bin = ($i/2)+1;
-				#my $binobs = $bins[$i];
-				my $obs = $splitter[$i];
-				$boot_obs_hash{$bin} = $splitter[$i];
-				#$boot_obs_hash{$binobs} = $splitter[$i];
-				#print " i $i bin $bin value  $splitter[$i]\n";
-				$i++;
-				my $exp = $splitter[$i];
-				#my $binexp = $bins[$i];
-				#print "Error! bins for obs and exp don't match: $binobs $binexp in $csvfile \n" unless ($binexp == $binobs);
-				#$boot_exp_hash{$binexp} = $splitter[$i];
-				$boot_exp_hash{$bin} = $exp;
-			}
-			
-			print ("iteration ".$iteration."\n");
-			my $test_obs_summ = sum(values %boot_obs_hash);
-			my $test_exp_summ = sum(values %boot_exp_hash);
-			
-			unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
-				print "Error! boot hist sum test for $site_node failed! $test_obs_summ obs, $test_exp_summ exp\n";
-				my $binnum = (scalar @splitter)/2;
-				print "there are $binnum bins here\n";
-			}
-			#if ($site_node eq "169_INTNODE2434") {hist_median_for_hash(\%boot_exp_hash, $step, "verbose");}
-			my $boot_obs_median = hist_median_for_hash(\%boot_obs_hash, $step);
-			my $boot_exp_median = hist_median_for_hash(\%boot_exp_hash, $step);
-			my $boot_obs_mean = hist_mean_for_hash(\%boot_obs_hash, $step);
-			my $boot_exp_mean = hist_mean_for_hash(\%boot_exp_hash, $step);
-		#	print $outputfile "\n boot obs median: $boot_obs_median boot exp median: $boot_exp_median \n";
-		#	print $outputfile "\n boot obs mean: $boot_obs_mean boot exp mean: $boot_exp_mean \n";
-			if (nearest(.00000001,$boot_obs_median - $boot_exp_median) >= nearest(.00000001,$obs_median - $exp_median)){
-				$pval_env += 1;
-			}
-			if (nearest(.00000001,$boot_obs_median - $boot_exp_median) <= nearest(.00000001,$obs_median - $exp_median)){
-				$pval_epi += 1;
-			}
-			if (nearest(.00000001,$boot_obs_mean - $boot_exp_mean) >= nearest(.00000001,$obs_mean - $exp_mean)){
-				$pval_env_for_mean += 1;
-			}
-			if (nearest(.00000001,$boot_obs_mean - $boot_exp_mean) <= nearest(.00000001,$obs_mean - $exp_mean)){
-				$pval_epi_for_mean += 1;
-			}
-			$iteration++;
-		}
-
+			my $csvfile = File::Spec->catfile($outdir, temp_tag(),$prot."_gulpselector_vector_".$restriction."_".$site_node.".csv");
+			open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
+			my $iteration = 0;
+			my @array_obs_minus_exp;
+			while(<CSVFILE>){
+				my %boot_obs_hash;
+				my %boot_exp_hash;
+				my @splitter = split(/,/, $_);
+				if ($splitter[0] eq "NA"){ # if no appropriate nodes were produced in this iteration, it is skipped
+					next;
+				}
 	
-		close CSVFILE;
-		
-		#print FILE "- pvalue_epistasis  pvalue_environment\n";
-		#print FILE "median_stat ".($pval_epi/$iteration)." ".($pval_env/$iteration)."\n";
-		#print FILE "mean_stat ".($pval_epi_for_mean/$iteration)." ".($pval_env_for_mean/$iteration)."\n";
-		my ($psite, $pnode_name) = Textbits::cleave($site_node);
-		my $pmaxdepth = $subtree_info->{$pnode_name}->{$psite}->{"maxdepth"};
-		my $pmutcount = sum(values %flat_obs_hash);
-		print $outputfile "Number of iterations: $iteration\n";
-			if ($iteration > 0){
-				print $outputfile "#\tsite_node\tmutations\tmaxlength\tpvalue_epistasis(median)\tpvalue_epistasis(mean)\tpvalue_environment(median)\tpvalue_environment(mean)\titerations\n";
-				print $outputfile ">\t".$site_node."\t".$pmutcount."\t".$pmaxdepth."\t".($pval_epi/$iteration)."\t".($pval_epi_for_mean/$iteration)."\t".($pval_env/$iteration)."\t".($pval_env_for_mean/$iteration)."\t".$iteration."\n";
+				for (my $i = 0; $i < scalar @splitter; $i++){
+					my $bin = ($i/2)+1;
+					my $obs = $splitter[$i];
+					$boot_obs_hash{$bin} = $splitter[$i];
+					$i++;
+					my $exp = $splitter[$i];
+					$boot_exp_hash{$bin} = $exp;
+				}
+				
+				print ("iteration ".$iteration."\n");
+				my $test_obs_summ = sum(values %boot_obs_hash);
+				my $test_exp_summ = sum(values %boot_exp_hash);
+				
+				unless (abs($test_obs_summ-$test_exp_summ) <0.00001 ){
+					print "Error! boot hist sum test for $site_node failed! $test_obs_summ obs, $test_exp_summ exp\n";
+					my $binnum = (scalar @splitter)/2;
+					print "there are $binnum bins here\n";
+				}
+				my %statboot;
+				foreach my $stype (@stattypes){
+					my $stat = AgeingStat->new($stype);
+					$stat->computeStats({obshash=>\%boot_obs_hash, exphash=>\%boot_exp_hash, step=>$step, zscore =>$zscore });
+					$statboot{$stype} = $stat;
+				}
+	
+				foreach my $stype (@stattypes){
+					if (nearest(.00000001,$statboot{$stype}->{value}) >= nearest(.00000001,$statdat{$stype}->{value})){
+						$pvals{$stype}{"env"} += 1;
+					}
+					if (nearest(.00000001,$statboot{$stype}->{value}) <= nearest(.00000001,$statdat{$stype}->{value})){
+						$pvals{$stype}{"epi"} += 1;
+					}	
+				} 
+				$iteration++;
 			}
-			else {
-				print $outputfile "No iterations found for site_node $site_node !\n";
+
+			close CSVFILE;
+			
+			my ($psite, $pnode_name) = Textbits::cleave($site_node);
+			my $pmaxdepth = $subtree_info->{$pnode_name}->{$psite}->{"maxdepth"};
+			my $pmutcount = sum(values %flat_obs_hash);
+			print $outputfile "Number of iterations: $iteration\n";
+				if ($iteration > 0){
+					print $outputfile "#\tsite_node\tmutations\tmaxlength\t";
+					foreach my $stype (@stattypes){
+						print $outputfile "pvalue_epistasis(".$stype.")\t";
+					}
+					foreach my $stype (@stattypes){
+						print $outputfile "pvalue_environment(".$stype.")\t";
+					}
+					print $outputfile "iterations\n";
+					print $outputfile ">\t".$site_node."\t".$pmutcount."\t".$pmaxdepth."\t";
+					foreach my $stype (@stattypes){
+						print $outputfile ($pvals{$stype}{"epi"}/$iteration)."\t";
+					}
+					foreach my $stype (@stattypes){
+						print $outputfile ($pvals{$stype}{"env"}/$iteration)."\t";
+					}
+					print $outputfile $iteration."\n";
+				}
+				else {
+					print $outputfile "No iterations found for site_node $site_node !\n";
+				}
 			}
-		}
 		else {
 			print $outputfile "hist sum is 0";	
 		}
@@ -3381,6 +3378,7 @@ sub entrenchment_for_subtrees{
 	my $tag = shift;
 	my $verbose = shift;
 	my $lifetime = shift;
+	my$skip_stoppers_in_simulation = shift;
 	my $restriction = 0;
 	# $rh_out_subtree->{$name}->{$site}= array of exits
 	my $dir = File::Spec->catdir($self->{static_output_base}, $self->{static_protein});

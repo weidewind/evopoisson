@@ -67,5 +67,5 @@ else {
 $mutmap -> set_tag($tag);
 $mutmap-> createCodeversionFile("single_sites");
 $mutmap-> concat_and_divide_simult_single_sites (\@restriction_levels, $mutnum_control);
-$mutmap-> count_single_site_pvalues(\@restriction_levels); #$self;  @restriction_levels; my @groups; my @group_names;
+$mutmap-> count_single_site_pvalues({restriction_levels => \@restriction_levels, stattypes => ["mean", "median", "bp"]}); #$self;  @restriction_levels; my @groups; my @group_names;
 
