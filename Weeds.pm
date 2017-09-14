@@ -96,7 +96,7 @@ sub worstWeeds{
 	$worst->{iterations} = $its;
 	foreach my $subtree(keys %{$weeds->{weeds}}){
 		my $fails = $weeds->{weeds}{$subtree};
-		if ($fails/$its >= $failsthr){
+		if (($its-$fails)/$its < $failsthr){
 			$worst->{weeds}{$subtree} = $fails;
 		}
 	}

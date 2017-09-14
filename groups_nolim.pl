@@ -28,7 +28,7 @@ my $skip_stoppers;
 my $mutnum_control = 0.2;
 my $syn_lengths;
 my $overwrite;
-my $fails_threshold; # 0 - keep all subtrees (supposed to be equal to option's absence). 0.9 - only take into account subtrees with more than 90% valid simulations	
+my $fails_threshold; # 0 - keep all subtrees (supposed to be equal to option's absence). 0.9 - only take into account subtrees with >= 90% valid simulations	
 
 
 GetOptions (	
