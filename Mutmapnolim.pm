@@ -3031,7 +3031,7 @@ sub count_pvalues{
 			my %complement_statdat;
 			foreach my $stype (@group_stattypes){
 				my $stat = AgeingStat->new($stype);
-				$stat->computeStats({obshash=>\%flat_obs_hash, exphash=>\%flat_exp_hash, step=>$step, zscore =>$zscore });
+				$stat->computeStats({obshash=>\%complement_flat_obs_hash, exphash=>\%complement_flat_exp_hash, step=>$step, zscore =>$zscore });
 				$stat->printStats($outputfile);
 				$complement_statdat{$stype} = $stat;
 			}

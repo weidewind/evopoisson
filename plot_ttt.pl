@@ -16,12 +16,12 @@ my $output;
 my $norm;
 
 GetOptions (	
-		'input=s' => \$file,
+		'input=s' => \$input,
 		'output=s' => \$output,
 		'norm' => \$norm,
 	);
 	
-plot($file, $output, $norm); #  '1', '0.97752808988764'
+plot($input, $output, $norm); #  '1', '0.97752808988764'
 
 
 sub plot {

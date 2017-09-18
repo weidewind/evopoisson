@@ -37,10 +37,10 @@ sub folderplot {
 	opendir(DH, $dir);
 	my @fakedirs = readdir(DH);
 	closedir(DH);
-	die "No files or dirs found in $input!\n" unless scalar @fakedirs > 0;
+	die "No files or dirs found in $dir!\n" unless scalar @fakedirs > 0;
 	my %files;
 	foreach my $di(sort @fakedirs){
-		my $dipath =  File::Spec->catdir($dirname,$di);
+		my $dipath =  File::Spec->catdir($dir,$di);
 		if (-d $dipath && $di =~ /([0-9]+)_fake/){
 			my $fakeno = $1;
 			$files{$fakeno} = File::Spec->catfile($dipath,$innerpath,$filename);
