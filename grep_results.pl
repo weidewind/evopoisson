@@ -30,6 +30,34 @@ foreach my $filename(sort @files){
 foreach my $filename(sort @files){
 	my $filepath =  File::Spec->catfile($dirname,$filename);
 	next if (-d $$filepath);
+	next unless ($filename =~ /(.*)_count$/);
+	open FILE, "<$filepath" or die "Cannot open file $filepath: $!\n";
+	my %hash;
+	while(<FILE>){
+		$_ =~ s/^\s++//;
+		my @splitter = split(/\s++/, $_);
+		if ($splitter[3]){
+			$hash{$splitter[0]}{$splitter[1]} = $splitter[3];
+		}
+	}
+	close FILE;
+	my $out = $filepath."_trimmed";
+	open OUT, ">$out";
+	print OUT "maxdepth,group,subtree_count\n";
+	foreach my $depth (sort { $a <=> $b } keys %hash){
+		foreach my $group (sort keys %{$hash{$depth}}){
+			print OUT $depth.",".$group.",".$hash{$depth}{$group}."\n";
+			print OUT "\n" if ($group eq "all");
+		}
+	}
+	close OUT;
+}
+
+
+
+foreach my $filename(sort @files){
+	my $filepath =  File::Spec->catfile($dirname,$filename);
+	next if (-d $$filepath);
 	next unless ($filename =~ /(.*)_gulpselector_vector_boot_median_test_([0-9\.]*)_(.*)/);
 	my $prot = $1;
 	my $depth = $2;

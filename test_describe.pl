@@ -14,7 +14,6 @@ use File::Spec;
 		push @restr, $1;
 	}
 	@sorted = sort { $a <=> $b } @restr;
-
  	my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$sorted[0]."_single_sites");
  	print $file;
  
