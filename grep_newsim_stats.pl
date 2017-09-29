@@ -52,7 +52,8 @@ open FILE, "<$filepath" or die "Cannot open $filepath: $!\n";
 
 my $sitesfile = File::Spec->catfile($dirname, $prot."_sites_with_stats");
 open GROUPS, ">$sitesfile" or die "Cannot open $sitesfile: $!\n";
-print GROUPS "site_node,mutations,maxlength,pvalue_epistasis(median),pvalue_epistasis(mean),pvalue_environment(median),pvalue_environment(mean),iterations,obsmedian,expmedian,obsmean,expmean,\n";
+#print GROUPS "site_node,mutations,maxlength,pvalue_epistasis(median),pvalue_epistasis(mean),pvalue_environment(median),pvalue_environment(mean),iterations,obsmedian,expmedian,obsmean,expmean,\n";
+my $header;
 my $simsitesfile = File::Spec->catfile($dirname, $prot."_sim_sites_with_stats");
 open SIMS, ">$simsitesfile" or die "Cannot open $simsitesfile: $!\n";
 print SIMS "site_node,maxdepth,mutnum,totlen,bootobsmed,bootexpmed,bootobsmean,bootexpmean,\n";
@@ -103,6 +104,15 @@ while(<FILE>){
 	if($_ =~ /^No iterations found.*\s+([0-9]+)_(INTNODE[0-9]+)/){
 		print SITES $1.",".$2."\n";
 		$obss = "";
+	}
+	if (!$header && $_ =~ /^#(.*)/){
+		my @args = split(/[\s+]/, $1); 
+		foreach my $arg(@args){
+			if ($arg ne ""){
+				$header = $header.$arg.",";
+			}
+		}
+		print GROUPS $header."\n";
 	}
 	if ($_ =~ /^>(.*)/){
 		#print $_;

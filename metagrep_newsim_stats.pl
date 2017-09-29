@@ -25,7 +25,8 @@ if (scalar @dirs == 0){
 }
 my $sitesfile = File::Spec->catfile($dirname, "meta_sites_with_stats");
 open SITES, ">$sitesfile" or die "Cannot open $sitesfile: $!\n";
-print SITES "fakeno,site_node,mutations,maxlength,pvalue_epistasis(median),pvalue_epistasis(mean),pvalue_environment(median),pvalue_environment(mean),iterations,obsmedian,expmedian,obsmean,expmean,\n";
+my $sites_header;
+#print SITES "fakeno,site_node,mutations,maxlength,pvalue_epistasis(median),pvalue_epistasis(mean),pvalue_environment(median),pvalue_environment(mean),iterations,obsmedian,expmedian,obsmean,expmean,\n";
 
 my $simfile = File::Spec->catfile($dirname, "meta_sim_sites_with_stats");
 open SIMS, ">$simfile" or die "Cannot open $simfile: $!\n";
@@ -64,10 +65,15 @@ foreach my $di(sort @dirs){
 				close FILE;
 				
 			}
-			if ($filename =~ /[a-z][0-9]_sites_with_stats/){
+			if ($filename =~ /^([a-z0-9]+)_sites_with_stats/){
 				print "$filename found\n";
 				open FILE, "<$filepath" or die "Cannot open $filepath: $!\n";  
-				my $str =  <FILE>; 
+				my $str =  <FILE>;
+				chomp $str;
+				unless ($sites_header){
+					$sites_header = "fakeno,".$str."bootobsmed,bootexpmed,bootobsmean,bootexpmean,\n";
+					print SITES $sites_header;
+				}
 				while(<FILE>){
 					print SITES $fakeno.",".$_;
 				}
