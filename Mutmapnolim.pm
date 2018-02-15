@@ -245,9 +245,13 @@ $| = 1;
 		return $self->{static_tree};
 	}
 	
+	sub get_treefile {
+		my $self = shift;
+		return $self->{static_treefile};
+	}
+	
 	sub new {
 		my ($class, $args) = @_;	
-		#my $output_base = File::Spec->catdir(getcwd(), "output", $args->{bigdatatag}, $args->{bigtag}, state_tag($args->{state}), maxpath_tag($args->{subtract_tallest})); 
 		my $output_base = pathFinder ($args);
 		my $input_base = dataFinder ($args);
 		my $treefile = File::Spec->catfile($input_base, $args->{protein}.".l.r.newick");
@@ -647,14 +651,19 @@ sub incidence_matrix {
 	return %incidence_hash;
 };
 
-
+sub matrixPath {
+	my $self = shift;
+	my $statetag = state_tag($self->{static_state});
+	my $matrix_file = File::Spec -> catfile($self->{static_output_base}, $self->{static_protein}."_".$statetag."_incidence_matrix");
+	return $matrix_file;
+}
 
 sub print_incidence_matrix {
 	my $self = $_[0];
 	my %incidence_hash = %{$_[1]};
 	#my $path = $_[2];
 	my $statetag = state_tag($self->{static_state});
-	my $matrix_file = File::Spec -> catfile($self->{static_output_base}, $self->{static_protein}."_".$statetag."_incidence_matrix");
+	my $matrix_file = $self->matrixPath;
 	my $sorted_sites_file = File::Spec -> catfile($self->{static_output_base}, $self->{static_protein}."_".$statetag."_sorted_sites");
 	my $sorted_nodnames_file = File::Spec -> catfile($self->{static_output_base}, $self->{static_protein}."_".$statetag."_sorted_nodnames");
 	
@@ -694,7 +703,7 @@ sub read_incidence_matrix {
 	my $line_index = 0;
 	while(<MATRIX>){
 		if (/^$/) {last;}
-			my $nodname = $self ->{static_sorted_nodnames}[$line_index];
+			my $nodname = $self->{static_sorted_nodnames}[$line_index];
 			my @sites = split(',');
 			my %substs;
 			foreach my $s(@sites){
@@ -720,6 +729,19 @@ sub read_incidence_matrix {
 	close MATRIX;
 	return (\%subs_on_node, \%nodes_with_sub);
 			
+}
+
+sub shuffle_incidence_matrix { 
+	my $self = shift;
+	my $file = $self->matrixPath;
+ 	if (-e $file){
+ 				print "Shuffling incidence matrix..\n";
+ 				my $logs = capture ('Rscript MatrixShuffler.R --file '.$file);
+ 				print $logs."\n";
+ 	}
+ 	else {
+ 				print "No incidence matrix found at $file!\n";
+ 	}		
 }
 
 
@@ -800,7 +822,56 @@ sub get_mrcn {
     }
     
 
-
+sub reversals_hist {
+	my $self = shift;
+	my $step = shift;
+	my $tag = shift;
+	my $site_nodes = shift; #array of arrays (site, node)
+	my $groupfile = shift;
+	my $root = $self->{static_tree}-> get_root;
+	my @array;
+	my %closest_ancestors;
+	$self -> set_timestamps();
+	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
+	my @args = ($step, $root);
+	$self->visitor_coat ($root, \@array,\&reversion_ratio_visitor,\&no_check,\@args,0);
+	my %hist;
+	if ($site_nodes){
+		foreach my $site_node (@{$site_nodes}){
+		print $site_node->[0]."--".$site_node->[1]."\n";
+			my $sitenodehist = $self->{static_subtree_info}{$site_node->[1]}{$site_node->[0]}{"reversions"};
+			foreach my $bin (keys %{$sitenodehist}){
+					$hist{$bin}[0] += $sitenodehist->{$bin}[0]; #reversions
+					$hist{$bin}[1] += $sitenodehist->{$bin}[1]; #not reversions
+				}
+		}
+	}
+	else {
+		foreach my $ancname (keys %{$self->{static_subtree_info}}){
+				foreach my $site_index (keys %{$self->{static_subtree_info}{$ancname}}){
+					my $sitenodehist = $self->{static_subtree_info}{$ancname}{$site_index}{"reversions"};
+					foreach my $bin (keys %{$sitenodehist}){
+						$hist{$bin}[0] += $sitenodehist->{$bin}[0]; #reversions
+						$hist{$bin}[1] += $sitenodehist->{$bin}[1]; #not reversions
+					}
+				}
+		}
+	}
+	
+	my $dir = File::Spec -> catdir($self -> {static_output_base}, "reversals", $tag);
+	make_path($dir);
+	my $filepath = File::Spec -> catfile($dir, $self->{static_protein}."_reversals_hist");
+	open HIST, ">$filepath";
+	print HIST "bin,rev,norev\n";
+	foreach my $bin (sort { $a <=> $b } keys %hist){
+		print HIST $bin.",".$hist{$bin}[0].",".$hist{$bin}[1]."\n";
+	}
+	if ($groupfile){
+		print HIST "## set of site_nodes from ".$groupfile."\n";
+	}
+	close HIST;
+	return %hist;
+}
 
 # prints tree with all mutations in the subtree of specified mutation (site, node). 
 # If there is no such mutation, warns and proceeds.
@@ -809,6 +880,7 @@ sub print_subtree_with_mutations {
 	my $self = shift;
 	my @muts = @{@_[0]};
 	my $tag = $_[1];
+	my $ete = $_[2];
 	my $root = $self->{static_tree}-> get_root;
 	my @array;
 	my $myCodonTable   = Bio::Tools::CodonTable->new();
@@ -820,9 +892,6 @@ sub print_subtree_with_mutations {
 	my @output_files;
 	for (my $i = 0; $i < scalar @muts; $i++){
 		my ($ind, $ancnodename) = Textbits::cleave($muts[$i]);
-		#my $ind = $muts[$i];
-		#$i++;
-		#my $ancnodename = $muts[$i];
 		if (!exists $self->{static_subtree_info}{$ancnodename}{$ind}){
 				warn "there is no mutation at $ind , $ancnodename";
 		}
@@ -847,23 +916,17 @@ sub print_subtree_with_mutations {
 			}
 			else {
 				$color{$node} = "-16776961";
-			
-				#print $file $ind.",".$ancnodename.",".$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[1].",".
-				#$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[2].",";
-				#my $event = 0;
-				#if($self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[0]) {$event = 1};
-				#print $file "$event\n";
 			}
 		}
 		
-		foreach my $node (@{$self->{static_background_nodes_with_sub}{$ind}}){
-			$sites{$node} = $node."_".$ind."_".$sub->{"Substitution::ancestral_allele"}.
-							  "(".$myCodonTable->translate($sub->{"Substitution::ancestral_allele"}).")->".
-							  $sub->{"Substitution::derived_allele"}.
-							  "(".$myCodonTable->translate($sub->{"Substitution::derived_allele"}).")";
-			$color{$node} = "-3407872";
-		}
-		
+#		foreach my $node (@{$self->{static_background_nodes_with_sub}{$ind}}){
+#			$sites{$node} = $node."_".$ind."_".$sub->{"Substitution::ancestral_allele"}.
+#							  "(".$myCodonTable->translate($sub->{"Substitution::ancestral_allele"}).")->".
+#							  $sub->{"Substitution::derived_allele"}.
+#							  "(".$myCodonTable->translate($sub->{"Substitution::derived_allele"}).")";
+#			$color{$node} = "-3407872";
+#		}
+
 		my $file = $self -> {static_protein}."_sites_".$ind."_".$ancnodename.".tre";
 		my $dir = File::Spec -> catdir($self -> {static_output_base}, "trees", $tag);
 		make_path($dir);
@@ -882,11 +945,61 @@ sub print_subtree_with_mutations {
 		close BLOCK;
 		close TREE;
 		push @output_files, $filepath;
+		
+		if ($ete){
+			my $eventsfile = $self -> {static_protein}."_treescheme_".$ind."_".$ancnodename;
+			my $filepath = File::Spec -> catfile($dir, $eventsfile);
+			open FILE, ">$filepath";
+			print FILE "Ancnode:$ancnodename\n";
+			print FILE "Events:";
+			foreach my $node (keys %sites){
+				print FILE $node.",";
+			}
+			print FILE "\n";
+			print FILE "Subtree:";
+			foreach my $node (keys %color){
+				print FILE $node.",";
+			}
+			print FILE "\n";
+			close FILE;
+			push @output_files, $filepath;
+		}
+
 	}
 	return @output_files;
 }
 
-
+sub print_events {
+	my $self = shift;
+	my @muts = @{@_[0]};
+	my $root = $self->{static_tree}-> get_root;
+	my @array;
+	
+	my %closest_ancestors;
+	$root->set_generic("-closest_ancestors" => \%closest_ancestors);
+	my @args = ($root);
+	$self->visitor_coat ($root, \@array,\&lrt_visitor,\&no_check,\@args,0);
+	
+	my $file = $self -> {static_protein}."_events";
+	my $dir = File::Spec -> catdir($self -> {static_output_base}, "distances");
+	make_path($dir);
+	my $filepath = File::Spec -> catfile($dir, $file);
+	open FILE, ">$filepath";
+	for (my $i = 0; $i < scalar @muts; $i++){
+		my ($ind, $ancnodename) = Textbits::cleave($muts[$i]);
+		if (!exists $self->{static_subtree_info}{$ancnodename}{$ind}){
+				warn "there is no mutation at $ind , $ancnodename";
+		}
+		print FILE $ind.",".$ancnodename.",";
+		foreach my $node ( keys %{$self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}}){
+			if($self->{static_subtree_info}{$ancnodename}{$ind}{"lrt"}{$node}[0]){
+				my $sub = ${$self -> {static_subs_on_node}{$node}}{$ind};
+				print FILE $node." ";
+			}
+		}
+		print FILE "\n";
+	}
+}
 
 
 
@@ -1120,11 +1233,11 @@ sub shuffle_sanity_check {
 
 sub shuffle_mutator {
 	my $self = shift;
-	my $mutator_type = $self->{static_mutator_type};
+	my $fake_type = shift;
 	my @mock_mutmaps; 
 	
 	#todo (not working!)
-	if ($mutator_type eq "sim"){
+	if ($fake_type eq "sim"){
 		my $restriction = shift;
 		my @sites = @{$_[0]};
 		my $poisson = $_[1];
@@ -1132,6 +1245,14 @@ sub shuffle_mutator {
 		my $rh_tree_constrains = $self->get_tree_constraints($restriction, \@sites);
 		my $rh_out_tree = shuffle_muts_on_tree_exp::shuffle_mutations_on_tree($self->{static_tree}, $rh_tree_constrains, $poisson, $continue); #$continue - same type mutations do not block lines (there can be any number of mutations on one line)  
 		@mock_mutmaps = $self->read_shuffled_tree($rh_out_tree);
+	}
+	elsif ($fake_type eq "matrix"){
+		unless ($self->{static_sorted_sites}){
+			$self->incidence_matrix; #sets sorted nodes and nodenames, otherwise we won't be able to read the shuffled matrix
+		}
+		print "Fake generation method - matrix\n";
+		$self->shuffle_incidence_matrix();
+		@mock_mutmaps = $self->read_incidence_matrix($self->matrixPath); 
 	}
 	else {
 		my %obs_vectors = $self->get_observation_vectors(); # created only once, reused afterwards
@@ -2345,19 +2466,23 @@ sub concat_and_divide_simult_single_sites {
 	my $dirname = File::Spec->catdir($dir, $prot); 
 	my @files = Textbits::iterationFiles($dirname);
 	
-	my %filehandles;
-
-#	foreach my $md(@maxdepths){
-	foreach my $site_node(keys %{$obs_hash}){
-			local *FILE;
-			my $csvfile =  File::Spec->catfile($subdir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$site_node.".csv");
-			open FILE, ">$csvfile" or die "Cannot create $csvfile";
-			FILE->autoflush(1);
-			$filehandles{$site_node} = *FILE;
-	}
-		
-#	}
-
+		my %filehandles;
+	my $lim = qx{echo `ulimit -n`};
+	my $filenum = scalar keys %{$obs_hash};
+	my $toomanyfiles = (($filenum+10)/$lim >= 1);
+	unless ($toomanyfiles){
+	#	foreach my $md(@maxdepths){
+		foreach my $site_node(keys %{$obs_hash}){
+				local *FILE;
+				my $csvfile =  File::Spec->catfile($subdir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$site_node.".csv");
+				open FILE, ">$csvfile" or die "Cannot create $csvfile";
+				FILE->autoflush(1);
+				$filehandles{$site_node} = *FILE;
+		}
+			
+	#	}
+	}	
+	
 	
 	foreach my $gulp_filename(@files){
 	next if (-d $gulp_filename);
@@ -2478,16 +2603,22 @@ print "iteration number $iteration_number\n";
 							}
 						}
 						
-						my $filehandle = $filehandles{$site_node};
-						#print "going to print something\n";
-						#foreach my $bin(@bins){
-						#	print $filehandle $bin.",".$bin.",";
-						#}
-						#print $filehandle "\n";
+						my $filehandle;
+						if ($toomanyfiles){
+							my $csvfile =  File::Spec->catfile($subdir, temp_tag(),$prot."_gulpselector_vector_".$md."_".$site_node.".csv");
+							open $filehandle, ">>$csvfile" or die "Cannot create $csvfile";
+							$filehandle->autoflush(1);	
+						}
+						else {		
+							$filehandle = $filehandles{$site_node};						
+						}
 						foreach my $bin(@bins){
 							print $filehandle $hash{$site_node}{$bin}[0].",".$hash{$site_node}{$bin}[1].",";
 						}
 						print $filehandle "\n";
+						if ($toomanyfiles){
+							close $filehandle; 
+						}
 					
 #					}
 				}
@@ -2526,9 +2657,11 @@ print "iteration number $iteration_number\n";
 	
 	
 #	foreach my $md(@maxdepths){
-	foreach my $site_node(keys %{$obs_hash}){
-					my $filehandle = $filehandles{$site_node};
-					close $filehandle;
+	unless ($toomanyfiles){
+		foreach my $site_node(keys %{$obs_hash}){
+						my $filehandle = $filehandles{$site_node};
+						close $filehandle;
+		}
 	}
 		
 #	}
@@ -2709,6 +2842,10 @@ sub count_pvalues{
 		## end of copypaste	
 			
 		my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
+		my $bfile = File::Spec->catfile($outdir, $prot."_boot_data_".$restriction."_".$group_names[$group_number]);
+		my $bootfile;
+		open $bootfile, ">$bfile" or die "Cannot create $bfile";
+		
 		my $outputfile;
 		if ($fake){
 			open $outputfile, ">>$file" or die "Cannot create $file";
@@ -2749,15 +2886,20 @@ sub count_pvalues{
 		}
 		
 		my %statdat;
+		foreach my $stype (@stattypes){print $bootfile $stype." ";}
+		print $bootfile "\n";
 		foreach my $stype (@stattypes){
 			print "stype $stype\n";
 				my $stat = AgeingStat->new($stype);
 				$stat->computeStats({obshash=>\%flat_obs_hash, exphash=>\%flat_exp_hash, step=>$step, zscore =>$zscore });
 				$stat->printStats($outputfile);
 				$statdat{$stype} = $stat;
+				print $bootfile $stat->{'value'}." ";
 		}
+		print $bootfile "\n--------\n";
 		
 		my %pvals;	
+		my %boots;
 		
 		if ($statdat{$stattypes[0]}->{'obs'} ne "NaN"){
 		
@@ -2799,8 +2941,13 @@ sub count_pvalues{
 				if (nearest(.00000001,$statboot{$stype}->{value}) <= nearest(.00000001,$statdat{$stype}->{value})){
 					$pvals{$stype}{"epi"} += 1;
 				}	
-			} 
-
+			}
+			foreach my $stype (@stattypes){
+				print $bootfile $statboot{$stype}->{value}." ";
+				push @{$boots{$stype}}, $statboot{$stype}->{value};
+			}
+			print $bootfile "\n";
+			
 			$iteration++;
 		}
 	
@@ -2811,18 +2958,22 @@ sub count_pvalues{
 			print "Error! no valid iterations produced.\n";
 		}
 		else {
+			print $bootfile "------\n";
 			foreach my $stype (@stattypes){
 				print $outputfile $stype."_stat ".($pvals{$stype}{"epi"}/$iteration)." ".($pvals{$stype}{"env"}/$iteration)."\n";
+				print $bootfile array_mean(@{$boots{$stype}})." ";
 			}
 
 		}
 		$self->printFooter($outputfile);
-		close $outputfile;	
+		close $outputfile;
+		close $bootfile;
 		
 		}
 		else {
 			print $outputfile "hist sum is 0";
 			close $outputfile;
+			close $bootfile;
 		}
 		
 	
@@ -2869,6 +3020,8 @@ sub count_pvalues{
 			}
 			my $file = File::Spec->catfile($outdir, $prot."_gulpselector_vector_boot_median_test_".$restriction."_".$group_names[$group_number]);
 			my $outputfile;
+			my $bfile = File::Spec->catfile($outdir,$prot."_boot_data_".$restriction."_".$group_names[$group_number]);
+			open $bootfile, ">$bfile" or die "Cannot create $bfile";
 			if ($fake){
 				open $outputfile, ">>$file" or die "Cannot create $file";
 			}
@@ -2908,11 +3061,18 @@ sub count_pvalues{
 			
 			my %statdat;
 			foreach my $stype (@group_stattypes){
+				print $bootfile $stype." ";
+			}
+			print $bootfile "\n";
+			
+			foreach my $stype (@group_stattypes){
 				my $stat = AgeingStat->new($stype);
 				$stat->computeStats({obshash=>\%flat_obs_hash, exphash=>\%flat_exp_hash, step=>$step, zscore =>$zscore });
 				$stat->printStats($outputfile);
 				$statdat{$stype} = $stat;
+				print $bootfile $stat->{'value'}." ";
 			}
+			print $bootfile "\n---------------\n";
 			
 			if($statdat{$group_stattypes[0]}->{'obs'} eq "NaN" || $statdat{$group_stattypes[0]}->{'exp'} eq "NaN") {
 				print $outputfile " hist sum is 0";
@@ -2926,6 +3086,7 @@ sub count_pvalues{
 			open CSVFILE, "<$csvfile" or die "Cannot open $csvfile";
 			my $iteration = 0; # counter for meaningful iterations
 			my %statboot;
+			my %boots;
 			my $itnumber = 0; # tracks iteration number, so that group and its complement are taken from the same iteration
 			while(<CSVFILE>){
 				my %boot_obs_hash;
@@ -2956,7 +3117,10 @@ sub count_pvalues{
 					my $stat = AgeingStat->new($stype);
 					$stat->computeStats({obshash=>\%boot_obs_hash, exphash=>\%boot_exp_hash, step=>$step, zscore =>$zscore });
 					$statboot{$stype}[$itnumber] = $stat;
+					print $bootfile $stat->{'value'}." ";
+					push @{$boots{$stype}}, $stat->{'value'};
 				}
+				print $bootfile "\n";
 
 				$itnumber++;
 				$iteration++;
@@ -2964,6 +3128,11 @@ sub count_pvalues{
 			close CSVFILE;
 			$self->printFooter($outputfile);	
 			close $outputfile;
+			print $bootfile "------------\n";
+			foreach my $stype (@group_stattypes){
+					print $bootfile array_mean(@{$boots{$stype}})." ";
+			}
+			close $bootfile;
 			
 				print "Number of meaningful iterations for group ".$group_names[$group_number]." is $iteration (haven't looked at the complement yet)\n";	
 				if ($iteration == 0) {
@@ -3883,7 +4052,7 @@ sub egor_smart_site_entrenchment {
 	my $file = File::Spec->catfile($self->{static_output_base}, "egor_smart_".$self->{static_protein}.".csv");
 	open my $plotcsv, ">$file" or die "Cannot create $file \n";
 	my @array;
-	print $plotcsv "radius,site,node,density,cummuts,cumlength\n";
+	print $plotcsv "radius,site,node,density,cum_muts,cum_length\n";
 	my $hash_ready;
 	if (exists $self->{static_ring_hash}){
 		warn "Static_ring_hash is ready, egor_smart_site_entrenchment won't change it\n";
@@ -3918,7 +4087,7 @@ sub egor_smart_site_entrenchment {
 				else {
 					$hist{$bin} = 0;
 				}
-					if ($muts_in_bin > 0){	
+				if ($muts_in_bin > 0){	
 					print $plotcsv "$bin,$ind,".$node->get_name().",".$hist{$bin}.",".$cumulative_muts.",".$cumulative_length."\n";
 				}
 				
@@ -3941,10 +4110,14 @@ sub egor_smart_site_entrenchment {
 
 sub egor_diff_rings_site_entrenchment {
 	my $self = shift;
+	my $step = shift;
+	my $cumulative = shift;
 	print ($self->{static_protein}."\n");
-	my $step = 1;
 	my $root = $self->{static_tree}-> get_root;
-	my $file = File::Spec->catfile($self->{static_output_base}, "egor_diff_rings_".$self->{static_protein}.".csv");
+	my $tag;
+	if ($cumulative) { $tag = "cumulative"; }
+	else { $tag = "diff_rings"; }
+	my $file = File::Spec->catfile($self->{static_output_base}, "egor_".$tag."_".$self->{static_protein}.".csv");
 	open my $plotcsv, ">$file" or die "Cannot create $file \n";
 	my @array;
 	print $plotcsv "radius,site,node,density,cum_muts,cum_length\n";
@@ -3981,11 +4154,13 @@ sub egor_diff_rings_site_entrenchment {
 				else {
 					$hist{$bin} = 0;
 				}
-				#if ($muts_in_bin > 0 || $bin == $sorted_keys[0] || $bin == $sorted_keys[-1]){	
-					if ($muts_in_bin > 0){	
+				if ($muts_in_bin > 0 || $bin == $sorted_keys[0] || $bin == $sorted_keys[-1]){	
+				#if ($muts_in_bin > 0){	
 					print $plotcsv "$bin,$ind,".$node->get_name().",".$hist{$bin}.",".$cumulative_muts.",".$cumulative_length."\n";
-					$cumulative_muts = 0;
-					$cumulative_length = 0;
+					unless ($cumulative){
+						$cumulative_muts = 0;
+						$cumulative_length = 0;
+					}
 				}
 				
 			}
@@ -4345,6 +4520,57 @@ sub get_sequential_distance {
 #!
  	}
 
+     	sub reversion_ratio_visitor {
+ 		my $self = shift;
+ 		my $node = $_[0];
+ 		my $step = $_[1]->[0];
+ 		my $no_neighbour_changing = $self->{static_no_neighbour_changing};
+		my $myCodonTable   = Bio::Tools::CodonTable->new();
+		if (!$node->is_root){
+		my $nname = $node->get_name();
+		my $nlength = $node->get_branch_length;
+		my %closest_ancestors = %{$node->get_parent->get_generic("-closest_ancestors")}; # closest_ancestors: ancestor mutation node for this node, key is a site number
+		my $comparator = $self->{static_comparator};
+		if (%closest_ancestors){
+			my @ancestors = keys %closest_ancestors;	
+			foreach my $site_index(@ancestors){
+				if (!($self->has_no_background_mutation($nname, $site_index))){
+					my $anc_node = $closest_ancestors{$site_index};
+					push @{$self->{static_subtree_info}{$anc_node->get_name()}{$site_index}{"stoppers"}}, $node;
+					delete $closest_ancestors{$site_index};
+				}
+			}	
+		}
+		# for nodes with mutations
+		foreach my $site_index(keys %{$self->{static_subs_on_node}{$nname}}){
+			if ($closest_ancestors{$site_index}){
+				my $anc_node = $closest_ancestors{$site_index};
+				my $ancname = $anc_node->get_name();
+				my $halfdepth = get_sequential_distance($anc_node,$node) - ($nlength)/2; #19.09.2016 
+				print get_sequential_distance($anc_node,$node)." ".(($nlength)/2)."\n";
+				if (!$no_neighbour_changing || ($no_neighbour_changing && ! $comparator->is_neighbour_changing($self->{static_subs_on_node}{$nname}{$site_index}, 1))){
+						my $allele0 = $self->{static_subs_on_node}{$ancname}{$site_index}{"Substitution::ancestral_allele"};
+						my $allele2 = $self->{static_subs_on_node}{$nname}{$site_index}{"Substitution::derived_allele"};
+						if ($self->{static_state} eq "nsyn"){
+							$allele0 = $myCodonTable->translate($allele0);
+							$allele2 = $myCodonTable->translate($allele2);
+						}
+						if ($allele0 eq $allele2){
+							$self->{static_subtree_info}{$ancname}{$site_index}{"reversions"}{bin($halfdepth,$step)}[0] += 1; #reversion
+						}
+						else {
+							$self->{static_subtree_info}{$ancname}{$site_index}{"reversions"}{bin($halfdepth,$step)}[1] += 1; #not a reversion
+						}
+				}				
+			}
+			$closest_ancestors{$site_index} = $node;
+		}
+		$node->set_generic("-closest_ancestors" => \%closest_ancestors);
+		}
+#!
+ 	}
+
+   
    
    	sub lrt_visitor {
    		my $self = shift;
@@ -4418,6 +4644,10 @@ sub get_sequential_distance {
    		my $step = $_[1];
    	#	print "Warning: not using step option for binning (if you did not explicitly set step to 1, it will cause havoc)\n";
    		return $depth;
+   }
+   
+   sub array_mean {
+	return sum(@_)/@_;
    }
 
    

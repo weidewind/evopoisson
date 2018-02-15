@@ -160,7 +160,7 @@ sub nsyn_substitutions_codons{
 		my $acod=substr $anc_seq,$i,3;
 		my $cod=substr $seq,$i,3;
 		next if $acod=~m/-/ || $cod=~m/-/;
-		next if $acod eq $cod;
+		next if (lc $acod eq lc $cod);
 		next if $myCodonTable->is_ter_codon($acod) || $myCodonTable->is_ter_codon($cod);
 		my $aaa=$myCodonTable->translate($acod);
 		my $aa=$myCodonTable->translate($cod);
@@ -203,7 +203,7 @@ sub syn_substitutions{
 		my $acod=substr $anc_seq,$i,3;
 		my $cod=substr $seq,$i,3;
 		next if $acod=~m/-/ || $cod=~m/-/;
-		next if $acod eq $cod;
+		next if (lc $acod eq lc $cod);
 		next if $myCodonTable->is_ter_codon($acod) || $myCodonTable->is_ter_codon($cod);
 		my $aaa=$myCodonTable->translate($acod);
 		my $aa=$myCodonTable->translate($cod);

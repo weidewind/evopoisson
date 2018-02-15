@@ -37,6 +37,7 @@ my $skip_stoppers;
 my $switch;
 my $mutnum_control = 0;
 my $fake;
+my $fake_type;
 
 my $lifetime_restr;
 my $onestrip;
@@ -79,6 +80,7 @@ GetOptions (
 		'onlysim' => \$onlysim,
 		'skip_stoppers_in_simulation' => \$skip_stoppers_in_simulation,
 		'fails_threshold=s' => \$fails_threshold, 
+		'fake_type=s' => \$fake_type,
 			);
 
 $| = 1;
@@ -112,7 +114,7 @@ else {
 }
 
 if ($fake){
-	$mutmap = $mutmap-> shuffle_mutator();
+	$mutmap = $mutmap-> shuffle_mutator($fake_type);
 	print "Fake : preparing real_data\n";
 	$mutmap-> prepare_real_data ({restriction => $specified_restriction, step => $step});
 }

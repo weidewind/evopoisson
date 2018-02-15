@@ -144,6 +144,39 @@ foreach my $filename(sort @files){
 		}
 		close SITES;
 	}
+	else {
+		$filename =~ /(.*)_gulpselector_vector_boot_median_test_([0-9\.]*)_(.*)/;
+		my $group = $3;
+		my $maxdepth = $2;
+		my $groupfile = File::Spec->catfile($dirname, $prot."_shift_groups");
+		open GROUPS, ">>$groupfile" or die "Cannot open $groupfile: $!\n";
+		my $obsmean;
+		my $expmean;
+		my $obsmedian;
+		my $expmedian;
+		while(<FILE>){
+			if ($_ =~ /^\s+observed\s+mean/){
+				$obsmean = (split(/:/, $_))[1];
+				$obsmean =~ s/[\s\t]+//g; 
+			}
+			if ($_ =~ /^\s+observed\s+median/){
+				$obsmedian = (split(/:/, $_))[1];
+				$obsmedian =~ s/[\s\t]+//g; 
+			}
+			if ($_ =~ /^\s+poisson\s+expected\s+mean/){
+				$expmean = (split(/:/, $_))[1];
+				$expmean =~ s/[\s\t]+//g; 
+			}
+			if ($_ =~ /^\s+poisson\s+expected\s+median/){
+				$expmedian = (split(/:/, $_))[1];
+				$expmedian =~ s/[\s\t]+//g; 
+			}
+		}
+		my $meandiff = $obsmean-$expmean; 
+		my $mediandiff = $obsmedian-$expmedian; 
+		print GROUPS $group.",".$maxdepth.",".$meandiff.",".$mediandiff."\n";
+		close GROUPS;
+	}
 	close FILE;
 	
 }

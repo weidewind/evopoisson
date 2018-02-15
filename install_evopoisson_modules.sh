@@ -35,3 +35,5 @@ cpanm install Parallel::ForkManager
 cpanm install Memory::Usage
 cpanm install Math::Random::ISAAC
 cpanm install Git::Repository
+cpanm install Sort::Rank 
+cpanm install Statistics::Descriptive::Full

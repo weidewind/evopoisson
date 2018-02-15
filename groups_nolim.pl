@@ -29,7 +29,7 @@ my $mutnum_control = 0.2;
 my $syn_lengths;
 my $overwrite;
 my $fails_threshold; # 0 - keep all subtrees (supposed to be equal to option's absence). 0.9 - only take into account subtrees with >= 90% valid simulations	
-
+my $stat_types = 'mean,median,bp';
 
 GetOptions (	
 		'protein=s' => \$protein,
@@ -45,6 +45,7 @@ GetOptions (
 		'include_tips' => \$include_tips,
 		'skip_stoppers' => \$skip_stoppers,
 		'mutnum_control=s' => \$mutnum_control,
+		'stat_types=s' => \$stat_types,
 		'syn_lengths' => \$syn_lengths,
 		'overwrite' => \$overwrite,
 		'fails_threshold=s' => \$fails_threshold, 
@@ -58,6 +59,7 @@ my $args = {bigdatatag => $input, bigtag => $output, protein => $protein, state 
 
 ## Checking if appropriate realdata exists, initializing
 my @restriction_levels = split(/,/, $restrictions);
+my @stattypes = split(/,/, $stat_types);
 my $specified_restriction = List::Util::min(@restriction_levels);
 my $mutmap;
 unless (Mutmapnolim::realdata_exists($args) || $overwrite) { 
@@ -101,5 +103,5 @@ if (!$mutnum_control){
 else {
 		$mutmap-> concat_and_divide_simult (\@restriction_levels, \@{$groups_and_names[0]}, \@{$groups_and_names[1]});
 }
-$mutmap-> count_pvalues({restriction_levels => \@restriction_levels, groups => \@{$groups_and_names[0]}, group_names => \@{$groups_and_names[1]}, stattypes => ["mean", "median", "bp"]}); #$self;  @restriction_levels; my @groups; my @group_names;
+$mutmap-> count_pvalues({restriction_levels => \@restriction_levels, groups => \@{$groups_and_names[0]}, group_names => \@{$groups_and_names[1]}, stattypes => \@stattypes}); #$self;  @restriction_levels; my @groups; my @group_names;
 

@@ -18,29 +18,45 @@ my $output = '';	# option variable with default value
 my $tag = '';
 my $muts = "278_INTNODE4195,209_INTNODE4241,209_INTNODE4201";
 my $jpeg;
+my $skip_stoppers;
+my $ete;
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
+		'skip_stoppers' => \$skip_stoppers,
 		'input=s' => \$input,
 		'output=s' => \$output,
 		'tag=s' => \$tag,
 		'muts=s' => \$muts,
 		'jpeg' => \$jpeg,
+		'ete' => \$ete,
 	);
 
 my @muts = split(/,/, $muts);
-my $mutmap = Mutmapnolim->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state});
-my @tree_files = $mutmap->print_subtree_with_mutations(\@muts, $tag);
+my $mutmap = Mutmapnolim->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, skip_stoppers => $skip_stoppers});
+my @tree_files = $mutmap->print_subtree_with_mutations(\@muts, $tag, $ete);
 if ($jpeg){
 	eval {
 		foreach my $file(@tree_files){
+			next unless $file =~ m/tre$/;
 			my $jpg = $file.".jpg";
 			my $command = "java -jar ~/lib/FigTree_v1.4.3/lib/figtree.jar -graphic JPEG $file $jpg";
 			my $logs = capture($command);
 			print $logs."\n";
+
 		}
 	};
 	if (my $exception = $@){
 		print STDERR "figtree error: $exception\n";
 		exit 3;
+	}
+}
+if ($ete){
+	foreach my $file(@tree_files){
+		next if $file =~ m/tre$/;
+		my $treefile = $mutmap->get_treefile;
+		my $outfile = $file;
+		my $command = "xvfb-run python drawTree.py --treefile $treefile --eventfile $file --output $outfile";
+		my $logs = capture($command);
+		print $logs."\n";
 	}
 }

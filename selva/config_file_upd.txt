@@ -1,0 +1,66 @@
+ALPHABET  AR
+LENGTH 1
+#how many independent landscapes do we have?
+NUM_INSTANCES 500
+
+TREE_FILE _TREE_FILE_
+#num_threads <= num_runs.  We currentely do not have the functionality to
+#multiithread a single run (landscape)
+NUM_THREADS 1
+
+#random seed: -1 if we want the simulation to use the system time (not be reproducible), seed otherwise
+#for now prespecified seed only works if NUM_RUNS=1
+RANDOM_SEED -1
+
+#print debug info?  won't work well with multiple threads
+#DEBUG false
+DEBUG true
+
+##LANDSCAPE_DEFINITION: {fitness, matrix}
+LANDSCAPE_DEFINITION fitness
+
+#if LANDSCAPE_DEFINITION="matrix", specify matrix file
+#MATRIX_FILE 
+
+##INITIAL_FITNESS: {lognorm, gamma, file}
+INITIAL_FITNESS file
+##if "file", specify FITNESS_FILE
+##if "lognorm", specify PARAM=SIGMA (mu is set to be 0)
+##if "gamma", specify PARAM=ALPHA (beta is set to be alpha, as does Yang)
+FITNESS_FILE fitness_2aa_1_0.1.txt
+#DIST_PARAM _SIGMA_
+
+##how do we change the fitness?  we could sample it from the same distribution
+##as initial fitness (iid), or perturb according to gaussian around the previous values
+##FITNESS_UPDATE_RULE : {iid, norm_around_previous, file, toggle, shuffle}
+FITNESS_UPDATE_RULE shuffle
+#FITNESS_UPDATE_RULE file
+#FITNESS_UPDATE_FILE
+
+#at what point do we change the fitness?
+#LANDSCAPE_CHANGE_RULE
+#stochastic: poisson process with parameter equal to LANDSCAPE_CHANGE_RATE in time units
+#fixed_num_intervals: N predetermined intervals (N = LANDSCAPE_CHANGE_RATE)
+#fixed_interval_length: fix the length of the interval between landscape changes to be LANDSCAPE_CHANGE_INTERVAL)
+#LANDSCAPE_CHANGE_RULE fixed_num_intervals
+#LANDSCAPE_CHANGE_RULE stochastic
+LANDSCAPE_CHANGE_TIMING stochastic
+#LANDSCAPE_CHANGE_RULE fixed_interval_length
+
+#LANDSCAPE_CHANGE_RULE stochastic
+#how does the parameter of speed of landscape change compare to average speed of nucleotide change?
+LANDSCAPE_CHANGE_PARAMETER 0
+#LANDSCAPE_CHANGE_INTERVAL 100
+
+#SHARED_LANDSCAPE is true if all branches _in_the_same_process_ share the same landscape.
+#false if each branch has its own landscape
+SHARED_LANDSCAPE false
+
+#Q_NORMALIZATION is how the Q matrix is normalized:
+#constant_rate = \sum_i -q_ii*p_i = 1
+#constant_for_flat: divide by 19 (so that \sum_i -q_ii*pi_i = 1 if all q_ij =1), rest normalized to that
+#none: no normalization
+#Q_NORMALIZATION none
+Q_NORMALIZATION constant_for_flat
+#Q_NORMALIZATION constant_rate
+PRINT_LANDSCAPE_INFO false

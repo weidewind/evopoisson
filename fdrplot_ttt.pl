@@ -47,7 +47,7 @@ sub folderplot {
 		}
 	}
 	open OUT, ">$output" or die "Cannot open $output: $!\n";
-	foreach my $fakeno(keys %files){
+	foreach my $fakeno(sort {$a <=> $b} keys %files){
 		my ($obshash, $exphash) = readFile($files{$fakeno});
 		my @plot = BPStat::tttplot($obshash, $exphash);
 		if ($norm){

@@ -3,39 +3,31 @@
 use File::Spec;
 use Cwd qw(abs_path cwd getcwd);
 use lib getcwd(); #adds working directory to @INC
-use Mutmapnolim;
+use Mutmapnolim (realdata_exists, check_realdata_restriction);
 use Getopt::Long;
 use Getopt::ArgvFile;
 use File::Path qw(make_path remove_tree);
+use IPC::System::Simple qw(capture); 
 
 
 
-my $protein;
+my $protein = "h3";
 my $state = 'nsyn';
 my $input = '';
 my $output = '';	# option variable with default value
-my $verbose;
-my $step;
+my $tag = '';
+my $muts = "278_INTNODE4195,209_INTNODE4241,209_INTNODE4201";
 my $skip_stoppers;
-my $cumulative;
-
+my $jpeg;
 GetOptions (	'protein=s' => \$protein,
 		'state=s' => \$state,
 		'input=s' => \$input,
 		'output=s' => \$output,
-		'step=s' => \$step,
-		'verbose'  => \$verbose,
+		'muts=s' => \$muts,
 		'skip_stoppers' => \$skip_stoppers,
-		'cumulative' => \$cumulative,
 	);
 
+my @muts = split(/,/, $muts);
 my $mutmap = Mutmapnolim->new({bigdatatag => $input, bigtag => $output, protein => $protein, state => $state, skip_stoppers => $skip_stoppers});
-
-## prints files for drawing the chosen version of plots: mutations_density_in_circles(distance from ancestral mutation), points correspond to mutations
-## There could be more than one mutation at the given distance, so number of points on the plot can be less than the number of mutations in the subtree under analysis 
-$mutmap->egor_diff_rings_site_entrenchment($step, $cumulative);
-
-
-
-
+my @tree_files = $mutmap->print_events(\@muts);
 

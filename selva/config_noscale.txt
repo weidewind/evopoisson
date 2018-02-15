@@ -1,0 +1,70 @@
+ALPHABET  ARNDCEQGHILKMFPSTWYV
+
+#what is the length of a sequence (for one landscape instance?)
+LENGTH 565
+
+#how many independent landscapes do we have?
+NUM_INSTANCES 1
+
+
+TREE_FILE MYTRR
+
+#How many threads should we use?
+#num_threads <= num_instances.  We currently do not have the functionality to
+#multiithread a single instance/landscape histories.  The default is 1
+NUM_THREADS 1
+
+#Print info on when and how landscape changes?
+#This can seriously increase memory usage/slow down execution, so set it to true only if you need the info
+
+PRINT_LANDSCAPE_INFO true
+
+##INITIAL_FITNESS: {lognorm, gamma, file}
+INITIAL_FITNESS lognorm
+##if "file", specify FITNESS_FILE
+##if "lognorm", specify DIST_PARAM=sigma (mu is set to be 0)
+##if "gamma", specify DIST_PARAM=alpha (beta is set to be alpha, as does Yang)
+
+#FITNESS_FILE fitness_2aa_1_0.1.txt
+#FITNESS_FILE flat.txt
+DIST_PARAM 0.5
+
+##how do we change the fitness?  we could sample it from the same distribution
+##as initial fitness (iid), or perturb according to gaussian around the previous values
+
+##NEW_FITNESS_RULE : {iid,  shuffle, current_allele_dependent}
+NEW_FITNESS_RULE shuffle
+
+#at what point do we change the fitness?
+#LANDSCAPE_CHANGE_TIMING
+#stochastic: poisson process with parameter equal to LANDSCAPE_CHANGE_PARAMETER in time units
+#fixed_num_intervals: N predetermined intervals (N = LANDSCAPE_CHANGE_PARAMETER)
+#fixed_interval_length: fix the length of the interval between landscape changes 
+#to be LANDSCAPE_CHANGE_PARAMETER)
+LANDSCAPE_CHANGE_TIMING fixed_num_changes
+
+#The rate of landscape changes.
+#It is the expected (if change timing is stochastic) or actual (if it is deterministic)
+#number of landscape changes along the longest path in the tree.
+LANDSCAPE_CHANGE_PARAMETER 0
+
+#SCALE_LANDSCAPE_CHANGE_TO_SUBSTITUTION_RATE true
+#If we change landscape deterministically at prespecified intervals, set the interval here
+#LANDSCAPE_CHANGE_INTERVAL 
+
+#if W = W_0+kt, this is k (and LANDSCAPE_CHANGE_INTERVAL is t)
+#AGE_DEPENDENCE_COEFFICIENT 0.01
+
+#SHARED_LANDSCAPE is true if all branches _in_the_same_instance_ share the same landscape.
+#false if each branch has its own landscape.  The default is false
+SHARED_LANDSCAPE true
+
+#Q_NORMALIZATION is how the Q matrix is normalized:
+#constant_rate: \sum_i -q_ii*p_i = 1
+#constant_for_flat: divide by the alphabet size - 1
+#(so that \sum_i -q_ii*pi_i = 1 if all q_ij =1), rest normalized to that
+
+#Q_NORMALIZATION constant_for_flat
+Q_NORMALIZATION constant_for_flat
+
+

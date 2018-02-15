@@ -19,7 +19,8 @@ struct Constrains =>{
 #The function expects a lifetime constrain in terms of a number of strips
 #Number of strips is required!
 sub shuffle_mutations {
-	my ($rnode,$ra_strip_constr,$ra_out_event_nodes, $poisson, $mutnum_control)=@_;
+	my ($rnode,$ra_strip_constr,$ra_out_event_nodes, $poisson, $mutnum_control, $k)=@_;
+	$k = 1 unless defined $k;
 	print "mutnum control is $mutnum_control\n";
 	@{$ra_out_event_nodes}=();
 	push @{$ra_out_event_nodes},[];
@@ -29,7 +30,7 @@ sub shuffle_mutations {
 		my $n=$ra_strip_constr->[$I]->number_of_mutations();
 		my $lambda=$ra_strip_constr->[$I]->hazard(); #number of strips
 		print "-----------------------ancestor is ".$rnode->get_name."site $I, want $n mutations here \n";
-		#print " lambda for ".$rnode->get_name." anc site $I is $lambda\n";
+		print " lambda for ".$rnode->get_name." anc site $I is $lambda\n";
 		my $ra_events=$ra_out_event_nodes->[-1];
 		my @nsamples;
 		my %blocked;
@@ -74,18 +75,21 @@ sub shuffle_mutations {
 				#$t=$node->get_generic('time')-$t0;
 				#$p-=exp(-$lambda*$t);
 				my $t=$node->get_generic('time')-$pnode->get_generic('time');
+				my $t2 = $node->get_generic('time');
+				my $t1 = $pnode->get_generic('time');
 				my $p;
 				if($poisson){
 					$p=$lambda*$t;
 				}
 				else {
-					$p=1-exp(-$lambda*$t);
+					$p=1-exp(-($lambda**$k)*($t2**$k - $t1**$k));
+					#$p=1-exp(-($lambda*$t)); #if $k == 1
 					#print "for ".$node->get_name." time is ".$t." and p is $p \n";
 				}
 				$_=$rng->rand();
 				if($_<=$p){ 
 					push @{$ra_events},$node->get_name;
-					#print "chose node ".$node->get_name." for anc ".$rnode->get_name."\n";
+					print "chose node ".$node->get_name." for anc ".$rnode->get_name."\n";
 					#print "Now get ";
 					#foreach my $nname(@{$ra_events}){
 					#	print $nname."\t";
@@ -110,7 +114,13 @@ sub shuffle_mutations {
 			@{$ra_events}=();
 			if($ii--==0){ 
 				#no more attempts allowed
-				print " failed to place ".$ra_strip_constr->[$I]->number_of_mutations()." mutations at ".$rnode->get_parent->get_name."\n";
+				my $warn = " failed to place ".$ra_strip_constr->[$I]->number_of_mutations()." mutations at ";
+				if ($rnode->get_parent){
+					print $warn.$rnode->get_parent->get_name."\n";
+				}
+				else {
+					print $warn."root\n";
+				}
 				$ra_out_event_nodes->[-1]=undef;
 			}
 		}
@@ -133,7 +143,7 @@ sub shuffle_mutations {
 sub shuffle_mutations_on_tree{
 	my ($tree,$rh_constrains, $poisson, $mutnum_control)=@_;
 	my $rh_out_subtree;
-#	print "Went inside shuffler\n";
+	#print "Went inside shuffler\n";
 	#if a setting of attributes on tree nodes is not a problem than cloning may be omitted
 	#my $tree=$tree_->clone();
 	#print "Tree cloned\n";
@@ -162,7 +172,7 @@ sub shuffle_mutations_on_tree{
 			$rh_out_subtree->{$name}={};
 			foreach my $site(keys %{$rh_constrains->{$name}}){
 				push @sites,$site;
-				#print "pushed $site into site array for $name\n";
+				print "pushed $site into site array for $name\n";
 				push @strip_constrs,$rh_constrains->{$name}->{$site};
 			};
 			my @tmp; 
